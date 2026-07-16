@@ -1,3 +1,57 @@
-# WhatsApp Images (plan image)
-WhatsApp Image 2026-07-16 at 9.29.16 PM.jpeg
+# plan documents
+plans/
 
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+credentials.json
+service-account*.json
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# node
+node_modules/
+dist/
+.vite/
+*.local
+
+# data artifacts (regenerate via data-pipeline/)
+# NOTE: use dir/* not dir/ — git cannot re-include a file whose parent dir is excluded
+data/raw/*
+data/interim/*
+data/processed/*
+data/knowledge_base/*
+!data/**/.gitkeep
+# small vector artifacts are allowed back in
+!data/processed/*.geojson
+*.tif
+*.tiff
+*.parquet
+*.gpkg
+*.zip
+
+# model artifacts
+models/*
+!models/.gitkeep
+
+# vector store
+**/chroma_db/
+**/.chroma/
+
+# logs / os / editor
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
