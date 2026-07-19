@@ -1,0 +1,37 @@
+[project]
+name = "urbanheat"
+version = "0.1.0"
+description = "Surface urban heat island analysis and mitigation planning for Mumbai"
+readme = "README.md"
+# 3.14 is deliberately excluded: geopandas/pyproj/shapely wheels lag the newest CPython,
+# and a source build needs a GEOS/PROJ toolchain that is painful on Windows.
+requires-python = ">=3.11,<3.14"
+
+dependencies = [
+    # --- Earth Engine (Phase 0+) ---
+    "earthengine-api>=1.4",
+    "geemap>=0.35",
+    # --- Geospatial (Phase 1+) ---
+    "geopandas>=1.0",
+    # --- Config ---
+    "python-dotenv>=1.0",
+    # --- Notebook runtime ---
+    "ipykernel>=6.29",
+    "ipywidgets>=8.1",
+    "jupyterlab>=4.2",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.6"]
+
+# Nothing here is an installable package yet — this project is a set of scripts and
+# notebooks sharing one environment. Phase 1 promotes the pipeline into a real package.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
