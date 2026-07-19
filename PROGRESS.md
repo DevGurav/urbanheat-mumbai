@@ -50,7 +50,7 @@ Package: `data_pipeline/`
 
 ### Pipeline scaffolding
 - [x] Rename `data-pipeline/` → `data_pipeline/`; installable package (`python -m data_pipeline.run`)
-- [ ] `config.py` — `pydantic-settings` reading `.env`, replacing the notebook's `dotenv`
+- [x] `config.py` — `pydantic-settings` reading `.env`, replacing the notebook's `dotenv`
 - [ ] `ee_session.py` — one Earth Engine init shared by every stage
 - [ ] `run.py` — `--stage <name>`; each stage caches to `data/interim/` so a failure
       does not force a full rebuild (Earth Engine quota is finite — ADR-0001)
@@ -58,8 +58,10 @@ Package: `data_pipeline/`
 ### Geometry — everything else joins to this
 - [x] Fetch + validate BMC wards → `data/processed/wards.geojson`
       *(gate: exact set of 24 ward codes; measured 458 km², not the 603 km² the docs assumed)*
-- [ ] 200 m grid clipped to the ward union; assign **stable `cell_id`** — never reindex
-- [ ] Ward label per cell by majority overlap → `data/interim/grid.parquet`
+- [x] 200 m grid clipped to the ward union; **stable `cell_id`** from grid position, not row
+      order — verified that dropping a ward renumbers none of the survivors
+- [x] Ward label per cell by majority overlap → `data/interim/grid.parquet`
+      *(11,944 cells, 458.3 km² land, reconciles with ward area to 0.01 km²)*
 
 ### Target variable
 - [ ] Promote the Phase 0 Landsat code into `sources/landsat.py`

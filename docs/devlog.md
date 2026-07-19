@@ -21,6 +21,56 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — The 200 m grid and a permanent cell_id
+
+**Done**
+- `data_pipeline/grid.py` → `data/interim/grid.parquet`. **11,944 cells**, columns
+  `cell_id` / `grid_row` / `grid_col` / `geometry` / `centroid_lat` / `centroid_lon` /
+  `land_fraction` / `ward_code`.
+- Added `pyarrow` for GeoParquet.
+
+**Decided**
+- **`cell_id = grid_row × 1_000_000 + grid_col`, anchored to the EPSG:32643 origin.** The
+  obvious alternative — a sequential `0..N` over whatever cells come out — is a trap. Drop
+  one coastal cell and every id after it shifts by one, so a stored scenario keeps its
+  number and silently points at different ground. Anchoring to the projected CRS makes an
+  id a property of *where the cell is on Earth*, so re-running against a revised boundary
+  adds and removes cells but renumbers nothing.
+  **Verified rather than asserted:** rebuilding without ward T gives 10,891 cells, all of
+  which carry their original ids, and zero ids appear that were not in the full grid.
+- **Grid built in EPSG:32643, stored in EPSG:4326.** A 200 m cell defined in degrees is
+  neither square nor constant in size with latitude. Centroids are likewise computed in UTM
+  and converted afterwards. This is the split `conventions.md` already mandated; the grid is
+  the first place it actually bites.
+- **`grid_row`/`grid_col` are kept as columns, not just folded into the id.** Neighbourhood
+  features (`ndvi_neigh_mean`, `built_neigh_mean`) become integer arithmetic on the row/col
+  lattice instead of a spatial join over 12k polygons.
+- **Coastal slivers are kept, with `land_fraction` recording how much land each holds.**
+  Filtering here would bake a guess into a permanent cell set. Phase 2 can drop or
+  down-weight low-`land_fraction` cells on evidence, which is reversible; deleting them now
+  is not.
+- **Ward by majority overlap**, from the same overlay that produces `land_fraction`, so the
+  two can never disagree about which geometry they came from.
+
+**Learned / noted**
+- The strongest correctness check turned out to be a reconciliation, not an assertion: total
+  cell land area **458.3 km²** against ward area **458.3 km²**, difference −0.00. If the
+  overlay had double-counted, dropped a ward, or mismatched a projection, that number would
+  not close. It is worth more than any single unit test here.
+- Per-ward counts sanity-check against area independently: R/C is 48.03 km² and gets 1,259
+  cells; C is 1.91 km² and gets 52. At 0.04 km² per cell those are the right magnitudes,
+  with the excess explained by partial edge cells.
+- 92.1% of cells are fully inland, 1.6% hold under a tenth of a cell of land. The
+  distribution is printed on every run so a future boundary change shows up immediately as
+  a shifted profile.
+
+**Next**
+- Promote the Phase 0 Landsat code into `sources/landsat.py` and reduce LST to per-cell
+  `lst_mean` / `lst_p90` / `lst_obs_count`. That is the first stage that spends Earth Engine
+  quota against the real grid, so `--stage` caching in `run.py` matters from here on.
+
+---
+
 ## 2026-07-20 — Phase 1 — Ward boundaries, and the study area is 458 km² not 603
 
 **Done**

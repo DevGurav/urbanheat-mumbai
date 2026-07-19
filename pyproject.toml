@@ -13,6 +13,8 @@ dependencies = [
     "geemap>=0.35",
     # --- Geospatial (Phase 1+) ---
     "geopandas>=1.0",
+    # GeoParquet writer for the feature table and grid intermediates.
+    "pyarrow>=17",
     # --- Config ---
     "python-dotenv>=1.0",
     "pydantic-settings>=2.4",

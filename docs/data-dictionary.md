@@ -80,10 +80,23 @@ extremes once aggregation to ~200 m cells averages them out. Phase 1 confirms.
 
 | Column | Type | Unit | Notes |
 |---|---|---|---|
-| `cell_id` | int64 | — | **Stable primary key. Never reindex** ([conventions.md](conventions.md)) |
-| `geometry` | polygon | EPSG:4326 | ~200 m cell |
-| `centroid_lat`, `centroid_lon` | float | ° | Convenience for the frontend |
-| `ward_name`, `ward_code` | str | — | BMC ward; aggregation unit |
+| `cell_id` | int64 | — | **Stable primary key. Never reindex** ([conventions.md](conventions.md)). `grid_row × 1_000_000 + grid_col` |
+| `grid_row`, `grid_col` | int64 | — | Cell index on the EPSG:32643 grid. Adjacency is arithmetic, so neighbourhood features need no spatial join |
+| `geometry` | polygon | EPSG:4326 | 200 m cell, built in EPSG:32643 (ADR-0007) |
+| `centroid_lat`, `centroid_lon` | float | ° | Computed in UTM then converted — a degree is not a constant distance |
+| `land_fraction` | float | 0…1 | Share of the cell inside the ward union. Coastal slivers are kept, not filtered |
+| `ward_code` | str | — | BMC ward by **majority overlap**; aggregation unit |
+| `ward_name` | str | — | *Not yet populated.* The source supplies only the code ("R/C"); official ward names need a citable source before use |
+
+**`cell_id` is derived from position, never from row order.** A sequential `0..N` id shifts
+every downstream id the moment one coastal cell is added or dropped, silently repointing
+saved scenarios at the wrong ground. Anchoring to the projected CRS means an id depends only
+on where the cell is on Earth. Verified: rebuilding without ward T drops the grid from
+11,944 to 10,891 cells and renumbers **none** of the survivors.
+
+**Grid as built (Phase 1):** 11,944 cells, covering 458.3 km² of land — reconciling with the
+ward area to within 0.01 km². 92.1% are fully inland (`land_fraction` = 1.0); 1.6% hold less
+than a tenth of a cell's worth of land. Largest ward R/C at 1,259 cells, smallest C at 52.
 
 ### Vegetation & water
 
