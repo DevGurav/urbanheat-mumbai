@@ -21,6 +21,100 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-19 — Phase 0 — Python environment and the Earth Engine hello-world notebook
+
+**Done**
+- Python environment: `pyproject.toml` + `uv.lock`, pinned to 3.12 via `.python-version`.
+  `uv sync` installs 151 packages — `earthengine-api` 1.7.35, `geemap` 0.38.3,
+  `geopandas` 1.1.4, JupyterLab, `ruff`.
+- `notebooks/00_hello_earth_engine.ipynb`, 25 cells: authenticate → GAUL Mumbai boundary →
+  Landsat 8/9 C2 L2 dry-season composite → numeric sanity check → interactive map → static
+  PNG → NDVI cross-check.
+- `runbook.md` §1.5, §2 and §6 corrected to match the setup that actually exists.
+- Earth Engine registered against the `urbanheat-mumbai` Cloud project (noncommercial,
+  academic) and the notebook run end to end: 56 Landsat scenes, both Mumbai districts,
+  LST composite rendered as both an interactive map and a static PNG.
+
+**Decided**
+- **Python 3.12, not the system 3.14.** `geopandas`/`pyproj`/`shapely` wheels lag the newest
+  CPython, and a source build needs a GEOS/PROJ toolchain that is miserable on Windows. 3.12
+  satisfies "3.11+" with full wheel coverage, and `.python-version` makes the venv
+  reproducible rather than dependent on whatever `python` resolves to.
+- **`pyproject.toml` + `uv.lock` instead of `requirements.txt`.** The runbook originally
+  specified `requirements.txt`; a lockfile pins the full transitive graph, which is what
+  ADR-0004's "must be regenerable by re-running the pipeline" contract actually needs.
+- **`python-dotenv` in the notebook, not `pydantic-settings`.** `conventions.md` mandates
+  pydantic-settings for *modules*, and explicitly scopes notebooks as exploration. The
+  settings module lands in Phase 1, when `data-pipeline/` exists and there is more than one
+  consumer to share it with. Deferred deliberately, not overlooked.
+- **FAO GAUL 2015 level-2 as the Phase 0 boundary.** Already in the EE catalog, so no
+  download and no shapefile handling. Greater Mumbai spans two GAUL districts (Mumbai +
+  Mumbai Suburban), dissolved into one polygon. A placeholder by design — and its licence
+  turns out to restrict redistribution, which is a second, independent reason Phase 1's
+  swap to BMC/OSM wards is the right call (`data-dictionary.md` §1, §5).
+- **Verify LST numerically before plotting.** The notebook prints min/mean/max °C before any
+  map cell. A map renders a picture whether or not the scale factor was applied; only the
+  numbers catch it.
+
+**Learned / noted**
+- The two Collection 2 scale factors are easy to confuse and fail differently. Thermal is
+  `× 0.00341802 + 149.0` (→ Kelvin); optical is `× 0.0000275 − 0.2` (→ reflectance 0–1).
+  Applying the optical factor to `ST_B10` yields ~0.15 — wrong enough to ruin the model,
+  plausible enough to go unnoticed. Failure table in notebook §3.1.
+- `QA_PIXEL` masking rejects four bits, not one: cloud (3), shadow (4), cirrus (2), dilated
+  cloud (1). Cirrus is the dangerous one — invisible in a true-colour preview while still
+  attenuating the thermal signal. Water (bit 7) is deliberately kept; the sea and the lakes
+  are genuine cool surfaces, not errors.
+- Band arithmetic drops image metadata in Earth Engine. `system:time_start` has to be
+  carried forward with `copyProperties` or the per-year work in Phase 1 breaks silently.
+- **Boundary bug — a partial match that raised no error.** GAUL spells the island city
+  `Mumbai city` (lowercase "c"); the hardcoded list said `Mumbai`, so `ee.Filter.inList`
+  matched only `Mumbai Suburban` and the study area silently lost ~78 km² of the densest
+  part of the city. Caught by the printed area (409 km², against ~603 expected), not by
+  any exception. **The guard was the real defect:** it tested `n_matched == 0`, which only
+  catches total failure. A partial match is the dangerous case — it yields a valid geometry
+  that is quietly incomplete, and every downstream statistic inherits the omission. Now
+  asserts `n_matched == len(MUMBAI_DISTRICTS)` and prints the matched names on failure.
+  General lesson for Phase 1: **validate the count and the magnitude, never just
+  non-emptiness.**
+- **GAUL under-measures Mumbai by ~19%** — 487 km² against BMC's published 603 km². Not a
+  bug; GAUL is a generalised global product that smooths coastlines, and Mumbai is built
+  substantially on reclaimed land. Harmless for a Phase 0 picture, but it is a third
+  independent reason (alongside no ward geometry and the redistribution licence) that
+  Phase 1 must use real BMC polygons. The notebook now prints the gap as a percentage
+  rather than a pass/fail verdict.
+- **Authentication took three separate failures to clear**, none of them code:
+  1. The paste-code flow produced a code that was never redeemed — it has to go into the
+     prompt of the *same* run, since the PKCE verifier is per-session.
+  2. `earthengine authenticate` with the default auth mode returned "This app is blocked"
+     — the college Workspace domain blocks that OAuth client. Different `--auth_mode`
+     values use *different* clients, so notebook mode worked where the default did not.
+  3. `ee.Initialize` then returned 403 `SERVICE_DISABLED`: the Cloud project existed but
+     had never been registered with Earth Engine. Creating a project and registering it
+     are separate steps. Registration enables `earthengine.googleapis.com` as a side
+     effect. All three are now rows in `runbook.md` §6.
+- **First real numbers**, Mar–May 2019–2025, 56 scenes after cloud filtering, clipped to
+  the GAUL land boundary: min 29.0 °C, mean 39.8 °C, max 51.6 °C.
+- **The predicted 30–36 °C mean was miscalibrated, and the code was right.** The prediction
+  assumed sea-surface pixels were in the region; an administrative *land* boundary excludes
+  them, so the minimum is the coolest land (park canopy) rather than water, and everything
+  shifts up. Worth remembering that a "plausible range" is a property of the clip footprint
+  as much as of the retrieval — comparing against a published figure that used a different
+  footprint would be an error. §4's table now carries observed values, not guesses.
+
+**Next**
+- Visual confirmation of the LST/NDVI inverse relationship — Sanjay Gandhi National Park
+  and Aarey cool, Dharavi and the eastern industrial belt hot. The one check that cannot
+  be automated, and the last thing standing between here and the Phase 0 ✅.
+- Phase 1 kickoff: BMC ward boundaries → `data/processed/wards.geojson`, then the ~200 m
+  grid with stable `cell_id`.
+- **Carry into Phase 1:** assert counts *and* magnitudes on every join and filter, never
+  just non-emptiness. The boundary bug above is the cheap version of a defect that would
+  be far more expensive to find inside a 20k-row feature table, where no printed area
+  number would be sitting there to contradict it.
+
+---
+
 ## 2026-07-17 — Phase 0 — Project scaffolding and documentation
 
 **Done**

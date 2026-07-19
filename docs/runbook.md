@@ -42,7 +42,7 @@ Supabase · Vercel · Render — all sign in with GitHub, no card.
 | Tool | Why | When |
 |---|---|---|
 | Python 3.11+ (via [`uv`](https://docs.astral.sh/uv/)) | Everything | Now |
-| Node.js LTS (v22) | Frontend | Now (used Phase 5) |
+| Node.js LTS (v22+) | Frontend | Now (used Phase 5) |
 | Git | ✅ done | — |
 | [QGIS](https://qgis.org) | Inspect rasters/GeoJSON, report screenshots | Optional, useful Phase 1 |
 | Docker Desktop | Render builds in cloud — local Docker only for debugging | Optional, Phase 6 |
@@ -71,15 +71,31 @@ Open-Meteo and OSM/Overpass need no key. Manual collection is limited to:
 ```bash
 git clone https://github.com/DevGurav/urbanheat-mumbai.git
 cd urbanheat-mumbai
-cp .env.example .env          # fill GEE_PROJECT_ID, GEMINI_API_KEY
+cp .env.example .env               # fill GEE_PROJECT_ID, GEMINI_API_KEY
 
-uv venv && source .venv/Scripts/activate    # Git Bash on Windows
-uv pip install -r requirements.txt
-
-earthengine authenticate       # opens a browser, once per machine
+uv sync                            # creates .venv, installs the locked dependency set
+uv run earthengine authenticate    # opens a browser, once per machine
 ```
 
-Verify: `python -c "import ee; ee.Initialize(project='...'); print(ee.String('ok').getInfo())"`
+`uv sync` reads `pyproject.toml` and `uv.lock` and provisions Python 3.12 itself — nothing
+needs to be installed or activated first, and `uv run` executes inside the venv without
+activation. There is deliberately **no `requirements.txt`**: `uv.lock` pins the entire
+transitive dependency graph, which is what the "regenerable from scratch" contract in §8
+actually requires.
+
+**Python version.** The venv is pinned to 3.12 by `.python-version`, independent of whatever
+`python` resolves to on the machine. `geopandas`/`pyproj`/`shapely` wheels lag the newest
+CPython releases, and falling back to a source build needs a GEOS/PROJ toolchain that is
+painful on Windows. Do not "upgrade" this pin without checking wheel availability first.
+
+Verify the credentials round-trip:
+
+```bash
+uv run python -c "import ee, os; from dotenv import load_dotenv; load_dotenv(); ee.Initialize(project=os.environ['GEE_PROJECT_ID']); print(ee.String('ok').getInfo())"
+```
+
+Then open `notebooks/00_hello_earth_engine.ipynb` and select the `.venv` (Python 3.12)
+kernel.
 
 ---
 
@@ -126,9 +142,15 @@ Env vars set in each dashboard, never committed. Steps filled in when this is re
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `ee.Initialize` → permission denied | Project not registered / wrong ID | Check `GEE_PROJECT_ID`; confirm noncommercial registration approved |
+| `ee.Initialize` → 403 `SERVICE_DISABLED`, "API has not been used in project … before" | Cloud project exists but was never registered with Earth Engine — creating the project and registering it are separate steps | Register at <https://code.earthengine.google.com/register> (existing project → Unpaid → Academic), or enable `earthengine.googleapis.com` directly in the Cloud console. Wait 1–2 min to propagate |
+| `earthengine authenticate` → "This app is blocked" | Institutional Workspace policy blocks that OAuth client. Auth modes use *different* clients, so one mode can work where another is blocked | `uv run earthengine authenticate --auth_mode=notebook`. Paste the code into the prompt of **that same run** — the PKCE verifier is per-session, so a recycled code fails. Else authenticate with a personal Google account granted `Earth Engine Resource Writer` on the project |
 | EE task runs forever | Client-side loop over cells; `getInfo()` per cell | Do reductions server-side, export once (ADR-0001) |
 | EE quota exhausted | Repeated full-pipeline runs | Wait for monthly reset; cache intermediates in `data/interim/` |
-| LST values ~300 | Kelvin, scale factor not applied | `ST_B10 × 0.00341802 + 149.0 − 273.15` |
+| LST values ~300 | Kelvin, `− 273.15` not applied | `ST_B10 × 0.00341802 + 149.0 − 273.15` |
+| LST values ~44,000 | No scale factor applied — raw DN | As above |
+| LST values ~0.15 | *Optical* scale factor applied to the thermal band | The two are different: optical is `× 0.0000275 − 0.2`, thermal is `× 0.00341802 + 149.0` |
+| Boundary filter matches 0 districts | Admin dataset renamed its districts between versions | Print `ADM2_NAME` values first and correct the list — notebook §2 does this |
+| `geemap.Map()` renders blank, no error | `ipyleaflet` widget layer, not Earth Engine | Restart the kernel (widget extensions don't load into a running one); else use `import geemap.foliumap as geemap` |
 | Cells missing from composite | Cloud-masked to nothing | Widen year range; flag low-observation cells (`data-dictionary.md` §5) |
 | R² suspiciously high (>0.95) | Random split leaking spatial autocorrelation | Use blocked CV (`ml-methodology.md` §2) — this is expected, not a win |
 | SHAP says vegetation warms | Model or feature bug | Stop. Investigate before proceeding — physics gate (`ml-methodology.md` §4) |

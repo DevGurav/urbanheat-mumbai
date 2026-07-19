@@ -24,6 +24,9 @@ Cited in `data-dictionary.md` §1 with licences and attribution obligations.
 - **WorldPop** — gridded population, 100 m. CC BY 4.0. <https://www.worldpop.org>
 - **SRTM v3 (SRTMGL1)** — NASA/USGS, 30 m elevation. Public domain.
 - **OpenStreetMap** — © OpenStreetMap contributors, ODbL. <https://www.openstreetmap.org>
+- **FAO GAUL 2015** — Global Administrative Unit Layers, FAO. Used **only** as the Phase 0
+  boundary placeholder; redistribution restricted, superseded by BMC wards in Phase 1
+  (`data-dictionary.md` §1). <https://data.apps.fao.org/map/catalog/>
 - **Open-Meteo** — ERA5-based historical + forecast API. CC BY 4.0.
   <https://open-meteo.com>
 - **Google Earth Engine** — Gorelick, N. et al. (2017). *Google Earth Engine:
@@ -86,7 +89,8 @@ RAG corpus for the Copilot (`agents.md` §4). All public. Files → `data/knowle
 
 - Earth Engine Python API — <https://developers.google.com/earth-engine>
 - Landsat C2 L2 Data Format Control Book — scale factors for `ST_B10`
-  (the `× 0.00341802 + 149.0` in `data-dictionary.md` §2)
+  (the `× 0.00341802 + 149.0` in `data-dictionary.md` §2) and the `QA_PIXEL` bit
+  definitions used for cloud masking (`notebooks/00_hello_earth_engine.ipynb` §3.1–3.2)
 - FastAPI — <https://fastapi.tiangolo.com>
 - LangGraph — <https://langchain-ai.github.io/langgraph/>
 - Gemini API rate limits — <https://ai.google.dev/gemini-api/docs/rate-limits> (ADR-0002)

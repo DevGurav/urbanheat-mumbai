@@ -4,7 +4,7 @@ Live task board. Newest phases get expanded into detailed tasks at their kickoff
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
 **Current phase:** 0 — Foundations
-**Last updated:** 2026-07-17
+**Last updated:** 2026-07-19
 
 ---
 
@@ -21,18 +21,22 @@ Live task board. Newest phases get expanded into detailed tasks at their kickoff
 - [x] Folder scaffold: `data-pipeline/`, `backend/`, `frontend/`, `notebooks/`, `data/`, `models/`
 
 ### External prep — author's own accounts and installs
-- [ ] **Earth Engine noncommercial registration** (college email — do this first, it's the only approval wait)
-- [ ] **Google AI Studio** Gemini API key → `.env`
-- [ ] Python 3.11+ (via `uv`)
-- [ ] Node.js LTS (needed Phase 5, install now)
+- [x] **Earth Engine noncommercial registration** — `urbanheat-mumbai`, academic / unpaid tier
+- [x] **Google AI Studio** Gemini API key → `.env`
+- [x] Python 3.11+ (via `uv`) — uv 0.11.29; project venv pinned to 3.12
+- [x] Node.js LTS (needed Phase 5, install now) — v24.18.0, npm 11.13.0
 - [ ] QGIS *(optional — inspecting rasters, report screenshots)*
 
 ### Environment
-- [ ] Python env with `earthengine-api`, `geemap`, `geopandas`
-- [ ] `earthengine authenticate` succeeds
+- [x] Python env with `earthengine-api`, `geemap`, `geopandas` — `pyproject.toml` + `uv.lock`,
+      151 packages, `uv sync` reproduces it
+- [x] `earthengine authenticate` succeeds — needed `--auth_mode=notebook` (`runbook.md` §6)
 
 ### Exit
 - [ ] ✅ **Hello-world notebook renders a Landsat LST image over Mumbai**
+      — ran end to end: 56 scenes, both districts, min 29.0 / mean 39.8 / max 51.6 °C,
+      interactive map and static PNG both rendered. Awaiting the author's visual check of
+      the LST/NDVI inverse relationship before this is ticked
 
 ---
 

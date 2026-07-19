@@ -25,6 +25,14 @@ observed value ranges as the pipeline is built. Nothing below is claimed as meas
 | **OpenStreetMap** | OSM contributors via OSMnx/Overpass | vector | live | Building/road density, parks | ODbL |
 | **Open-Meteo** (archive + forecast) | Open-Meteo | ~11 km (ERA5) | 1940– | Weather covariates, alerts | CC BY 4.0, keyless |
 | **BMC ward boundaries** | Datameet / OSM | vector | static | Aggregation units | See §5 |
+| **FAO GAUL 2015 level-2** (`FAO/GAUL/2015/level2`) | FAO via GEE | vector | 2015 static | **Phase 0 only** — placeholder city boundary | Redistribution restricted — see §5 |
+
+**FAO GAUL is a Phase 0 scaffold, not a project dataset.** It supplies a serviceable Greater
+Mumbai outline (the union of the *Mumbai* and *Mumbai Suburban* districts) with no download,
+which is all the hello-world notebook needs. It is replaced in Phase 1 by BMC ward polygons
+for two independent reasons: GAUL has no ward-level geometry, and its licence restricts
+redistribution, which would be a problem for a publicly deployed dashboard. No GAUL geometry
+is persisted to disk or served by the API.
 
 **Attribution obligations.** CC BY sources (Sentinel-2, WorldCover, WorldPop, Open-Meteo)
 require credit; OSM requires "© OpenStreetMap contributors" on any map display. These
@@ -43,6 +51,13 @@ appear in the dashboard footer and the report — tracked as a Phase 5 task.
 **Critical caveat.** This is **surface** temperature at ~10:30 local overpass, not air
 temperature and not the 3 pm peak. Every label in UI, API and report says *surface*
 (ADR-0005).
+
+**First observation (Phase 0, `notebooks/00_hello_earth_engine.ipynb`).** Mar–May 2019–2025,
+56 Landsat 8/9 scenes after cloud filtering, clipped to the GAUL land boundary: **min 29.0,
+mean 39.8, max 51.6 °C** (per pixel at 100 m). Note this is a *land-only* footprint — an
+administrative boundary excludes the sea, so the minimum is the coolest land surface rather
+than water. The per-cell `lst_mean` range above will be narrower than these per-pixel
+extremes once aggregation to ~200 m cells averages them out. Phase 1 confirms.
 
 ---
 
@@ -137,6 +152,10 @@ exactly why spatial block CV is mandatory (ADR-0006).
 ## 5. Open questions for Phase 1
 
 - [ ] BMC ward boundary provenance and licence — confirm before use (Datameet vs OSM)
+- [ ] Confirm FAO GAUL's exact redistribution terms **if** any GAUL-derived geometry ever
+      outlives Phase 0. The plan is that none does — the boundary is swapped for BMC wards
+      before anything is persisted or deployed — which retires the question rather than
+      answering it
 - [ ] Landsat years to include: 2019–2025? Trade-off — more years = better trend, more
       compute quota
 - [ ] Does 200 m survive the 100 m native thermal resolution honestly, or is 300 m safer?
