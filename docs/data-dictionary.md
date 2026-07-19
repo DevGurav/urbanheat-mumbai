@@ -6,8 +6,15 @@ feature column gets its row here the same day it is added ([conventions.md](conv
 **Status:** planned specification — Phase 1 fills in actual date ranges, cell counts and
 observed value ranges as the pipeline is built. Nothing below is claimed as measured yet.
 
-**Study area** Greater Mumbai (BMC boundary), ~603 km²
-**Grid** ~200 m cells, ≈15–20k expected (confirm in Phase 1)
+**Study area** Greater Mumbai — the union of BMC's 24 administrative wards, **458 km²**
+as measured from the DataMeet polygons in EPSG:32643.
+
+> The widely quoted **603 km²** is the two *districts* (Mumbai City 157 + Mumbai Suburban
+> 446), which include harbour, creek and tidal area that no ward polygon covers. FAO GAUL
+> independently measures 487 km². All three describe different footprints; this project's
+> study area is the ward union, so **458 km² is the figure every per-area number uses.**
+
+**Grid** 200 m cells (ADR-0007), **≈11–12k expected** — confirmed when the grid stage lands
 **Season** Dry season, March–May (monsoon cloud makes Jun–Sep unusable — ADR-0005)
 **CRS** EPSG:4326 for storage and API; EPSG:32643 (UTM 43N) for area/distance maths
 
@@ -127,7 +134,7 @@ extremes once aggregation to ~200 m cells averages them out. Phase 1 confirms.
 | `humidity_mean` | % | As above |
 | `wind_speed_mean` | m/s | As above |
 
-⚠️ Weather covariates are near-constant across a 603 km² city at 11 km resolution. They
+⚠️ Weather covariates are near-constant across a 458 km² city at 11 km resolution. They
 add little within-city signal and risk being noise. Phase 2 decides empirically whether
 they stay — record the outcome in `ml-methodology.md`.
 

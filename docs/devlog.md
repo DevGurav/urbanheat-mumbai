@@ -21,6 +21,63 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — Ward boundaries, and the study area is 458 km² not 603
+
+**Done**
+- `data_pipeline/config.py` — `pydantic-settings`, replacing the notebook's bare `dotenv`.
+  Resolves `DATA_DIR` against a repo root derived from `__file__`, so stages behave
+  identically whichever directory they are launched from.
+- `data_pipeline/boundary.py` — caches the DataMeet source under `data/raw/`, validates it,
+  writes `data/processed/wards.geojson`. Runs as `uv run python -m data_pipeline.boundary`.
+- Output: 24 wards, EPSG:4326, columns `ward_code` / `area_km2` / `geometry`, 573 KB.
+
+**Decided**
+- **The gate is the exact set of 24 ward codes, not the count.** Phase 0's bug passed a
+  `count != 0` check while matching one district of two. A count check answers "did I get
+  something?"; a set check answers "did I get the *right* thing?". No truncated or wrong
+  dataset reproduces all 24 of A…T with the E/W and N/S splits. Verified by deleting a ward
+  and confirming the failure names it: `missing=['T']`.
+- **Area is reported, not tightly gated.** No two sources agree on Mumbai's area, so a
+  narrow band around any one figure would reject a legitimate source. The band is
+  380–700 km²: wide enough for any real Mumbai boundary, narrow enough to reject a
+  different city entirely.
+- **Wards must tile** — `sum(areas) == area(union)` within 0.5 km². Overlapping wards would
+  let one cell belong to two wards and silently double-count every ward-level aggregate.
+- **6 decimal places on write.** float64's ~15 digits produced 972 KB; RFC 7946's
+  recommended 6 dp (~0.11 m) gives 573 KB, for an area difference of 167 m² across the
+  entire city — 0.000036%. No vertices removed, 29 coincident points collapsed. Storing
+  precision the source survey never had is not worth 400 KB in git.
+- **`ward_code` only; `ward_name` deferred.** The source's `name` field holds the BMC code
+  ("A", "R/C"), not a place name. Mapping R/C→Borivali from memory would be precisely the
+  invented-label problem `conventions.md` forbids. It needs a citable source first.
+
+**Broke / learned**
+- **The study area is 458 km², not the 603 km² that five documents asserted.** 603 is the
+  two *districts* (Mumbai City 157 + Mumbai Suburban 446), which include harbour, creek and
+  tidal area that no ward polygon covers. FAO GAUL independently measures 487. All three
+  describe different footprints; this project's is the ward union, 458 km².
+- **Consequence: ~11–12k cells at 200 m, not the "15–20k" written into BLUEPRINT.**
+  ADR-0007's *decision* is unaffected — 11.5k is still comfortable for boosted trees, and
+  it strengthens rather than weakens the rejection of 300 m (~5k rows). But the supporting
+  figure inside that ADR is now known to be wrong, and `conventions.md` makes ADRs
+  immutable, so it stays as written. The corrected number lives in `data-dictionary.md`,
+  which is the living spec. **Open question for the author:** whether "immutable" permits
+  an appended dated correction note, or whether a stale supporting figure is simply what an
+  ADR is — a record of what was known at decision time.
+- **Checked SGNP coverage explicitly before trusting the dataset**, because a heat study
+  that excluded the city's largest cool surface would be broken in a way no schema check
+  catches. Kanheri Caves resolves to ward R/C; Aarey, Powai and Vihar are all inside. The
+  park is in.
+- The wards tile exactly — sum equals union, no interior holes — so the missing 145 km² is
+  a notch in the outer boundary (coastline, creeks) rather than a hole punched in the
+  middle. That is what ruled out the "SGNP is excluded" hypothesis before writing any code.
+
+**Next**
+- The 200 m grid and `cell_id`. Everything above exists so that stage has a validated
+  polygon to clip to.
+
+---
+
 ## 2026-07-20 — Phase 1 — Kickoff: planning pass
 
 **Done**

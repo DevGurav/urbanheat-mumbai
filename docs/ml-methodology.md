@@ -11,7 +11,7 @@ with real numbers as the work lands. **No result is recorded here until it is me
 ## 1. Problem statement
 
 **Task** Supervised regression.
-**Unit** One ~200 m grid cell of Greater Mumbai (≈15–20k cells).
+**Unit** One 200 m grid cell of Greater Mumbai (≈11–12k cells; ADR-0007).
 **Target** `lst_mean` — dry-season median land surface temperature, °C (ADR-0005).
 **Predictors** ~20 tabular features: vegetation, built-up, albedo, land cover, density,
 terrain, coastal distance, population (see [data-dictionary.md](data-dictionary.md)).

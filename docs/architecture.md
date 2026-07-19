@@ -96,7 +96,7 @@ that contract is what makes excluding them safe (ADR-0004).
 
 ```mermaid
 flowchart LR
-    A[Earth Engine<br/>server-side compositing] --> B[Per-cell reduction<br/>~20k cells]
+    A[Earth Engine<br/>server-side compositing] --> B[Per-cell reduction<br/>~12k cells]
     B --> C[Join OSM density<br/>+ Open-Meteo]
     C --> D[Feature engineering<br/>NDVI · NDBI · albedo · HVI]
     D --> E[(features.parquet)]
@@ -106,7 +106,7 @@ flowchart LR
 ```
 
 **Key constraint.** All raster math happens inside Earth Engine and only the reduced
-~20k-row table is downloaded. Pulling rasters to the laptop would blow both the RAM budget
+~12k-row table is downloaded. Pulling rasters to the laptop would blow both the RAM budget
 and the Earth Engine compute quota.
 
 **Proven in Phase 0.** The first box — server-side compositing of a cloud-masked,

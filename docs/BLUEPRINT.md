@@ -21,7 +21,7 @@ so the answer is reachable without GIS training.
 
 ## 2. The approach in one paragraph
 
-Divide Mumbai into a ~200 m grid (~15–20k cells). For each cell, derive predictors from
+Divide Mumbai into a 200 m grid (~11–12k cells). For each cell, derive predictors from
 free satellite and open data: vegetation (NDVI), built-up index (NDBI), water (NDWI),
 albedo, land-cover fractions, building and road density, population, elevation, distance
 to coast. Take **Land Surface Temperature** from Landsat 8/9 thermal bands as the target.

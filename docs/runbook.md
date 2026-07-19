@@ -49,7 +49,7 @@ Supabase · Vercel · Render — all sign in with GitHub, no card.
 
 **Hardware** ~10 GB disk · 8 GB RAM workable, 16 GB comfortable · **no GPU needed** ·
 stable internet. Heavy raster work runs in Earth Engine's cloud (ADR-0001); the laptop only
-handles a ~20k-row table (ADR-0006).
+handles a ~12k-row table (ADR-0006, ADR-0007).
 
 ### 1.6 Datasets — almost nothing to download
 
