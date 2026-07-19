@@ -3,7 +3,7 @@
 Live task board. Newest phases get expanded into detailed tasks at their kickoff.
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
-**Current phase:** 0 — Foundations *(complete; Phase 1 kicks off next)*
+**Current phase:** 1 — Data pipeline
 **Last updated:** 2026-07-20
 
 ---
@@ -43,17 +43,46 @@ Live task board. Newest phases get expanded into detailed tasks at their kickoff
 
 **Goal:** one feature table describing every ~200 m cell of Mumbai. First presentable demo.
 
-- [ ] Mumbai boundary + BMC ward polygons → `data/processed/wards.geojson`
-- [ ] ~200 m analysis grid over the city boundary, stable `cell_id`
-- [ ] Landsat 8/9 L2 dry-season (Mar–May) LST composites, multi-year → target variable
-- [ ] Sentinel-2 NDVI / NDBI / NDWI composites
-- [ ] ESA WorldCover land-cover fractions per cell
-- [ ] WorldPop population density per cell
-- [ ] SRTM elevation + distance-to-coast
-- [ ] OSM building density, road density, park proximity (OSMnx)
-- [ ] Open-Meteo historical weather join
-- [ ] Assemble `data/processed/features.parquet`; fill `docs/data-dictionary.md`
-- [ ] Exploration notebook: LST + NDVI maps, correlation matrix, ward summary
+**Settled at kickoff, 2026-07-20**
+Wards: Datameet `BMC_Wards.geojson`, CC BY 4.0, **24 administrative** wards (not the 227
+electoral ones) · Grid: **200 m** (ADR-0007) · Season: Mar–May **2019–2026** ·
+Package: `data_pipeline/`
+
+### Pipeline scaffolding
+- [x] Rename `data-pipeline/` → `data_pipeline/`; installable package (`python -m data_pipeline.run`)
+- [ ] `config.py` — `pydantic-settings` reading `.env`, replacing the notebook's `dotenv`
+- [ ] `ee_session.py` — one Earth Engine init shared by every stage
+- [ ] `run.py` — `--stage <name>`; each stage caches to `data/interim/` so a failure
+      does not force a full rebuild (Earth Engine quota is finite — ADR-0001)
+
+### Geometry — everything else joins to this
+- [ ] Fetch + validate BMC wards → `data/processed/wards.geojson`
+      *(gate: 24 wards, total area ≈ 603 km²)*
+- [ ] 200 m grid clipped to the ward union; assign **stable `cell_id`** — never reindex
+- [ ] Ward label per cell by majority overlap → `data/interim/grid.parquet`
+
+### Target variable
+- [ ] Promote the Phase 0 Landsat code into `sources/landsat.py`
+- [ ] Per-cell `lst_mean`, `lst_p90`, and `lst_obs_count` to flag cloud-starved cells
+- [ ] `lst_trend` — slope of per-year Mar–May medians
+
+### Predictors
+- [ ] Sentinel-2 → `ndvi_mean`, `ndvi_p10`, `ndbi_mean`, `ndwi_mean`
+- [ ] ESA WorldCover → tree / grass / built / water fractions per cell
+- [ ] WorldPop → `population`, `pop_density`
+- [ ] SRTM → `elevation_mean`, `slope_mean`; plus `dist_coast`, `dist_water`
+- [ ] OSM via OSMnx → `building_density`, `building_count`, `road_density`, `dist_park`
+- [ ] Landsat optical → `albedo` (Liang 2001) — the cool-roof lever
+- [ ] Neighbourhood aggregates → `ndvi_neigh_mean`, `built_neigh_mean`
+- [ ] Open-Meteo join *(expected near-constant at 11 km; Phase 2 decides if they stay)*
+
+### Assemble & verify
+- [ ] Join every source on `cell_id` → `data/processed/features.parquet`
+- [ ] **Validation gate:** assert row count, per-column null rate and observed range for
+      every feature. Counts *and* magnitudes, never just non-emptiness — a silent partial
+      join is the Phase 0 boundary bug at 15,000× the scale, with no printed area to catch it
+- [ ] Fill observed ranges in `docs/data-dictionary.md`; close remaining §5 questions
+- [ ] Exploration notebook: LST + NDVI maps, correlation matrix, ward summary table
 - [ ] ✅ **`features.parquet` exists and the notebook renders Mumbai's heat map**
 
 ---

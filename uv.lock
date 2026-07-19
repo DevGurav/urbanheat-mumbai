@@ -2597,7 +2597,7 @@ wheels = [
 [[package]]
 name = "urbanheat"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "earthengine-api" },
     { name = "geemap", version = "0.37.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },

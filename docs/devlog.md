@@ -21,6 +21,56 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — Kickoff: planning pass
+
+**Done**
+- Phase 0 closed: exit criterion ticked, CHANGELOG entry written, `architecture.md` checked.
+- ADR-0007 — 200 m analysis grid.
+- `data-pipeline/` → `data_pipeline/`, now an installable package (hatchling) so
+  `python -m data_pipeline.run` works as `runbook.md` §3 already documented.
+- Phase 1 expanded into grouped tasks in `PROGRESS.md`: scaffolding → geometry → target →
+  predictors → assemble.
+
+**Decided**
+- **Ward boundaries: DataMeet `Municipal_Spatial_Data`, `Mumbai/BMC_Wards.geojson`,
+  CC BY 4.0**, already EPSG:4326. This closes the longest-standing open question in
+  `data-dictionary.md` §5. A materially better licence than GAUL's restricted
+  redistribution, and it comes with a trap: the same folder ships
+  `bmc_electoral_wards_2017`, the 227 *electoral* wards. This project uses the **24
+  administrative** wards — those are the units MCAP is written against and that budgets
+  follow. Ranking electoral wards would produce a result no planner could act on.
+- **200 m grid (ADR-0007).** The deciding argument is the *direction* of the resolution
+  claim: Landsat thermal is 100 m native (the 30 m delivery grid is packaging, not
+  information), so a 200 m cell averages ~4 measured pixels and sits deliberately coarser
+  than the instrument. Nothing is ever downscaled. 100 m was rejected because one pixel per
+  cell means no averaging and co-registration error propagates undiluted; 300 m because it
+  blurs the ~200 m scale at which a park or a block of cool roofs actually exists.
+- **Years: Mar–May 2019–2026.** Phase 0 measured 56 scenes over 2019–2025 after cloud
+  filtering, so the range is known-good; 2026 is complete and free, giving an 8th year for
+  `lst_trend`. Decided from evidence rather than guessed, which is the point of having run
+  Phase 0 first.
+- **Renamed the pipeline directory now.** `data-pipeline` with a hyphen is not a legal
+  Python module name, so the `python -m data_pipeline.run` in the runbook could never have
+  worked. The folder held one `.gitkeep`, so the fix cost nothing today; after three weeks
+  of imports it would have been a refactor.
+
+**Learned / noted**
+- `architecture.md` §3 claimed pipeline output is "committed as data artifacts". It is the
+  opposite — `data/processed/` and `models/` are gitignored build outputs, and ADR-0004's
+  whole argument is that excluding them is safe *because* they are regenerable. Left
+  standing, that sentence would have quietly licensed committing a 50 MB parquet in Phase 1.
+  Caught only because `conventions.md` requires an architecture check at phase close, which
+  is the first time that rule has earned its keep.
+
+**Next**
+- First code task: fetch and validate BMC wards → `data/processed/wards.geojson`, gated on
+  24 wards and total area ≈ 603 km².
+- Then the 200 m grid and `cell_id`. That builder deserves the most scrutiny of anything in
+  Phase 1: `cell_id` is permanent once assigned, and every saved scenario, stored model and
+  cached API response downstream is keyed on it.
+
+---
+
 ## 2026-07-19 — Phase 0 — Python environment and the Earth Engine hello-world notebook
 
 **Done**

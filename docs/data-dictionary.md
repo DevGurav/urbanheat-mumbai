@@ -24,7 +24,7 @@ observed value ranges as the pipeline is built. Nothing below is claimed as meas
 | **SRTM v3** (`USGS/SRTMGL1_003`) | NASA via GEE | 30 m | 2000 static | Elevation | Public domain |
 | **OpenStreetMap** | OSM contributors via OSMnx/Overpass | vector | live | Building/road density, parks | ODbL |
 | **Open-Meteo** (archive + forecast) | Open-Meteo | ~11 km (ERA5) | 1940– | Weather covariates, alerts | CC BY 4.0, keyless |
-| **BMC ward boundaries** | Datameet / OSM | vector | static | Aggregation units | See §5 |
+| **BMC ward boundaries** (`Mumbai/BMC_Wards.geojson`) | [DataMeet](https://github.com/datameet/Municipal_Spatial_Data) | vector, EPSG:4326 | static | Aggregation units — **24 administrative wards** | CC BY 4.0 |
 | **FAO GAUL 2015 level-2** (`FAO/GAUL/2015/level2`) | FAO via GEE | vector | 2015 static | **Phase 0 only** — placeholder city boundary | Redistribution restricted — see §5 |
 
 **FAO GAUL is a Phase 0 scaffold, not a project dataset.** It supplies a serviceable Greater
@@ -34,9 +34,15 @@ for two independent reasons: GAUL has no ward-level geometry, and its licence re
 redistribution, which would be a problem for a publicly deployed dashboard. No GAUL geometry
 is persisted to disk or served by the API.
 
-**Attribution obligations.** CC BY sources (Sentinel-2, WorldCover, WorldPop, Open-Meteo)
-require credit; OSM requires "© OpenStreetMap contributors" on any map display. These
-appear in the dashboard footer and the report — tracked as a Phase 5 task.
+**Attribution obligations.** CC BY sources (Sentinel-2, WorldCover, WorldPop, Open-Meteo,
+DataMeet) require credit; OSM requires "© OpenStreetMap contributors" on any map display.
+DataMeet's wording: *"Municipal data by DataMeet India community (CC BY 4.0)"*. These appear
+in the dashboard footer and the report — tracked as a Phase 5 task.
+
+⚠️ The DataMeet Mumbai folder also ships `bmc_electoral_wards_2017` — the **227 electoral**
+wards. This project uses the **24 administrative** wards, which are the units MCAP is
+written against and that budgets follow. Aggregating to electoral wards would produce
+rankings no planner could act on.
 
 ---
 
@@ -151,18 +157,28 @@ exactly why spatial block CV is mandatory (ADR-0006).
 
 ## 5. Open questions for Phase 1
 
-- [ ] BMC ward boundary provenance and licence — confirm before use (Datameet vs OSM)
-- [ ] Confirm FAO GAUL's exact redistribution terms **if** any GAUL-derived geometry ever
-      outlives Phase 0. The plan is that none does — the boundary is swapped for BMC wards
-      before anything is persisted or deployed — which retires the question rather than
-      answering it
-- [ ] Landsat years to include: 2019–2025? Trade-off — more years = better trend, more
-      compute quota
-- [ ] Does 200 m survive the 100 m native thermal resolution honestly, or is 300 m safer?
+**Settled at the Phase 1 kickoff, 2026-07-20**
+
+- [x] **Ward provenance and licence** — DataMeet `Municipal_Spatial_Data`,
+      `Mumbai/BMC_Wards.geojson`, CC BY 4.0, already EPSG:4326. Use the 24 *administrative*
+      wards, not the 227 electoral ones.
+- [x] **Grid resolution — 200 m** (ADR-0007). It survives the 100 m native thermal because
+      it sits *coarser* than native: ~4 measured pixels average into each cell, so nothing
+      claims detail the instrument did not deliver. 300 m was rejected for blurring the
+      ~200 m scale at which interventions actually happen.
+- [x] **Landsat years — Mar–May 2019–2026.** Phase 0 measured 56 scenes over 2019–2025
+      after cloud filtering; 2026 is complete and free, giving an 8th year for `lst_trend`.
+- [x] **FAO GAUL redistribution terms** — retired rather than answered. No GAUL geometry
+      outlives Phase 0, so the question never becomes live.
+
+**Still open**
+
 - [ ] Cloud-free observation count per cell after masking — if some cells are starved, the
-      composite is unreliable there and must be flagged
+      composite is unreliable there and must be flagged (`lst_obs_count`)
 - [ ] Do Open-Meteo covariates survive Phase 2 feature selection?
 - [ ] WorldPop year alignment against Landsat composite years
+- [ ] Reduction method per source into a 200 m cell — area-weighted mean, majority class or
+      sum. Differs by source and must be recorded here as each one lands (ADR-0007)
 
 ---
 

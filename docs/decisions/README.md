@@ -19,6 +19,7 @@ decision → consequences.
 | [0004](0004-files-first-supabase-later.md) | Files first, Supabase later | Accepted |
 | [0005](0005-land-surface-temperature-as-target.md) | Land Surface Temperature as the model target | Accepted |
 | [0006](0006-gradient-boosted-trees-over-deep-learning.md) | Gradient-boosted trees over deep learning | Accepted |
+| [0007](0007-200m-analysis-grid.md) | 200 m analysis grid | Accepted |
 
 ## Template
 

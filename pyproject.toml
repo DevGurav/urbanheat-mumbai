@@ -24,10 +24,15 @@ dependencies = [
 [dependency-groups]
 dev = ["ruff>=0.6"]
 
-# Nothing here is an installable package yet — this project is a set of scripts and
-# notebooks sharing one environment. Phase 1 promotes the pipeline into a real package.
-[tool.uv]
-package = false
+# The pipeline is a real package from Phase 1 so `python -m data_pipeline.run` works
+# without sys.path manipulation. Note the underscore: `data-pipeline` with a hyphen is
+# not a legal Python module name, which is why the directory was renamed at Phase 1 kickoff.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["data_pipeline"]
 
 [tool.ruff]
 line-length = 100
