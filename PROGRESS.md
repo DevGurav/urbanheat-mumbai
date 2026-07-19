@@ -3,8 +3,8 @@
 Live task board. Newest phases get expanded into detailed tasks at their kickoff.
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
-**Current phase:** 0 — Foundations
-**Last updated:** 2026-07-19
+**Current phase:** 0 — Foundations *(complete; Phase 1 kicks off next)*
+**Last updated:** 2026-07-20
 
 ---
 
@@ -33,10 +33,9 @@ Live task board. Newest phases get expanded into detailed tasks at their kickoff
 - [x] `earthengine authenticate` succeeds — needed `--auth_mode=notebook` (`runbook.md` §6)
 
 ### Exit
-- [ ] ✅ **Hello-world notebook renders a Landsat LST image over Mumbai**
-      — ran end to end: 56 scenes, both districts, min 29.0 / mean 39.8 / max 51.6 °C,
-      interactive map and static PNG both rendered. Awaiting the author's visual check of
-      the LST/NDVI inverse relationship before this is ticked
+- [x] ✅ **Hello-world notebook renders a Landsat LST image over Mumbai**
+      — 56 scenes, both districts, min 29.0 / mean 39.8 / max 51.6 °C; interactive map,
+      static PNG and the NDVI cross-check all render. **Phase 0 complete.**
 
 ---
 

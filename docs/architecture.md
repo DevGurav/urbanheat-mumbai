@@ -4,7 +4,8 @@ Text-based, editable re-creation of the system design. Diagrams are Mermaid so t
 diffable and render on GitHub.
 
 **Status:** target design. Components are marked ⬜ planned / 🟨 in progress / ✅ built,
-and updated as phases land. Nothing here is claimed to exist yet.
+and updated as phases land. As of Phase 0, no component in §2 or §6 is built — the only
+thing proven to work is the Earth Engine access path at the head of §3.
 
 ---
 
@@ -88,8 +89,10 @@ testable. It also caps LLM calls per request, which matters on a 10 req/min free
 
 ## 3. Offline pipeline
 
-Runs on the developer's machine, not in the request path. Output is committed as data
-artifacts the API reads.
+Runs on the developer's machine, not in the request path. Output is a set of data artifacts
+the API reads, written to `data/processed/` and `models/`. They are **not** committed —
+they are gitignored build outputs that must be regenerable by re-running the pipeline, and
+that contract is what makes excluding them safe (ADR-0004).
 
 ```mermaid
 flowchart LR
@@ -105,6 +108,12 @@ flowchart LR
 **Key constraint.** All raster math happens inside Earth Engine and only the reduced
 ~20k-row table is downloaded. Pulling rasters to the laptop would blow both the RAM budget
 and the Earth Engine compute quota.
+
+**Proven in Phase 0.** The first box — server-side compositing of a cloud-masked,
+dry-season Landsat LST stack over Mumbai — runs end to end and returns physically plausible
+values (`notebooks/00_hello_earth_engine.ipynb`). Nothing was downloaded but three summary
+numbers, which is the constraint above working as designed. The per-cell reduction and
+everything right of it remain ⬜.
 
 ## 4. Request flow — a scenario query
 
