@@ -51,8 +51,8 @@ Package: `data_pipeline/`
 ### Pipeline scaffolding
 - [x] Rename `data-pipeline/` → `data_pipeline/`; installable package (`python -m data_pipeline.run`)
 - [x] `config.py` — `pydantic-settings` reading `.env`, replacing the notebook's `dotenv`
-- [ ] `ee_session.py` — one Earth Engine init shared by every stage
-- [ ] `run.py` — `--stage <name>`; each stage caches to `data/interim/` so a failure
+- [x] `ee_session.py` — one Earth Engine init shared by every stage
+- [x] `run.py` — `--stage <name>`; each stage caches to `data/interim/` so a failure
       does not force a full rebuild (Earth Engine quota is finite — ADR-0001)
 
 ### Geometry — everything else joins to this
@@ -64,8 +64,10 @@ Package: `data_pipeline/`
       *(11,944 cells, 458.3 km² land, reconciles with ward area to 0.01 km²)*
 
 ### Target variable
-- [ ] Promote the Phase 0 Landsat code into `sources/landsat.py`
-- [ ] Per-cell `lst_mean`, `lst_p90`, and `lst_obs_count` to flag cloud-starved cells
+- [x] Promote the Phase 0 Landsat code into `sources/landsat.py`
+- [x] Per-cell `lst_mean`, `lst_p90`, `lst_obs_count` → `data/interim/lst.parquet`
+      *(mean 39.7 °C — matches Phase 0's 39.8 by a separate route; no cell cloud-starved,
+      minimum 46 observations; park belt 3.15 °C cooler than the southern city)*
 - [ ] `lst_trend` — slope of per-year Mar–May medians
 
 ### Predictors

@@ -21,6 +21,71 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — The target variable: per-cell LST
+
+**Done**
+- `data_pipeline/ee_session.py` — one Earth Engine init per run, with the three known
+  failure modes funnelled into a message that points at `runbook.md` §6.
+- `data_pipeline/sources/landsat.py` → `data/interim/lst.parquet`. 11,944 rows,
+  `lst_mean` / `lst_p90` / `lst_obs_count`. 134 scenes, 102 s for the full reduction.
+- `data_pipeline/run.py` — `--stage {all,boundary,grid,landsat}`, skipping stages whose
+  output exists. Completes the Phase 1 scaffolding.
+
+**Results**
+- `lst_mean` 29.8 – 50.6, mean **39.7 °C**. `lst_p90` 32.3 – 55.8, mean 43.5 °C.
+- **Zero cells without a value; the sparsest has 46 cloud-free observations** (mean 58.3).
+  That closes the cloud-starvation open question — no cell is starved, so `lst_obs_count`
+  stays as a diagnostic rather than becoming a filter.
+- **The urban heat island signal is clean: the park belt is 3.15 °C cooler than the
+  southern city** (37.91 vs 41.06, inland cells only).
+
+**Decided**
+- **Chunked `reduceRegions`, 500 cells per request, 24 requests.** `reduceRegions` is
+  server-side, but the result still has to come down through `getInfo`, and one call over
+  12k cells exceeds the payload limit. Twenty-four requests each returning a fully reduced
+  table is the "export aggregates" pattern ADR-0001 asks for — not the per-cell `getInfo`
+  loop it forbids. The distinction is what is computed per request, not how many requests.
+- **Cells go up as explicit polygons with `geodesic=False`.** They were built as squares in
+  EPSG:32643, so their edges are straight in projection; letting Earth Engine assume
+  geodesic edges would bow them slightly outward.
+- **`lst_p90` is a *temporal* percentile**, not a spatial one within the cell — the hot
+  years, not the hot corner. Asserted `p90 ≥ median` on every cell (0 violations), which is
+  what would catch the two reducers being wired up backwards.
+
+**Broke / learned**
+- **Dropped `.filterBounds()` when promoting the notebook code.** The collection became the
+  *global* archive: 349,333 scenes instead of Mumbai's 134. The values were unaffected —
+  Earth Engine is lazy and spatially indexed, so it only ever computed the tiles the cells
+  touched, and the smoke test returned byte-identical numbers before and after the fix.
+  **That is what makes it dangerous:** the sole symptom was a scene count, and nothing would
+  have failed. Now guarded by `if n_scenes > 1000: raise` — a filter that silently does
+  nothing is worse than one that errors, so the check asserts the filter had an effect.
+- **The cold tail is water, not vegetation, and `land_fraction` predicts it monotonically:**
+  33.7 °C below 0.1 land, rising through 34.5 / 35.5 / 37.1 / 37.6 to 40.1 °C for fully
+  inland cells. A 6.4 °C spread. Water is deliberately unmasked (the sea genuinely is a cool
+  surface), so a mostly-sea cell reports mostly sea temperature while its predictors will
+  describe the land sliver. Keeping those cells with a `land_fraction` column — rather than
+  filtering at grid-build time — is what turned this from an assumption into evidence. Phase
+  2 now has a real distribution to pick a threshold against.
+- **Ward A looks like the coolest ward until its coastal cells are excluded**, then it falls
+  to 5th. The wards that are genuinely cool are T and R/C, which hold Sanjay Gandhi National
+  Park. A city-wide ward ranking published without that correction would have been wrong in
+  a way that looks entirely plausible — worth remembering when the hotspot ranking is built.
+- **The strongest check was again a reconciliation, not an assertion.** Phase 0's notebook
+  gave a city mean of 39.8 °C over the GAUL boundary at pixel level; this pipeline gives
+  39.7 °C over the ward boundary at 200 m cells with an extra year of data. Different code,
+  footprint and aggregation agreeing to 0.1 °C is worth more than any range check, and the
+  slight compression of the extremes (29.0→29.8, 51.6→50.6) is exactly what 200 m averaging
+  should do.
+
+**Next**
+- Sentinel-2 NDVI/NDBI/NDWI. The reduction machinery in `landsat.py` generalises, so the
+  chunked-`reduceRegions` helper should be lifted into a shared module rather than copied.
+- Still no `pytest`. The `cell_id` stability property and the `p90 ≥ median` invariant are
+  both load-bearing and both currently checked by scratch scripts.
+
+---
+
 ## 2026-07-20 — Phase 1 — The 200 m grid and a permanent cell_id
 
 **Done**

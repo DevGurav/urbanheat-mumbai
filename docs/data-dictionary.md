@@ -55,11 +55,50 @@ rankings no planner could act on.
 
 ## 2. Target variable
 
-| Column | Type | Unit | Range (expected) | Derivation |
+| Column | Type | Unit | Observed | Derivation |
 |---|---|---|---|---|
-| `lst_mean` | float | °C | ~28–48 | Landsat C2 L2 `ST_B10` × 0.00341802 + 149.0 − 273.15; QA_PIXEL cloud/shadow mask; median composite over Mar–May across years |
-| `lst_p90` | float | °C | — | 90th percentile of the same stack — captures extremes the median hides |
-| `lst_trend` | float | °C/yr | — | Slope of per-year Mar–May medians (needs ≥5 years) |
+| `lst_mean` | float | °C | 29.8 – 50.6, mean 39.7 | Landsat C2 L2 `ST_B10` × 0.00341802 + 149.0 − 273.15; QA_PIXEL cloud/shadow mask; **temporal median** over Mar–May 2019–2026, spatially averaged to the cell at 100 m |
+| `lst_p90` | float | °C | 32.3 – 55.8, mean 43.5 | **Temporal** 90th percentile of the same stack — the hot extreme the median hides. Not a spatial percentile within the cell |
+| `lst_obs_count` | float | count | 46 – 66, mean 58.3 | Cloud-free observations contributing to the cell. Flags cells whose composite rests on too little data to trust |
+| `lst_trend` | float | °C/yr | *not yet built* | Slope of per-year Mar–May medians (needs ≥5 years) |
+
+⚠️ **`lst_mean` is a spatial mean of a temporal median**, not a mean of means. The name is
+retained for continuity with the rest of the schema; the derivation column is authoritative.
+
+**Measured, Phase 1** — 11,944 cells, 134 scenes, Mar–May 2019–2026. **Zero cells lack an
+LST value** and the sparsest cell still has 46 cloud-free observations, which closes the
+cloud-starvation question in §5: no cell is starved, and `lst_obs_count` is retained as a
+diagnostic rather than a filter.
+
+**Independent validation.** Phase 0's notebook measured a city-wide mean of 39.8 °C over the
+*GAUL* boundary at pixel level. This pipeline measures 39.7 °C over the *ward* boundary,
+aggregated to 200 m cells, with an extra year of imagery — a different code path, footprint
+and aggregation agreeing to 0.1 °C. The extremes compress slightly (min 29.0 → 29.8, max
+51.6 → 50.6), which is what spatial averaging to 200 m should do.
+
+⚠️ **Water contamination scales with `land_fraction`, and it is large.** Water is
+deliberately *not* masked — the sea and the lakes are genuine cool surfaces — so a cell that
+is mostly sea reports mostly sea temperature:
+
+| `land_fraction` | cells | mean `lst_mean` |
+|---|---|---|
+| < 0.10 | 189 | 33.7 °C |
+| 0.10 – 0.25 | 126 | 34.5 °C |
+| 0.25 – 0.50 | 172 | 35.5 °C |
+| 0.50 – 0.90 | 295 | 37.1 °C |
+| 0.90 – 0.999 | 163 | 37.6 °C |
+| = 1.00 | 10,999 | 40.1 °C |
+
+The gradient is monotonic and spans 6.4 °C. For a model predicting *urban* heat from *urban*
+predictors, low-`land_fraction` cells carry a target describing water while their features
+describe land. **Phase 2 must choose and justify a threshold** — this is the empirical
+evidence the decision was deferred for (ADR-0007 consequences).
+
+**Physical check passed.** Restricted to fully-inland cells, the coolest wards are T (38.01)
+and R/C (38.03) — the two holding Sanjay Gandhi National Park — and the hottest are B
+(44.16), L (43.18) and C (42.84), all dense built-up. The park belt runs **3.15 °C cooler**
+than the southern city. Ward A appears coolest city-wide only until its coastal cells are
+excluded, at which point it falls to 5th: its apparent coolness is water, not shade.
 
 **Critical caveat.** This is **surface** temperature at ~10:30 local overpass, not air
 temperature and not the 3 pm peak. Every label in UI, API and report says *surface*
@@ -193,8 +232,12 @@ exactly why spatial block CV is mandatory (ADR-0006).
 
 **Still open**
 
-- [ ] Cloud-free observation count per cell after masking — if some cells are starved, the
-      composite is unreliable there and must be flagged (`lst_obs_count`)
+- [x] **Cloud-free observation count — resolved, no cell is starved.** Minimum 46
+      observations, mean 58.3, and zero cells without an LST value. `lst_obs_count` stays
+      in the table as a diagnostic, but no cell needs excluding on these grounds.
+- [ ] **`land_fraction` threshold for the model** — new, and now evidenced rather than
+      hypothetical. Cells below ~0.5 report substantially water temperature (see §2). Phase 2
+      must pick a cutoff or a weighting and justify it
 - [ ] Do Open-Meteo covariates survive Phase 2 feature selection?
 - [ ] WorldPop year alignment against Landsat composite years
 - [ ] Reduction method per source into a 200 m cell — area-weighted mean, majority class or
