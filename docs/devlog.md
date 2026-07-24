@@ -21,6 +21,55 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — Sentinel-2 indices, and the premise holds in the data
+
+**Done**
+- Refactored the chunked `reduceRegions` machinery out of `landsat.py` into
+  `sources/_reduce.py` (shared reducer + study-region helper). Landsat now calls it —
+  verified byte-identical, 0.000e+00 diff over 500 cells, so no quota re-spent.
+- `sources/sentinel2.py` → `data/interim/sentinel2.parquet`: `ndvi_mean`, `ndvi_p10`,
+  `ndbi_mean`, `ndwi_mean` over 11,944 cells, 542 dry-season scenes, 0 nulls. ~10.6 min.
+- Registered `sentinel2` as a `run.py` stage.
+
+**Results — the acceptance test passed**
+- **NDBI vs LST = +0.74**, the strongest single relationship: built-up index drives surface
+  heat harder than vegetation absence does. **NDVI vs LST = −0.45** — greener is cooler, the
+  core premise, clearly present. Two sensors, independent instruments, agreeing.
+- Ward cross-check is decisive: greenest wards by NDVI (R/C 0.39, T 0.33 — the national-park
+  wards) are the coolest by LST; greyest (C 0.13, B, L — dense island city) are the hottest.
+  This is the LST ward ranking reproduced from a completely different sensor.
+
+**Decided**
+- **30 m reduction, not 20 m.** The smoke test measured ~70 s/200 cells at 20 m (~70 min
+  full grid). A 200 m cell *mean* is insensitive to sampling below ~50 m for a smooth field,
+  so 30 m gives the same cell mean at ~half the cost — full grid ran in 10.6 min.
+- **`S2_SR_HARMONIZED`, not `S2_SR`.** The harmonised collection removes the post-2022
+  processing-baseline offset. A normalised difference is invariant to a common *scale* but
+  not to an *offset*, so the offset would bias NDVI across the 2019–2026 span if unremoved.
+- **SCL-band cloud masking**, water class kept — same principle as the LST QA mask. Simpler
+  and more directly explainable at a viva than Cloud Score+, and dry season is low-cloud.
+
+**Broke / learned**
+- **Dropped `.filterBounds()` again** in the first draft — the collection came back as
+  349,333 scenes (global) instead of 542. Same lazy-evaluation trap as the LST stage: the
+  reduced values are identical either way, the only symptom is the scene count. Same guard
+  now protects both stages.
+- **NDVI is non-monotonic with LST at the low end.** Binning LST by NDVI, the coolest bin is
+  *not* the lowest-NDVI one — cells under 0.1 NDVI include inland water, wet mangrove and
+  salt pans, which are cool *and* low-NDVI. So NDVI alone cannot tell "bare hot" from "wet
+  cool"; NDBI, NDWI and the WorldCover water fraction are what disambiguate. Good argument
+  for the multi-feature model, and a limitation worth stating rather than hiding.
+- The refactor-then-verify-byte-identical pattern is worth keeping: it let me change a
+  shared code path with confidence and without re-spending Earth Engine quota to prove it.
+
+**Next**
+- ESA WorldCover land-cover fractions (tree / grass / built / water) per cell — the water
+  fraction is now known to be needed to disambiguate the low-NDVI cells above.
+- Still no `pytest`; the byte-identical refactor check and the index invariants ran as
+  scratch scripts.
+
+---
+
 ## 2026-07-20 — Phase 1 — The target variable: per-cell LST
 
 **Done**

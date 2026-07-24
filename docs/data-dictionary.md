@@ -139,25 +139,51 @@ than a tenth of a cell's worth of land. Largest ward R/C at 1,259 cells, smalles
 
 ### Vegetation & water
 
-| Column | Unit | Range | Derivation |
+| Column | Unit | Observed | Derivation |
 |---|---|---|---|
-| `ndvi_mean` | index | −1…1 | `(NIR−Red)/(NIR+Red)` = S2 `(B8−B4)/(B8+B4)`, Mar–May median. Primary cooling driver |
-| `ndvi_p10` | index | −1…1 | Worst-case greenness |
-| `ndwi_mean` | index | −1…1 | `(B3−B8)/(B3+B8)` — water presence |
+| `ndvi_mean` | index | −0.22 … +0.75, mean +0.29 | `(NIR−Red)/(NIR+Red)` = S2 `(B8−B4)/(B8+B4)`, Mar–May median. Primary cooling driver |
+| `ndvi_p10` | index | −0.72 … +0.62, mean +0.19 | Temporal 10th percentile — worst-case (dry-year) greenness |
+| `ndwi_mean` | index | −0.67 … +0.35, mean −0.32 | `(B3−B8)/(B3+B8)`. Over land this tracks canopy water, so it runs inverse to NDVI, not "open water" |
 | `tree_fraction` | fraction | 0…1 | WorldCover class 10 share of cell |
 | `grass_fraction` | fraction | 0…1 | WorldCover class 30 share |
 
+Sentinel-2 indices come from `COPERNICUS/S2_SR_HARMONIZED`, SCL cloud/shadow-masked,
+Mar–May 2019–2026 (542 scenes), reduced to the cell at 30 m. `S2_SR_HARMONIZED` is required
+specifically: it removes the post-2022 processing-baseline offset that would otherwise skew
+a normalised-difference ratio.
+
 ### Built environment
 
-| Column | Unit | Range | Derivation |
+| Column | Unit | Observed | Derivation |
 |---|---|---|---|
-| `ndbi_mean` | index | −1…1 | `(SWIR−NIR)/(SWIR+NIR)` = S2 `(B11−B8)/(B11+B8)`. Primary warming driver |
+| `ndbi_mean` | index | −0.44 … +0.40, mean −0.02 | `(SWIR−NIR)/(SWIR+NIR)` = S2 `(B11−B8)/(B11+B8)`. Primary warming driver |
 | `built_fraction` | fraction | 0…1 | WorldCover class 50 share |
 | `albedo` | fraction | 0…1 | Liang (2001) narrowband→broadband from Landsat SR. **Cool-roof lever** |
 | `building_density` | m²/m² | 0…~2 | OSM building footprint area ÷ cell area |
 | `building_count` | count | — | OSM buildings per cell |
 | `road_density` | m/m² | — | OSM road length ÷ cell area |
 | `impervious_fraction` | fraction | 0…1 | built + roads, capped at 1 |
+
+**Sentinel-2 indices validated against LST (Phase 1).** The whole premise is that vegetation
+cools and built-up warms, so the acceptance test is the sign and strength of the correlation
+with `lst_mean` (land cells, `land_fraction ≥ 0.9`):
+
+| Predictor | corr with `lst_mean` | Reading |
+|---|---|---|
+| `ndbi_mean` | **+0.74** | Built-up index is the *strongest* single driver of surface heat |
+| `ndvi_mean` | **−0.45** | Greener is cooler — the core premise, clearly present |
+| `ndwi_mean` | +0.24 | Over land, higher NDWI ≈ less canopy ≈ warmer |
+| `ndvi_p10` | −0.25 | Worst-case greenness, weaker than the median |
+
+Two independent sensors agree at ward level: the greenest wards by NDVI — R/C (0.39) and
+T (0.33), which hold Sanjay Gandhi National Park — are exactly the coolest by LST, and the
+greyest — C (0.13), B, L, all dense island-city — are the hottest.
+
+⚠️ **NDVI is non-monotonic with LST at the extreme low end.** Cells with NDVI < 0.1 are *not*
+the hottest — inland water, wet mangrove and salt-pan cells have both low NDVI and low
+temperature. NDVI alone therefore cannot separate "bare hot" from "wet cool"; the model needs
+`ndbi_mean`, `ndwi_mean` and the WorldCover water fraction to disambiguate. A notable finding
+for the report: in a dense tropical city the built-up signal outweighs the vegetation signal.
 
 ### Terrain & context
 

@@ -71,7 +71,9 @@ Package: `data_pipeline/`
 - [ ] `lst_trend` — slope of per-year Mar–May medians
 
 ### Predictors
-- [ ] Sentinel-2 → `ndvi_mean`, `ndvi_p10`, `ndbi_mean`, `ndwi_mean`
+- [x] Sentinel-2 → `ndvi_mean`, `ndvi_p10`, `ndbi_mean`, `ndwi_mean` → `data/interim/sentinel2.parquet`
+      *(11,944 cells, 0 nulls; NDBI vs LST +0.74, NDVI vs LST −0.45 — premise holds. Reducer
+      shared into `sources/_reduce.py`, Landsat refactor byte-identical)*
 - [ ] ESA WorldCover → tree / grass / built / water fractions per cell
 - [ ] WorldPop → `population`, `pop_density`
 - [ ] SRTM → `elevation_mean`, `slope_mean`; plus `dist_coast`, `dist_water`
