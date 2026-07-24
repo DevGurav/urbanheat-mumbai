@@ -144,8 +144,8 @@ than a tenth of a cell's worth of land. Largest ward R/C at 1,259 cells, smalles
 | `ndvi_mean` | index | −0.22 … +0.75, mean +0.29 | `(NIR−Red)/(NIR+Red)` = S2 `(B8−B4)/(B8+B4)`, Mar–May median. Primary cooling driver |
 | `ndvi_p10` | index | −0.72 … +0.62, mean +0.19 | Temporal 10th percentile — worst-case (dry-year) greenness |
 | `ndwi_mean` | index | −0.67 … +0.35, mean −0.32 | `(B3−B8)/(B3+B8)`. Over land this tracks canopy water, so it runs inverse to NDVI, not "open water" |
-| `tree_fraction` | fraction | 0…1 | WorldCover class 10 share of cell |
-| `grass_fraction` | fraction | 0…1 | WorldCover class 30 share |
+| `tree_fraction` | fraction | 0…1, mean 0.34 | WorldCover class 10 share of cell |
+| `grass_fraction` | fraction | 0…1, mean 0.03 | WorldCover class 30 share |
 
 Sentinel-2 indices come from `COPERNICUS/S2_SR_HARMONIZED`, SCL cloud/shadow-masked,
 Mar–May 2019–2026 (542 scenes), reduced to the cell at 30 m. `S2_SR_HARMONIZED` is required
@@ -157,12 +157,58 @@ a normalised-difference ratio.
 | Column | Unit | Observed | Derivation |
 |---|---|---|---|
 | `ndbi_mean` | index | −0.44 … +0.40, mean −0.02 | `(SWIR−NIR)/(SWIR+NIR)` = S2 `(B11−B8)/(B11+B8)`. Primary warming driver |
-| `built_fraction` | fraction | 0…1 | WorldCover class 50 share |
+| `built_fraction` | fraction | 0…1, mean 0.39 | WorldCover class 50 share |
 | `albedo` | fraction | 0…1 | Liang (2001) narrowband→broadband from Landsat SR. **Cool-roof lever** |
 | `building_density` | m²/m² | 0…~2 | OSM building footprint area ÷ cell area |
 | `building_count` | count | — | OSM buildings per cell |
 | `road_density` | m/m² | — | OSM road length ÷ cell area |
 | `impervious_fraction` | fraction | 0…1 | built + roads, capped at 1 |
+
+**ESA WorldCover — full class set (Phase 1).** WorldCover v200, a single static 10 m mosaic
+(2021), reduced to per-class pixel *fractions* per cell via a frequency histogram. The sea is
+class 80, not masked, so every cell has ~425 classified pixels and the fractions sum to 1
+(share of the whole cell). Inspection showed the original tree/grass/built plan was too
+narrow, so all occurring classes are kept:
+
+| Column | Unit | Observed mean | WorldCover class |
+|---|---|---|---|
+| `tree_fraction` | fraction | 0.34 | 10 Tree cover |
+| `shrub_fraction` | fraction | ~0 | 20 Shrubland |
+| `grass_fraction` | fraction | 0.03 | 30 Grassland |
+| `crop_fraction` | fraction | 0.04 | 40 Cropland |
+| `built_fraction` | fraction | 0.39 | 50 Built-up |
+| `bare_fraction` | fraction | 0.02 | 60 Bare / sparse |
+| `water_fraction` | fraction | 0.08 | 80 Permanent water |
+| `wetland_fraction` | fraction | ~0 | 90 Herbaceous wetland |
+| `mangrove_fraction` | fraction | 0.10 | 95 Mangroves |
+| `wc_pixels` | count | ~425 | Classified pixels in the cell (QA / denominator) |
+
+City composition: **built 39%, tree 34%, mangrove 10%, water 8%, crop 4%.** Mangrove at 10%
+is a major Mumbai cover with a distinct (cool) thermal signature — the reason it is broken out
+from `tree_fraction` rather than lumped in. Snow (70) and moss (100) never occur and are
+dropped.
+
+⚠️ **`crop_fraction` is not farmland here.** Crop-dominated cells are the *hottest* land in the
+city (mean 42.6 °C, above built's 41.9; 12 of the 20 hottest cells), because WorldCover labels
+Mumbai's dry-season bare ground, fallow land and the Deonar dump as cropland. Read it as
+"dry bare ground", not agriculture.
+
+**Validated against LST and the Sentinel-2 indices.** Signs are all as physics requires, and
+the two independent datasets corroborate each other:
+
+| Relationship | corr | Reading |
+|---|---|---|
+| `built_fraction` vs `lst_mean` | +0.59 | Built-up is hot |
+| `water_fraction` vs `lst_mean` | −0.46 | Water is cool |
+| `mangrove_fraction` vs `lst_mean` | −0.46 | Mangrove is cool — a real distinct cooler |
+| `built_fraction` vs `ndbi_mean` | +0.46 | Agrees with the S2 built-up index |
+| `tree_fraction` vs `ndvi_mean` | +0.53 | Agrees with the S2 vegetation index |
+| `water_fraction` vs `ndwi_mean` | +0.57 | Agrees with the S2 water index |
+
+**`water_fraction` resolves the low-NDVI ambiguity.** The 285 land cells that were low-NDVI
+*and* cool — unexplainable from NDVI alone (§ Sentinel-2) — have mean `water_fraction` **0.96**
+against 0.03 for every other cell. They are inland water and creeks. This is the disambiguation
+the column was added for, confirmed.
 
 **Sentinel-2 indices validated against LST (Phase 1).** The whole premise is that vegetation
 cools and built-up warms, so the acceptance test is the sign and strength of the correlation

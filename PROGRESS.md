@@ -74,7 +74,10 @@ Package: `data_pipeline/`
 - [x] Sentinel-2 → `ndvi_mean`, `ndvi_p10`, `ndbi_mean`, `ndwi_mean` → `data/interim/sentinel2.parquet`
       *(11,944 cells, 0 nulls; NDBI vs LST +0.74, NDVI vs LST −0.45 — premise holds. Reducer
       shared into `sources/_reduce.py`, Landsat refactor byte-identical)*
-- [ ] ESA WorldCover → tree / grass / built / water fractions per cell
+- [x] ESA WorldCover → per-class fractions per cell → `data/interim/worldcover.parquet`
+      *(9 classes, not just tree/grass/built: mangrove is 10% of the city, crop is dry bare
+      ground and the hottest class. built vs LST +0.59; water_fraction 0.96 on the low-NDVI
+      cool cells resolves that ambiguity)*
 - [ ] WorldPop → `population`, `pop_density`
 - [ ] SRTM → `elevation_mean`, `slope_mean`; plus `dist_coast`, `dist_water`
 - [ ] OSM via OSMnx → `building_density`, `building_count`, `road_density`, `dist_park`

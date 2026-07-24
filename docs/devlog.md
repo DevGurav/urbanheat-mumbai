@@ -21,6 +21,50 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — ESA WorldCover land-cover fractions
+
+**Done**
+- `sources/worldcover.py` → `data/interim/worldcover.parquet`: nine per-class fractions per
+  cell plus `wc_pixels`, over 11,944 cells, 0 empty. Single static 10 m mosaic, so the full
+  grid ran in 78 s. Registered as a `run.py` stage.
+
+**Decided**
+- **Widened the class list from the planned tree/grass/built.** Inspection over four
+  representative cells showed the plan missed what Mumbai actually is: the greenest cell is
+  100% **mangrove** (class 95), and the hottest is 71% **cropland** (class 40). Kept all nine
+  occurring classes — city composition came out built 39%, tree 34%, mangrove 10%, water 8%,
+  crop 4%. Mangrove alone is 10% of the city with a −0.46 LST correlation; lumping it into
+  "tree" would have hidden a major distinct cooler.
+- **Frequency-histogram reducer, fractions as share of the whole cell.** The sea is class 80,
+  not masked, so every cell has ~425 classified pixels and the fractions sum to 1 (asserted).
+  Reduced at native 10 m — categorical class codes must be counted at native scale, never
+  resampled to a coarser one.
+
+**Broke / learned**
+- **`reduceRegions` names a frequency-histogram output `histogram`, not after the band.** My
+  first pass read a `Map` property and every cell came back empty; the reducer, not the band,
+  names the property. Caught immediately by the "every cell empty" guard, which is exactly the
+  failure that guard exists for. Fixed to read `histogram`.
+- **"Cropland" in Mumbai is dry bare ground, not farmland.** Crop-dominated cells are the
+  *hottest* land in the city (42.6 °C mean, above built's 41.9; 12 of the 20 hottest are
+  crop). WorldCover labels the Deonar dump, fallow and dry-season bare land as cropland.
+  Recorded as a caveat — using `crop_fraction` as "agriculture" would be wrong.
+- **The water-disambiguation feature works, decisively.** The 285 low-NDVI *cool* cells that
+  NDVI alone could not explain (the Sentinel-2 entry flagged them) have mean `water_fraction`
+  0.96 vs 0.03 elsewhere. They are inland water and creeks. The reason for keeping the water
+  class is now evidence, not a hunch.
+- **Two independent datasets corroborate.** WorldCover fractions agree with the Sentinel-2
+  indices — built↔NDBI +0.46, tree↔NDVI +0.53, water↔NDWI +0.57 — which is the cross-check
+  that matters more than any single number: two different instruments telling the same story.
+
+**Next**
+- WorldPop population density per cell — the human-exposure layer, and the first that is not
+  about the physical surface.
+- Still no `pytest`; the WorldCover class-sum invariant and the cross-dataset checks ran as
+  scratch scripts.
+
+---
+
 ## 2026-07-20 — Phase 1 — Sentinel-2 indices, and the premise holds in the data
 
 **Done**
