@@ -92,3 +92,19 @@ regions without starving the training folds (`ml-methodology.md` §2).
 within-cell heterogeneity dominates the residuals. In either case the honest response is a
 finer grid **and** a re-derived `cell_id` — a pipeline rebuild under a superseding ADR, not
 a patch to this one.
+
+---
+
+## Correction — 2026-07-20
+
+This ADR quotes the study area as **~603 km²** and the grid as **~15,000 cells** (Context,
+and Consequences "~15k rows"). Both were pre-measurement estimates. When the real BMC ward
+boundaries were loaded (Phase 1, `data-dictionary.md`), the study area measured **458 km²**,
+producing **11,944 cells** — the 603 km² figure was the two *districts* including tidal
+area, not the ward union the project actually uses.
+
+**The decision is unchanged.** 11,944 cells is still comfortable for gradient-boosted trees,
+and it *strengthens* the rejection of a 300 m grid (which would give only ~5,000 rows, not
+the ~6,700 estimated here). The live figures live in `data-dictionary.md`; this note exists
+so the ADR is not read as asserting a number now known to be wrong. Per the correction-note
+rule in [README.md](README.md), the original text above is left intact.

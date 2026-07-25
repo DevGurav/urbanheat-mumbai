@@ -7,6 +7,10 @@ decision → consequences.
 
 - ADRs are **immutable** once committed. To reverse a decision, write a new ADR and mark
   the old one `Superseded by ADR-XXXX`.
+- The one permitted edit is a **dated correction note appended at the end** — for a
+  supporting *fact* that later proved wrong (a figure, a dataset detail) where the
+  *decision* still stands. It never alters the original argument; it annotates it. A change
+  to the decision itself always requires a new ADR, never a correction note.
 - Record the decision when it is made, not after it works out. The rejected options are
   the valuable part — they are what a viva panel asks about.
 - Number sequentially: `NNNN-short-kebab-title.md`.
