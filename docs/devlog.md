@@ -21,6 +21,33 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-26 — Phase 1 → 2 — Test suite before the modelling code
+
+**Done**
+- `tests/` with pytest — 20 tests, green in ~2 s. Split by dependency:
+  - **Pure-logic (always run):** `cell_id` is the position formula and is stable when the study
+    area shrinks (the guarantee that stops a boundary change repointing saved scenarios);
+    `neighbourhood_mean` centre/corner/isolated; the assembly gate rejects nulls, out-of-range
+    values and duplicate ids; the ward gate rejects a missing/unexpected code and the wrong CRS.
+  - **Data-backed (skip if the parquets aren't built):** `features.parquet` is 11,944 × 42, has
+    no all-null source column (the reducer-name-trap guard), `lst_p90 ≥ lst_mean`, WorldCover
+    fractions sum to 1, unit-range columns stay in range; the real DataMeet wards pass the gate.
+- `pytest>=8` in the dev group; `uv run pytest` documented in `runbook.md` §3.
+
+**Decided**
+- **Pure-logic and data-backed tests separated so a fresh clone runs green** without EE, `.env`
+  or built artifacts — the data-backed ones `pytest.skip` cleanly. Locks the invariants that
+  bit as silent bugs four times in Phase 1 (three reducer-name traps, `cell_id` stability)
+  before modelling code — where a silent error is far more expensive to find — lands in Phase 2.
+- **`test_schema_is_42_columns` is a deliberate lock:** adding or removing a feature now has to
+  update the test, so schema drift is a conscious change, not an accident.
+
+**Next**
+- Phase 2 kickoff planning pass — baseline → boosted trees under spatial block CV, SHAP, HVI,
+  scenario engine (where the albedo confound flag comes due).
+
+---
+
 ## 2026-07-21 — Phase 1 — Exploration notebook: the exit-criterion render
 
 **Done**

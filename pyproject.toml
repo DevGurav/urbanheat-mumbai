@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.6"]
+dev = ["ruff>=0.6", "pytest>=8.0"]
 
 # The pipeline is a real package from Phase 1 so `python -m data_pipeline.run` works
 # without sys.path manipulation. Note the underscore: `data-pipeline` with a hyphen is
@@ -47,3 +47,9 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Data-backed tests skip cleanly when the gitignored parquets have not been built yet, so a
+# fresh clone still gets a green pure-logic run.
+addopts = "-q"

@@ -104,6 +104,9 @@ kernel.
 *[Phase 1+]* Pipeline · *[Phase 3+]* Backend · *[Phase 5+]* Frontend — filled in as built.
 
 ```bash
+# Tests — fast; pure-logic tests need no data, data-backed tests skip if parquets absent
+uv run pytest
+
 # Pipeline (Phase 1) — deliberate, not on a loop; it spends Earth Engine quota
 python -m data_pipeline.run --stage all
 
