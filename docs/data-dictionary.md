@@ -245,10 +245,23 @@ for the report: in a dense tropical city the built-up signal outweighs the veget
 
 ### Human exposure
 
-| Column | Unit | Notes |
-|---|---|---|
-| `population` | persons | WorldPop, summed to cell |
-| `pop_density` | persons/km² | Normalised |
+| Column | Unit | Observed | Notes |
+|---|---|---|---|
+| `population` | persons | 0 … 2,641, total 11.7 M | WorldPop `GP/100m/pop`, year **2020** (latest available), person count **summed** to the cell at native 100 m |
+| `pop_density` | persons/km² | median 26,240, max 66,029 | `population ÷ 0.04 km²` (full 200 m cell). Coastal cells with little land under-state true density; noted, minor since they hold few people |
+
+**WorldPop validated (Phase 1).** The total over the grid is **11.7 M**, against BMC's ~12.4 M
+census — the strongest possible check that the units are person-counts (sum, not mean), the
+year is right and the mosaic is not double-counting. People land where expected:
+`pop_density` correlates **+0.74** with `built_fraction` and **−0.31 / −0.33** with
+tree / water. The densest cells resolve to Dharavi (ward G/N) and Parel (F/S) at ~65,000/km²,
+Mumbai's known dense cores.
+
+**The HVI seed.** `pop_density` correlates **+0.56** with `lst_mean` — population and surface
+heat co-locate, which is exactly what makes a Heat Vulnerability Index meaningful: the people
+are where the heat is. 225 cells sit in the top decile of *both* density and LST, concentrated
+in Kurla (L, K/E), Ghatkopar (N), Parel (F/S) and Dharavi (G/N) — the wards a heat action plan
+would prioritise.
 
 ### Weather covariates
 
@@ -311,7 +324,8 @@ exactly why spatial block CV is mandatory (ADR-0006).
       hypothetical. Cells below ~0.5 report substantially water temperature (see §2). Phase 2
       must pick a cutoff or a weighting and justify it
 - [ ] Do Open-Meteo covariates survive Phase 2 feature selection?
-- [ ] WorldPop year alignment against Landsat composite years
+- [x] **WorldPop year — resolved: 2020**, the latest the collection offers (it ends at 2020),
+      one year inside the 2019–2026 LST window. Total reconciles to 11.7 M vs BMC's ~12.4 M.
 - [ ] Reduction method per source into a 200 m cell — area-weighted mean, majority class or
       sum. Differs by source and must be recorded here as each one lands (ADR-0007)
 

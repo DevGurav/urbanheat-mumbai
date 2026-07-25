@@ -21,6 +21,49 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — WorldPop population, and the HVI signal is real
+
+**Done**
+- `sources/worldpop.py` → `data/interim/worldpop.parquet`: `population` (persons) and
+  `pop_density` (persons/km²) over 11,944 cells. WorldPop `GP/100m/pop`, year 2020, 81 s.
+  Registered as a `run.py` stage.
+
+**Decided**
+- **Year 2020**, the latest the collection offers (it ends at 2020) — one year inside the
+  2019–2026 LST window. Closes the alignment question data-dictionary §5 had left open.
+- **Sum reducer at native 100 m.** WorldPop stores a *person count* per pixel, so the cell
+  value is a sum, not a mean, and a count must be summed at native resolution — reducing at a
+  coarser scale would mis-count. `pop_density` divides by the full 0.04 km² cell.
+
+**Broke / learned**
+- **`Reducer.sum()` names its output `sum`, not after the band** — the same trap as
+  WorldCover's `histogram`. First run read a `population` property, got 0 everywhere, and the
+  total-population reconciliation guard fired: "total 0 is not near Mumbai's ~12 M". That guard
+  is the whole point of the stage — a population layer that silently zeroed would be invisible
+  without it. There is now a clear pattern worth internalising: **non-default reducers name
+  their output after the reducer, and the shared helper must be told that name.**
+- **The reconciliation is the strongest check in the pipeline so far.** Total over the grid is
+  **11.7 M** against BMC's ~12.4 M census. That single number confirms units, year and mosaic
+  in one shot — worth more than any range assertion.
+
+**Results — the HVI premise holds**
+- `pop_density` vs `built_fraction` **+0.74**, vs tree/water −0.31/−0.33: people live in the
+  built-up cells, not the parks or the creeks, exactly as they should.
+- **`pop_density` vs `lst_mean` +0.56** — population and surface heat co-locate. This is the
+  finding the Heat Vulnerability Index rests on: the people are where the heat is. Without this
+  correlation the HVI would be averaging two unrelated things.
+- The densest cells resolve to Dharavi (G/N) and Parel (F/S) at ~65,000/km², Mumbai's known
+  dense cores. 225 cells are in the top decile of *both* density and LST, clustered in Kurla,
+  Ghatkopar, Parel and Dharavi — the HVI's future hotspot list, visible already in the raw data.
+
+**Next**
+- SRTM elevation + slope, then distance-to-coast/water/park. These are the terrain and
+  context features; distance-to-coast is expected to matter a lot in Mumbai (sea breeze).
+- Still no `pytest`; the reducer-name traps (`sum`, `histogram`) would each be a one-line
+  regression test worth having before there are eight source modules to keep straight.
+
+---
+
 ## 2026-07-20 — Phase 1 — ESA WorldCover land-cover fractions
 
 **Done**

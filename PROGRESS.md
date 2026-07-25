@@ -78,7 +78,9 @@ Package: `data_pipeline/`
       *(9 classes, not just tree/grass/built: mangrove is 10% of the city, crop is dry bare
       ground and the hottest class. built vs LST +0.59; water_fraction 0.96 on the low-NDVI
       cool cells resolves that ambiguity)*
-- [ ] WorldPop → `population`, `pop_density`
+- [x] WorldPop → `population`, `pop_density` → `data/interim/worldpop.parquet`
+      *(year 2020; total 11.7 M reconciles with BMC's ~12.4 M. density vs built +0.74, vs LST
+      +0.56 — the HVI premise: people are where the heat is. Densest cells = Dharavi, Parel)*
 - [ ] SRTM → `elevation_mean`, `slope_mean`; plus `dist_coast`, `dist_water`
 - [ ] OSM via OSMnx → `building_density`, `building_count`, `road_density`, `dist_park`
 - [ ] Landsat optical → `albedo` (Liang 2001) — the cool-roof lever
