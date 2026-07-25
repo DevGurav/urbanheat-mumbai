@@ -24,6 +24,7 @@ from data_pipeline.sources._reduce import reduce_to_cells, study_region
 
 # --- Collection 2 Level-2 scaling constants (USGS Data Format Control Book) ---
 ST_SCALE, ST_OFFSET = 0.00341802, 149.0  # ST_B10 → Kelvin
+SR_SCALE, SR_OFFSET = 0.0000275, -0.2  # SR_Bx → surface reflectance 0–1 (used by albedo)
 KELVIN_TO_C = 273.15
 
 # QA_PIXEL bits to reject. Water (7) is deliberately kept — the sea and the lakes are
@@ -38,28 +39,28 @@ MAX_SCENE_CLOUD = 40  # percent; scene-level pre-filter only
 REDUCE_SCALE_M = 100
 
 
-def prepare(image: ee.Image) -> ee.Image:
-    """Scale one scene's thermal band to °C and mask cloud-affected pixels."""
+def cloud_mask(image: ee.Image) -> ee.Image:
+    """1 where the pixel is clear of cloud, shadow, cirrus and dilated cloud; else 0.
+
+    Shared with the albedo stage so both apply the exact same `QA_PIXEL` masking.
+    """
     qa = image.select("QA_PIXEL")
     clear = qa.bitwiseAnd(1 << CLOUD_BITS[0]).eq(0)
     for bit in CLOUD_BITS[1:]:
         clear = clear.And(qa.bitwiseAnd(1 << bit).eq(0))
-
-    kelvin = image.select("ST_B10").multiply(ST_SCALE).add(ST_OFFSET)
-    lst = kelvin.subtract(KELVIN_TO_C).rename("LST")
-
-    return lst.updateMask(clear).copyProperties(image, ["system:time_start"])
+    return clear
 
 
-def build_composite(region: ee.Geometry) -> tuple[ee.Image, int]:
-    """Three-band composite over the dry-season stack. Returns (image, scene count).
+def dry_season_collection(region: ee.Geometry) -> ee.ImageCollection:
+    """Landsat 8/9 C2 L2 over `region`, dry-season Mar–May, scene-cloud pre-filtered.
 
     `region` is not optional. Without `filterBounds` the collection is the *global* archive
     — ~349k scenes rather than Mumbai's ~130. Earth Engine's laziness means the reduced
     values come out the same either way, which is what makes the omission dangerous: the
-    only visible symptom is a scene count nobody checks.
+    only visible symptom is a scene count nobody checks. Shared with the albedo stage so both
+    composite over identical scenes.
     """
-    collection = (
+    return (
         ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
         .merge(ee.ImageCollection("LANDSAT/LC09/C02/T1_L2"))
         .filterBounds(region)
@@ -68,6 +69,17 @@ def build_composite(region: ee.Geometry) -> tuple[ee.Image, int]:
         .filter(ee.Filter.lt("CLOUD_COVER", MAX_SCENE_CLOUD))
     )
 
+
+def prepare(image: ee.Image) -> ee.Image:
+    """Scale one scene's thermal band to °C and mask cloud-affected pixels."""
+    kelvin = image.select("ST_B10").multiply(ST_SCALE).add(ST_OFFSET)
+    lst = kelvin.subtract(KELVIN_TO_C).rename("LST")
+    return lst.updateMask(cloud_mask(image)).copyProperties(image, ["system:time_start"])
+
+
+def build_composite(region: ee.Geometry) -> tuple[ee.Image, int]:
+    """Three-band composite over the dry-season stack. Returns (image, scene count)."""
+    collection = dry_season_collection(region)
     stack = ee.ImageCollection(collection.map(prepare)).select("LST")
 
     # Median, not mean: it resists the handful of cloud pixels the QA mask inevitably
