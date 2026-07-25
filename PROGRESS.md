@@ -81,7 +81,9 @@ Package: `data_pipeline/`
 - [x] WorldPop → `population`, `pop_density` → `data/interim/worldpop.parquet`
       *(year 2020; total 11.7 M reconciles with BMC's ~12.4 M. density vs built +0.74, vs LST
       +0.56 — the HVI premise: people are where the heat is. Densest cells = Dharavi, Parel)*
-- [ ] SRTM → `elevation_mean`, `slope_mean`; plus `dist_coast`, `dist_water`
+- [x] SRTM → `elevation_mean`, `slope_mean`; plus `dist_coast`, `dist_water` → `data/interim/terrain.parquet`
+      *(elevation finds SGNP hills at 459 m; +4 °C sea-breeze gradient over the first 6 km,
+      reversing in the park. cumulativeCost not fastDistanceTransform; sea = large connected water)*
 - [ ] OSM via OSMnx → `building_density`, `building_count`, `road_density`, `dist_park`
 - [ ] Landsat optical → `albedo` (Liang 2001) — the cool-roof lever
 - [ ] Neighbourhood aggregates → `ndvi_neigh_mean`, `built_neigh_mean`

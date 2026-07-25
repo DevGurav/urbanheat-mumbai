@@ -21,6 +21,49 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — SRTM terrain and distance-to-coast
+
+**Done**
+- `sources/terrain.py` → `data/interim/terrain.parquet`: `elevation_mean`, `slope_mean`,
+  `dist_coast`, `dist_water` over 11,944 cells. 499 s (cumulativeCost is the heaviest source).
+  Registered as a `run.py` stage.
+
+**Decided**
+- **`cumulativeCost` for distances, not `fastDistanceTransform`.** Tested FDT first; its
+  pixel-unit squared-distance output inflated far distances badly — SGNP read as 34 km from a
+  coast that is ~9 km away, and interior `dist_water` was ~2× too large — while near-shore
+  values looked fine, so the bug would have been easy to miss. `cumulativeCost` returns metres
+  directly (cost 1/pixel × pixel width), is robust to the projection scale, and validated at
+  six known landmarks (Colaba, Marine Drive, SGNP, Powai, Kurla, Bandra).
+- **The "sea" is large connected permanent water, not all water.** JRC GSW permanent water
+  (occurrence ≥ 80%), keep only bodies > 10.24 km² (≥ 1024 px at 100 m): the Arabian Sea and
+  Thane creek qualify, Powai (2 km²) and Vihar (7 km²) do not. That is what makes `dist_coast`
+  (distance to tidal water) meaningfully different from `dist_water` (distance to any water) —
+  Powai's are 6.7 km vs 0.2 km.
+- **Distances computed on a 100 m UTM grid**, elevation/slope at native 30 m. cumulativeCost
+  over a finer grid is far more expensive and a 200 m cell does not need sub-100 m distance.
+
+**Broke / learned**
+- **`ee.Projection(...)` at module import fails** — it needs Earth Engine initialised, which
+  happens inside `build()`. Moved the projection construction into the image function. A
+  reminder that anything touching the EE API must be lazy, not module-level.
+- **The sea-breeze gradient is real but confounded by the park.** LST climbs +4 °C from the
+  shore (37.7 °C) to 6 km inland (41.7 °C), then *falls* beyond 6 km (39.1 °C) — because the
+  deepest interior is Sanjay Gandhi National Park, cool for vegetation/elevation reasons, not
+  coastal ones. So `dist_coast` is non-monotonic with LST and its raw correlation is only
+  +0.10; it is a real driver but only in combination with NDVI and elevation. Third instance
+  of the same lesson (low-NDVI water cells, crop=dry-bare, now dist_coast=park): **no single
+  feature separates the causes — that is what the model is for.**
+- **A cheap invariant that paid off:** `dist_coast ≥ dist_water` in all 11,944 cells (the sea
+  is a subset of all water). 0 violations confirms the two masks are mutually consistent.
+
+**Next**
+- OSM via OSMnx — building density/count, road density, distance-to-park. First non-Earth-
+  Engine source; needs Overpass, not the reduce helper.
+- Then Landsat albedo, Open-Meteo, and the assembly into `features.parquet`.
+
+---
+
 ## 2026-07-20 — Phase 1 — WorldPop population, and the HVI signal is real
 
 **Done**

@@ -233,15 +233,44 @@ for the report: in a dense tropical city the built-up signal outweighs the veget
 
 ### Terrain & context
 
-| Column | Unit | Notes |
+| Column | Unit | Observed | Notes |
+|---|---|---|---|
+| `elevation_mean` | m | −6 … 459, median 11 | SRTM `USGS/SRTMGL1_003`, mean at native 30 m |
+| `slope_mean` | ° | 0 … 39, median 3 | `ee.Terrain.slope` of SRTM, mean |
+| `dist_coast` | m | 0 … 9,648, median 2,920 | Surface-spread (`cumulativeCost`) distance to the **sea**: large connected permanent water (Arabian Sea + tidal creeks), excluding freshwater lakes |
+| `dist_water` | m | 0 … 5,861, median 1,808 | Distance to **any** permanent water (JRC GSW occurrence ≥ 80%) — sea, creeks and lakes |
+| `dist_park` | m | *pending (OSM stage)* | Distance to nearest OSM park/green polygon |
+| `ndvi_neigh_mean` | index | *pending (assembly)* | Mean NDVI of adjacent cells — explicit spatial context (ADR-0006) |
+| `built_neigh_mean` | fraction | *pending (assembly)* | Mean built fraction of adjacent cells |
+
+**Terrain validated (Phase 1).** The five highest cells are all ward T at 440–479 m — Sanjay
+Gandhi National Park's peaks — vegetated and cool. `dist_coast ≥ dist_water` holds in all
+11,944 cells (0 violations), as it must: the sea is a subset of all permanent water.
+
+⚠️ **Distances are computed with `cumulativeCost`, not `fastDistanceTransform`.** The latter's
+pixel-unit output inflated far distances badly in testing (SGNP read as 34 km from a coast
+~9 km away); `cumulativeCost` returns metres directly and validated at six known landmarks.
+The **sea** is defined as *large connected* permanent water (> 10.24 km², i.e. ≥ 1024 pixels
+at 100 m) so the Arabian Sea and Thane creek count but Powai (2 km²) and Vihar (7 km²) do not
+— which is why Powai's `dist_coast` (6.7 km to the creek) is correctly distinct from its
+`dist_water` (0.2 km to the lake).
+
+**The sea-breeze gradient is real — and confounded by the park.** LST rises monotonically with
+distance from the coast up to 6 km, then reverses:
+
+| `dist_coast` | mean `lst_mean` | cells |
 |---|---|---|
-| `elevation_mean` | m | SRTM |
-| `slope_mean` | ° | Derived from SRTM |
-| `dist_coast` | m | Distance to coastline — dominant in Mumbai; sea breeze |
-| `dist_park` | m | Distance to nearest OSM park/green polygon |
-| `dist_water` | m | Distance to nearest water body |
-| `ndvi_neigh_mean` | index | Mean NDVI of adjacent cells — explicit spatial context (ADR-0006) |
-| `built_neigh_mean` | fraction | Mean built fraction of adjacent cells |
+| < 0.5 km | 37.7 °C | 1,074 |
+| 0.5 – 1.5 km | 39.4 °C | 2,042 |
+| 1.5 – 3 km | 40.3 °C | 2,507 |
+| 3 – 6 km | **41.7 °C** | 3,498 |
+| > 6 km | 39.1 °C | 1,992 |
+
+A clear **+4 °C** shore-to-inland gradient (the sea breeze), reversing beyond 6 km because
+Mumbai's deepest interior *is* the national park — cool for vegetation and elevation reasons,
+not coastal ones. So `dist_coast` alone is non-monotonic and its overall correlation with LST
+is modest (+0.10); it carries real signal only in combination with `ndvi_mean` and
+`elevation_mean`. The same lesson as the low-NDVI cells: no single feature separates the causes.
 
 ### Human exposure
 
