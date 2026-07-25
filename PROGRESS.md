@@ -87,7 +87,9 @@ Package: `data_pipeline/`
 - [x] OSM via OSMnx → `building_density`, `building_count`, `road_density`, `dist_park` → `data/interim/osm.parquet`
       *(80,842 buildings, cached in data/raw/. roads reliable (+0.69 vs built); buildings
       under-mapped (relative only); dist_park misleading — SGNP isn't OSM-tagged as park)*
-- [ ] Landsat optical → `albedo` (Liang 2001) — the cool-roof lever
+- [x] Landsat optical → `albedo` (Liang 2001) → `data/interim/albedo.parquet`
+      *(physically correct — sea 0.03, city median 0.13. 🚨 but albedo vs LST is +0.70 (wrong
+      sign, land-cover confound): cool-roof lever must use a cited coefficient, not the model's)*
 - [ ] Neighbourhood aggregates → `ndvi_neigh_mean`, `built_neigh_mean`
 - [ ] Open-Meteo join *(expected near-constant at 11 km; Phase 2 decides if they stay)*
 

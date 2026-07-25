@@ -21,6 +21,46 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — Landsat albedo, and a confound that could break the cool-roof tool
+
+**Done**
+- `sources/albedo.py` → `data/interim/albedo.parquet`: `albedo` (Liang 2001 broadband
+  shortwave) over 11,944 cells, 0 nulls, 148 s. Registered as a `run.py` stage.
+- Refactored `landsat.py`: extracted `cloud_mask()` and `dry_season_collection()` so albedo
+  and LST share the exact same scenes and masking. Verified LST output byte-identical after.
+
+**Decided**
+- **Pure published Liang (2001) coefficients, no /1.016 normalisation** — matches the citation
+  exactly and validated at known surfaces (sea 0.03, forest 0.12, apron 0.15, city median 0.13).
+  ETM+ bands 1/3/4/5/7 → OLI SR_B2/B4/B5/B6/B7.
+- **Shared the Landsat collection + cloud mask** rather than duplicate them. Byte-identical
+  re-check of the LST stage confirmed the refactor changed nothing.
+
+**Broke / learned — the important one**
+- **`albedo` correlates +0.70 with LST — the wrong sign.** The feature is physically correct,
+  but observationally *brighter = hotter* across the city, because dark water is cool and bright
+  bare/grass/built is hot. It even holds within built cells (+0.20). **This is not a bug; it is a
+  confound that inverts the cool-roof physics.** A model trained on this learns albedo→warming,
+  so the digital twin would predict that whitening a roof *heats* it — the cool-roof
+  recommendation, one of the project's headline interventions, would backfire.
+  - **Fix, recorded for Phase 2:** the cool-roof ΔLST must come from a cited albedo-cooling
+    study, not the model's coefficient, and the physics gate must expect a positive albedo SHAP.
+    Flagged in `data-dictionary.md` (🚨) and `ml-methodology.md` §6.
+  - This is the **fifth and most consequential** instance of the confound pattern — low-NDVI
+    water, dry cropland, dist_coast/park, now albedo. The others corrupted interpretation; this
+    one would corrupt an *intervention*. It is exactly what the physics gate exists to catch, and
+    catching it now — before the model — is the whole point of validating every feature.
+- **`reduceRegions` names a single-band mean output `mean`, not after the band.** Multi-band
+  images (LST, Sentinel-2) name after the bands; a single band names after the reducer. Every
+  cell came back NaN until I read `mean`. That is now three reducer-name traps (`sum`,
+  `histogram`, `mean`) — a one-line `pytest` on each would have saved three debugging rounds.
+
+**Next**
+- Open-Meteo weather (last predictor, expected near-constant at 11 km), then assemble
+  `features.parquet` and the exploration notebook — the Phase 1 exit criterion.
+
+---
+
 ## 2026-07-20 — Phase 1 — OSM buildings, roads, parks — and what OSM misses
 
 **Done**

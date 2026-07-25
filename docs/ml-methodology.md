@@ -144,10 +144,19 @@ simulate(cell_ids, deltas) → ΔLST
 | Intervention | Feature changes | Source |
 |---|---|---|
 | Urban forestry / tree planting | `ndvi_mean` ↑, `tree_fraction` ↑, `albedo` slight ↑ | *cite* |
-| Cool/reflective roofs | `albedo` ↑ (~0.2→0.6 on treated area) | *cite* |
+| Cool/reflective roofs | `albedo` ↑ (~0.13→0.6 on treated area) | *cite* — see 🚨 below |
 | Green roofs | `ndvi_mean` ↑, `built_fraction` unchanged | *cite* |
 | Water body / restoration | `ndwi_mean` ↑, `dist_water` ↓ | *cite* |
 | Depaving / permeable surfaces | `impervious_fraction` ↓, `ndvi_mean` ↑ | *cite* |
+
+🚨 **`albedo` is confounded and must not use the model's own coefficient.** Phase 1 measured
+`albedo` correlating **+0.70** with `lst_mean` in the observational data — brighter reads
+*hotter*, because dark water is cool and bright bare/built is hot (`data-dictionary.md`, albedo
+caveat). A model trained on this learns a positive albedo→LST coefficient, so raising albedo in
+the twin would predict **warming** and the cool-roof recommendation would backfire. The cool-roof
+ΔLST **must** come from a cited albedo-cooling study, never from the model's learned coefficient,
+and the physics gate below must treat a positive albedo SHAP as expected confounding, not a
+model bug. This is the one intervention where the data's sign is actively wrong.
 
 **Limitations that must ship with every scenario output — stating these is the difference
 between a defensible tool and a fabrication:**

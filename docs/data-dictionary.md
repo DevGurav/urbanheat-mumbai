@@ -158,7 +158,7 @@ a normalised-difference ratio.
 |---|---|---|---|
 | `ndbi_mean` | index | −0.44 … +0.40, mean −0.02 | `(SWIR−NIR)/(SWIR+NIR)` = S2 `(B11−B8)/(B11+B8)`. Primary warming driver |
 | `built_fraction` | fraction | 0…1, mean 0.39 | WorldCover class 50 share |
-| `albedo` | fraction | *pending (Landsat stage)* | Liang (2001) narrowband→broadband from Landsat SR. **Cool-roof lever** |
+| `albedo` | fraction | 0.03…0.25, median 0.13 | Liang (2001) narrowband→broadband shortwave albedo from Landsat SR (dry-season median). **Cool-roof lever** |
 | `building_density` | m²/m² | 0…1, median 0.02 | OSM footprint area ÷ cell area (building assigned by representative point) |
 | `building_count` | count | 0…650, total 80,842 | OSM buildings per cell |
 | `road_density` | m/m² | 0…0.09, median 0.010 | OSM `drive`-network length clipped to the cell ÷ cell area |
@@ -175,6 +175,22 @@ a normalised-difference ratio.
   buildings, unevenly (informal settlements worst). Treat as a **relative** indicator,
   partly redundant with `built_fraction`. *(Google Open Buildings is a more complete
   alternative for India — parked as a possible swap.)*
+
+🚨 **`albedo` — its observational correlation with LST has the *wrong sign*, and this matters
+more than any other caveat here.** Validated as physically correct at known surfaces (sea 0.03,
+forest 0.12, apron 0.15) — but across the city `albedo` correlates **+0.70** with `lst_mean`:
+brighter reads *hotter*, the **opposite** of the cool-roof physics. The cause is a land-cover
+confound: dark water (albedo 0.07) is cool, bright bare/grass/built (0.14+) is hot. It persists
+even within built-up cells (+0.20).
+
+**Consequence for the scenario engine (Phase 2, `ml-methodology.md`):** a model trained on this
+data will learn a *positive* albedo→LST coefficient, so naïvely raising albedo in the digital
+twin would predict **warming** — and the cool-roof recommendation would backfire. The cool-roof
+lever must therefore apply a **literature-derived** albedo→cooling coefficient (cited in
+`references.md`), never the model's confounded coefficient, and the physics gate must expect
+albedo's raw SHAP to come out wrong-signed. This is the confound pattern (low-NDVI water,
+dry cropland, dist_coast/park) in its most dangerous form — here it threatens an intervention,
+not just an interpretation.
 
 **ESA WorldCover — full class set (Phase 1).** WorldCover v200, a single static 10 m mosaic
 (2021), reduced to per-class pixel *fractions* per cell via a frequency histogram. The sea is
