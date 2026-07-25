@@ -21,6 +21,36 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-21 — Phase 1 — Exploration notebook: the exit-criterion render
+
+**Done**
+- `notebooks/01_explore_features.ipynb` (16 cells): reads `features.parquet` (no Earth Engine,
+  runs in seconds) and renders the heat map, the LST/NDVI inverse, the driver-correlation bar
+  and matrix, the ward summary table + ranking, and the hot-and-dense vulnerability scatter.
+- Built with `nbformat` (valid by construction), lint-clean, and — unlike the Phase 0
+  notebook — **executed headlessly end to end to verify it runs**: 0 error cells, every figure
+  cell completes. Committed without outputs; the author runs it to confirm the ✅.
+
+**Decided**
+- **Colourmaps by the data's job** (dataviz method): `inferno` for LST magnitude
+  (perceptually uniform, CVD-safe, brighter = hotter — not a rainbow), `YlGn` for NDVI,
+  `RdBu_r` centred at zero for the correlation polarity, red/blue-by-sign for the driver bar.
+  A table view accompanies the ward chart so identity is never colour-alone.
+- **Land cells only for statistics** (`land_fraction ≥ 0.5`) so the sea does not skew ward
+  means or correlations — the same caveat the model will apply.
+
+**Learned**
+- Executing the notebook is worth it even though the author owns the ✅: it caught nothing this
+  time, but it proves the plotting code runs against the *real* table, which static checks
+  cannot. The ward ranking it printed (hottest B/L/C, coolest R/C/T) matches the LST stage
+  independently — a third cross-check on the whole pipeline.
+
+**Next**
+- Author runs the notebook and confirms Mumbai's heat map renders → **Phase 1 ✅**. Then the
+  Phase 1 CHANGELOG entry and the Phase 2 kickoff (baseline → boosted trees, spatial block CV).
+
+---
+
 ## 2026-07-21 — Phase 1 — features.parquet assembled
 
 **Done**

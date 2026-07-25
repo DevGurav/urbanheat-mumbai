@@ -102,8 +102,12 @@ Package: `data_pipeline/`
       every feature. Counts *and* magnitudes, never just non-emptiness — a silent partial
       join is the Phase 0 boundary bug at 15,000× the scale, with no printed area to catch it
 - [ ] Fill observed ranges in `docs/data-dictionary.md`; close remaining §5 questions
-- [ ] Exploration notebook: LST + NDVI maps, correlation matrix, ward summary table
+- [x] Exploration notebook: LST + NDVI maps, correlation matrix, ward summary table
+      → `notebooks/01_explore_features.ipynb` (written, lint-clean, executes end-to-end with
+      0 errors; committed without outputs)
 - [ ] ✅ **`features.parquet` exists and the notebook renders Mumbai's heat map**
+      — `features.parquet` built (11,944×42); notebook verified to run. **Awaiting the author's
+      visual confirmation of the heat map to tick this.**
 
 ---
 
