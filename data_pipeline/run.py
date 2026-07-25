@@ -31,7 +31,7 @@ class Stage:
 def _stages() -> list[Stage]:
     # Imported lazily: `--stage boundary` should not need Earth Engine to be reachable.
     from data_pipeline import boundary, grid
-    from data_pipeline.sources import landsat, sentinel2, worldcover
+    from data_pipeline.sources import landsat, sentinel2, worldcover, worldpop
 
     return [
         Stage("boundary", boundary.build, "processed/wards.geojson"),
@@ -39,6 +39,7 @@ def _stages() -> list[Stage]:
         Stage("landsat", landsat.build, "interim/lst.parquet", spends_quota=True),
         Stage("sentinel2", sentinel2.build, "interim/sentinel2.parquet", spends_quota=True),
         Stage("worldcover", worldcover.build, "interim/worldcover.parquet", spends_quota=True),
+        Stage("worldpop", worldpop.build, "interim/worldpop.parquet", spends_quota=True),
     ]
 
 
