@@ -126,11 +126,45 @@ Package: `data_pipeline/`
 
 ## Phase 2 — ML: predict & explain · Weeks 5–7
 
-- [ ] Baseline (linear) → XGBoost → LightGBM, spatial block cross-validation
-- [ ] Metrics + model comparison → `docs/ml-methodology.md`
-- [ ] SHAP: global importance + per-cell attribution
-- [ ] Heat Vulnerability Index + ward hotspot ranking
-- [ ] Scenario engine v1: `simulate(feature_deltas) → ΔLST`
+**Goal:** a trained, explained LST model; a Heat Vulnerability Index; a scenario engine that
+turns interventions into a ΔLST map. Everything runs locally on `features.parquet`.
+
+**Settled at kickoff, 2026-07-26 (ADR-0008)**
+Target `lst_mean` · train/evaluate on `land_fraction ≥ 0.5`, predict on all land cells ·
+**ward-grouped k-fold** spatial CV (GroupKFold on `ward_code`) · features exclude absolute
+location (`ward_code`, `centroid_lat/lon`) and the leakage columns (`lst_p90`,
+`lst_obs_count`, `wc_pixels`).
+
+### Data prep & validation harness
+
+- [ ] `ml/dataset.py` — build X, y from `features.parquet`; apply the training filter and the
+      feature/leakage exclusions; return the ward groups for CV
+- [ ] `ml/cv.py` — ward-grouped fold splitter + a spatial-CV scorer (R², RMSE, MAE per fold)
+- [ ] Show the random-split vs spatial-CV gap once, to evidence why spatial CV is used (ADR-0006)
+
+### Models
+
+- [ ] Baseline — linear regression (the honest floor)
+- [ ] XGBoost, then LightGBM; light tuning only (defaults are near-optimal at 12k×~30)
+- [ ] Model comparison table → `docs/ml-methodology.md`; save the chosen model → `models/`
+
+### Explainability
+
+- [ ] SHAP TreeExplainer — global importance + per-cell attribution
+- [ ] **Physics gate:** confirm signs are sane; a positive `albedo` SHAP is *expected*
+      (confound, ADR-0008 / `ml-methodology.md` §6), a vegetation-warms sign is a stop-and-fix
+
+### Heat Vulnerability Index
+
+- [ ] `hvi` — normalised weighted blend of heat / population / lack-of-green; weights + rationale
+      in `ml-methodology.md` §5. A **relative** tool, never a health-risk score (ADR-0005)
+- [ ] `hotspot_rank` + ward hotspot ranking
+
+### Scenario engine v1
+
+- [ ] `simulate(feature_deltas) → ΔLST`, clamped to the training envelope (no extrapolation)
+- [ ] Intervention → feature-delta map with **cited** coefficients (`references.md` §3 — read
+      the papers first); **cool-roof uses a literature albedo coefficient, not the model's**
 - [ ] ✅ **Saved model + metrics; a greening scenario produces a sensible ΔLST map**
 
 ---

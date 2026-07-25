@@ -21,6 +21,38 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-26 — Phase 2 — Kickoff: planning pass
+
+**Done**
+- ADR-0008 — spatial CV, training set, and feature policy (the three coupled decisions below).
+- Expanded Phase 2 into tasks in `PROGRESS.md`; updated `ml-methodology.md` §2 to the concrete
+  scheme.
+
+**Decided (ADR-0008, author-confirmed)**
+- **Ward-grouped k-fold spatial CV** — `GroupKFold` on `ward_code`, hold out whole wards.
+  Chosen over a k-km block grid and k-means because wards are the unit recommendations are
+  made in and the honest question is "predict an unseen ward?". The Phase 1 correlation work
+  is why this is non-negotiable: `built_neigh_mean` (+0.60) ≈ `built_fraction` (+0.59), so a
+  random split would place near-duplicate neighbours on both sides and inflate R².
+- **Train on `land_fraction ≥ 0.5`**, predict on all land cells. Mostly-sea cells carry water
+  temperature (the monotonic gradient measured in Phase 1).
+- **Exclude absolute location from X** (`ward_code`, `centroid_lat/lon`) so the trees learn
+  causal drivers rather than memorising the heat map — which keeps SHAP meaningful and the
+  scenario engine coherent (you cannot "move" a cell). Hard-exclude `lst_p90`,
+  `lst_obs_count`, `wc_pixels` as target leakage / QA.
+
+**Learned / noted**
+- The whole Phase 1 validation discipline pays its dividend here: because every feature was
+  checked against physics, the Phase 2 physics gate has a precise expectation — a positive
+  `albedo` SHAP is the *expected* confound, not a bug, and a vegetation-warms sign is a
+  stop-and-fix. Without the Phase 1 caveats, that gate would be guesswork.
+
+**Next**
+- `ml/dataset.py` (X, y, groups with the ADR-0008 filters) and `ml/cv.py` (ward-grouped
+  splitter + scorer), then the model ladder: mean floor → ridge → RF → XGBoost → LightGBM.
+
+---
+
 ## 2026-07-26 — Phase 1 → 2 — Test suite before the modelling code
 
 **Done**

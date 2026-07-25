@@ -38,12 +38,19 @@ possibly badly, and the model would still fail on any genuinely unseen neighbour
 This is spatial autocorrelation, and it is the single easiest way to produce an
 impressive-looking and worthless result. It is also exactly what a viva panel probes.
 
-**The fix — spatial block cross-validation.** Partition the city into contiguous spatial
-blocks (candidate: BMC wards, ~24 units — administratively meaningful and roughly the scale
-at which recommendations are made; fallback: a k-km grid of blocks if wards are too uneven).
-Hold out **whole blocks**, so no held-out cell has a neighbour in training. This measures
-what we actually claim: *given a neighbourhood the model has never seen, can it predict its
-heat from its physical characteristics?*
+**The fix — ward-grouped spatial cross-validation (settled, ADR-0008).** `GroupKFold` on
+`ward_code`: hold out **whole BMC wards** (24 → ~5 folds), so no held-out cell has a neighbour
+in training. Chosen over a k-km block grid (an extra parameter, cuts across wards) and k-means
+clusters (non-standard) because wards are the unit recommendations are made in and the question
+a planner asks — *predict a ward it has never seen?* Wards are uneven in size; accepted as
+honest.
+
+**Training set and features (ADR-0008).** Train and evaluate on `land_fraction ≥ 0.5` (mostly-
+sea cells carry water temperature); predict on all land cells. Exclude absolute location
+(`ward_code`, `centroid_lat/lon`) so the trees learn causal drivers, not a memorised spatial
+surface — which keeps SHAP meaningful and the scenario engine coherent. Hard-exclude the
+target-leakage columns `lst_p90`, `lst_obs_count` (both from the thermal band) and the QA
+count `wc_pixels`.
 
 **Both numbers get reported.** Naive random-split CV alongside blocked CV. The gap between
 them is a finding, not an embarrassment — it quantifies how much of an apparently good
