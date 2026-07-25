@@ -31,7 +31,7 @@ class Stage:
 def _stages() -> list[Stage]:
     # Imported lazily: `--stage boundary` should not need Earth Engine to be reachable.
     from data_pipeline import boundary, grid
-    from data_pipeline.sources import landsat, sentinel2, terrain, worldcover, worldpop
+    from data_pipeline.sources import landsat, osm, sentinel2, terrain, worldcover, worldpop
 
     return [
         Stage("boundary", boundary.build, "processed/wards.geojson"),
@@ -41,6 +41,8 @@ def _stages() -> list[Stage]:
         Stage("worldcover", worldcover.build, "interim/worldcover.parquet", spends_quota=True),
         Stage("worldpop", worldpop.build, "interim/worldpop.parquet", spends_quota=True),
         Stage("terrain", terrain.build, "interim/terrain.parquet", spends_quota=True),
+        # Not Earth Engine — downloads from Overpass (OSMnx), cached in data/raw/.
+        Stage("osm", osm.build, "interim/osm.parquet"),
     ]
 
 

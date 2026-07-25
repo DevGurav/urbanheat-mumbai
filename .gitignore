@@ -49,6 +49,9 @@ models/*
 **/chroma_db/
 **/.chroma/
 
+# OSMnx Overpass HTTP response cache (regenerated on download)
+cache/
+
 # logs / os / editor
 *.log
 .DS_Store
