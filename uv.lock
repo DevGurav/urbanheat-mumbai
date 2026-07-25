@@ -2788,6 +2788,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
+    { name = "requests" },
 ]
 
 [package.dev-dependencies]
@@ -2807,6 +2808,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=17" },
     { name = "pydantic-settings", specifier = ">=2.4" },
     { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "requests", specifier = ">=2.32" },
 ]
 
 [package.metadata.requires-dev]

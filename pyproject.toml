@@ -17,6 +17,8 @@ dependencies = [
     "pyarrow>=17",
     # OpenStreetMap buildings/roads/parks via Overpass (Phase 1 OSM stage).
     "osmnx>=2.0",
+    # Open-Meteo historical weather archive (keyless HTTP).
+    "requests>=2.32",
     # --- Config ---
     "python-dotenv>=1.0",
     "pydantic-settings>=2.4",
