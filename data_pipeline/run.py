@@ -30,7 +30,7 @@ class Stage:
 
 def _stages() -> list[Stage]:
     # Imported lazily: `--stage boundary` should not need Earth Engine to be reachable.
-    from data_pipeline import boundary, grid
+    from data_pipeline import assemble, boundary, grid
     from data_pipeline.sources import (
         albedo,
         landsat,
@@ -55,6 +55,8 @@ def _stages() -> list[Stage]:
         Stage("osm", osm.build, "interim/osm.parquet"),
         # Not Earth Engine — Open-Meteo archive (keyless HTTP), cached in data/raw/.
         Stage("weather", weather.build, "interim/weather.parquet"),
+        # Final join of every source into the feature table the API and models read.
+        Stage("assemble", assemble.build, "processed/features.parquet"),
     ]
 
 
