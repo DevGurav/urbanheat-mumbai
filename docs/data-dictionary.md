@@ -322,15 +322,19 @@ would prioritise.
 
 ### Weather covariates
 
-| Column | Unit | Notes |
-|---|---|---|
-| `air_temp_mean` | °C | Open-Meteo Mar–May mean. Coarse (~11 km) — city-scale context, not a within-city driver |
-| `humidity_mean` | % | As above |
-| `wind_speed_mean` | m/s | As above |
+| Column | Unit | Observed | Notes |
+|---|---|---|---|
+| `air_temp_mean` | °C | mean 28.8, city spread 1.7 | Open-Meteo ERA5 archive, dry-season Mar–May 2019–2026 mean. Queried on a ~0.1° point grid, nearest-assigned to cells |
+| `humidity_mean` | % | mean 67, city spread 16 | As above |
+| `wind_speed_mean` | m/s | mean 2.9, city spread 2.3 | As above |
 
-⚠️ Weather covariates are near-constant across a 458 km² city at 11 km resolution. They
-add little within-city signal and risk being noise. Phase 2 decides empirically whether
-they stay — record the outcome in `ml-methodology.md`.
+⚠️ **Measured (Phase 1): weather carries essentially no within-city LST signal, and Phase 2
+should probably drop it.** ERA5 is ~11 km, so across the 458 km² city these barely move —
+air temperature spreads 1.7 °C against LST's ~20 °C. And the correlations are decisive:
+`air_temp_mean` vs `lst_mean` = **+0.02**, humidity **−0.01**, wind **+0.01** — all essentially
+zero. What little spatial structure they have is a coarse proxy for the coast (humidity vs
+`dist_coast` = −0.43, wind = −0.45), which the model already has at 200 m. Retained for now so
+Phase 2 selection has them to reject on the record; the final call goes in `ml-methodology.md`.
 
 ### Derived indices
 

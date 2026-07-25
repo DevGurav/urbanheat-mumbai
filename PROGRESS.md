@@ -91,7 +91,9 @@ Package: `data_pipeline/`
       *(physically correct — sea 0.03, city median 0.13. 🚨 but albedo vs LST is +0.70 (wrong
       sign, land-cover confound): cool-roof lever must use a cited coefficient, not the model's)*
 - [ ] Neighbourhood aggregates → `ndvi_neigh_mean`, `built_neigh_mean`
-- [ ] Open-Meteo join *(expected near-constant at 11 km; Phase 2 decides if they stay)*
+- [x] Open-Meteo join → `data/interim/weather.parquet`
+      *(measured: air_temp vs LST +0.02 — near-zero within-city signal; only a coarse
+      dist_coast proxy. Phase 2 has the evidence to drop it)*
 
 ### Assemble & verify
 - [ ] Join every source on `cell_id` → `data/processed/features.parquet`

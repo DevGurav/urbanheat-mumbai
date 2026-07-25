@@ -21,6 +21,41 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-21 — Phase 1 — Open-Meteo weather (the last predictor, and it is nearly noise)
+
+**Done**
+- `sources/weather.py` → `data/interim/weather.parquet`: `air_temp_mean`, `humidity_mean`,
+  `wind_speed_mean`, dry-season Mar–May 2019–2026 means from the Open-Meteo ERA5 archive.
+  Registered as a `run.py` stage. **All 8 predictor sources are now built.**
+
+**Decided**
+- **Query a ~0.1° point grid (20 points), not per cell.** ERA5 is ~11 km, so 11,944 per-cell
+  calls would return ~6 distinct values many times over. Cells are nearest-assigned to points.
+- **Bulk requests, batched, with backoff.** The archive rate-limits by locations × days; 54
+  points over 8 years hit repeated 429s. Coarsening to 20 points and sending them in one
+  comma-separated request fixed it. Raw point means cached to `data/raw/`.
+- **Wind in m/s** via `wind_speed_unit=ms` (the API defaults to km/h) to match the schema.
+
+**Results — the caveat is now measured, and it points to "drop"**
+- Within-city spread is tiny: air temp **1.7 °C** across the whole city, against LST's ~20 °C.
+- The correlations are the real evidence: `air_temp_mean` vs `lst_mean` = **+0.02**, humidity
+  −0.01, wind +0.01 — all essentially zero. Weather has **no within-city LST signal**.
+- Its only spatial structure is a coarse coast proxy (humidity/wind vs `dist_coast` ≈ −0.44),
+  which `dist_coast` already captures at 200 m. So the weather columns are near-redundant noise.
+- Kept in the table so Phase 2 feature selection rejects them *on the record* rather than by
+  omission — the honest way to retire a feature. Final call goes in `ml-methodology.md`.
+
+**Broke / learned**
+- Computing cell centroids in EPSG:4326 (degrees) warns and is subtly wrong; reproject to UTM
+  first, then take the centroid. Harmless here (points are 11 km apart) but fixed properly.
+
+**Next**
+- **Assemble `features.parquet`** — join all 8 sources + neighbourhood aggregates
+  (`ndvi_neigh_mean`, `built_neigh_mean`) on `cell_id`, with the row-count/null/range validation
+  gate. Then the exploration notebook: the **Phase 1 exit criterion**.
+
+---
+
 ## 2026-07-20 — Phase 1 — Landsat albedo, and a confound that could break the cool-roof tool
 
 **Done**
