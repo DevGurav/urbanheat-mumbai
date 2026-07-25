@@ -3,8 +3,8 @@
 Live task board. Newest phases get expanded into detailed tasks at their kickoff.
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
-**Current phase:** 1 — Data pipeline
-**Last updated:** 2026-07-20
+**Current phase:** 2 — ML: predict & explain *(Phase 1 complete)*
+**Last updated:** 2026-07-26
 
 ---
 

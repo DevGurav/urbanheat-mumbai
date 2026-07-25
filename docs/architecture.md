@@ -4,8 +4,10 @@ Text-based, editable re-creation of the system design. Diagrams are Mermaid so t
 diffable and render on GitHub.
 
 **Status:** target design. Components are marked ⬜ planned / 🟨 in progress / ✅ built,
-and updated as phases land. As of Phase 0, no component in §2 or §6 is built — the only
-thing proven to work is the Earth Engine access path at the head of §3.
+and updated as phases land. As of **Phase 1**, the **offline pipeline (§3) is built end to
+end** — every source reduces to `data/processed/features.parquet` (11,944 cells × 42 cols).
+The backend, agents, frontend and storage (§2, §6) remain ⬜; model training and SHAP (the
+right of §3) are Phase 2.
 
 ---
 
@@ -109,11 +111,13 @@ flowchart LR
 ~12k-row table is downloaded. Pulling rasters to the laptop would blow both the RAM budget
 and the Earth Engine compute quota.
 
-**Proven in Phase 0.** The first box — server-side compositing of a cloud-masked,
-dry-season Landsat LST stack over Mumbai — runs end to end and returns physically plausible
-values (`notebooks/00_hello_earth_engine.ipynb`). Nothing was downloaded but three summary
-numbers, which is the constraint above working as designed. The per-cell reduction and
-everything right of it remain ⬜.
+**Built in Phase 1 (boxes A→E ✅).** The whole left half runs: server-side compositing
+(A) → per-cell reduction of every source (B) → join on `cell_id` + Open-Meteo (C) → feature
+engineering incl. neighbourhood aggregates and `impervious_fraction` (D) → `features.parquet`
+(E), 11,944 cells × 42 columns, validated. Only aggregates come down the wire, never rasters —
+the constraint above working as designed. **Boxes F→H (train, SHAP, `model.pkl`) are Phase 2**;
+the HVI in box D is also Phase 2 (it needs the model). `data_pipeline/run.py --stage all`
+drives A→E.
 
 ## 4. Request flow — a scenario query
 

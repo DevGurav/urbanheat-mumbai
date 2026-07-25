@@ -6,6 +6,42 @@ detail belongs in [devlog.md](devlog.md).
 
 ---
 
+## Phase 1 — Data pipeline · completed 2026-07-21
+
+### Added
+- `data_pipeline/` package: `config` (pydantic-settings), `ee_session` (one EE init),
+  `run.py` stage orchestrator that caches per-stage and skips completed stages
+- Geometry — BMC ward boundaries (DataMeet, 24 administrative wards) →
+  `data/processed/wards.geojson`; a 200 m grid with a **position-derived, permanent `cell_id`**
+  → `data/interim/grid.parquet` (11,944 cells, ADR-0007)
+- Target — Landsat 8/9 C2 L2 dry-season LST per cell (`lst_mean`, `lst_p90`, `lst_obs_count`)
+- Eight predictor sources → `data/interim/*.parquet`: Sentinel-2 (NDVI/NDBI/NDWI),
+  ESA WorldCover (9 land-cover fractions), WorldPop (population/density), SRTM + surface-spread
+  distances (elevation/slope/dist_coast/dist_water), OSM (building/road/park), Landsat albedo
+  (Liang 2001), Open-Meteo weather; plus neighbourhood aggregates
+- `data/processed/features.parquet` — **11,944 rows × 42 columns**, assembled from every
+  source with a validation gate (row count, null rate, physical range per column)
+- `notebooks/01_explore_features.ipynb` — heat map, LST/NDVI inverse, driver correlations,
+  ward summary
+- ADR-0007 — 200 m analysis grid
+
+### Verified
+- ✅ **Exit criterion met** — `features.parquet` exists and the notebook renders Mumbai's heat
+  map. The premise holds in the data: `ndbi_mean` +0.74 and the built/population cluster warm,
+  mangrove/water/NDVI (~−0.46) cool, and two independent satellites agree at ward level. Study
+  area **458 km²**; total population **11.7 M** (reconciles with BMC's ~12.4 M census).
+
+### Known limitations carried into Phase 2
+- **Albedo confound** — correlates +0.70 with LST (wrong sign, land-cover confound); the
+  cool-roof lever must use a cited coefficient, not the model's (`ml-methodology.md` §6)
+- OSM buildings under-mapped (relative indicator only); `dist_park` misleading (SGNP is not
+  OSM-tagged as a park)
+- Weather covariates carry near-zero within-city signal — a Phase 2 drop candidate
+- `land_fraction` model threshold undecided (Phase 2); `lst_trend` deferred (its per-year
+  reduction is not built)
+
+---
+
 ## Phase 0 — Foundations · completed 2026-07-20
 
 ### Added
