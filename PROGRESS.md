@@ -90,7 +90,8 @@ Package: `data_pipeline/`
 - [x] Landsat optical → `albedo` (Liang 2001) → `data/interim/albedo.parquet`
       *(physically correct — sea 0.03, city median 0.13. 🚨 but albedo vs LST is +0.70 (wrong
       sign, land-cover confound): cool-roof lever must use a cited coefficient, not the model's)*
-- [ ] Neighbourhood aggregates → `ndvi_neigh_mean`, `built_neigh_mean`
+- [x] Neighbourhood aggregates → `ndvi_neigh_mean`, `built_neigh_mean` (queen contiguity via
+      grid-index arithmetic; computed in the assembly step)
 - [x] Open-Meteo join → `data/interim/weather.parquet`
       *(measured: air_temp vs LST +0.02 — near-zero within-city signal; only a coarse
       dist_coast proxy. Phase 2 has the evidence to drop it)*

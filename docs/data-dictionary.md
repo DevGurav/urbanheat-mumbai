@@ -115,6 +115,25 @@ extremes once aggregation to ~200 m cells averages them out. Phase 1 confirms.
 
 ## 3. Feature columns → `data/processed/features.parquet`
 
+**Assembled (Phase 1): 11,944 rows × 42 columns, 3.3 MB GeoParquet**, joined from all eight
+sources + the LST target on `cell_id`, with zero nulls and every column inside its physical
+range (`data_pipeline/assemble.py` asserts both). Univariate correlation with `lst_mean`
+(land cells) ranks the drivers and confirms every finding logged during Phase 1:
+
+- **Warmers** — `ndbi_mean` **+0.74**, `albedo` +0.67 *(confounded — see 🚨 below)*,
+  `built_neigh_mean` +0.60, `built_fraction` +0.59, `impervious_fraction` +0.57,
+  `pop_density` +0.56, `road_density` +0.36.
+- **Coolers** — `mangrove_fraction` **−0.46**, `water_fraction` −0.46, `ndvi_mean` −0.45,
+  `ndvi_neigh_mean` −0.43, `elevation_mean` −0.16, `tree_fraction` −0.16.
+- **Noise** — `air_temp_mean` +0.02, `humidity_mean` −0.01, `wind_speed_mean` +0.01 (weather,
+  as measured above).
+
+The neighbourhood aggregates rank alongside their own-cell versions (`built_neigh_mean` 0.60 ≈
+`built_fraction` 0.59), i.e. strong spatial autocorrelation — which is exactly why a random
+train/test split would leak and Phase 2 must use spatial block CV (ADR-0006, `ml-methodology.md`
+§2). `impervious_fraction = built_fraction + road_density × 8 m` (assumed carriageway width),
+clipped to 1.
+
 ### Identity & geometry
 
 | Column | Type | Unit | Notes |
@@ -398,7 +417,7 @@ exactly why spatial block CV is mandatory (ADR-0006).
 |---|---|---|
 | `data/raw/` | Earth Engine exports, OSM dumps | No — regenerate via `data-pipeline/` |
 | `data/interim/` | Per-source intermediate tables | No |
-| `data/processed/features.parquet` | **The feature table** — one row per cell | No (regenerable) |
+| `data/processed/features.parquet` | **The feature table** — 11,944 rows × 42 cols, GeoParquet | No (regenerable) |
 | `data/processed/wards.geojson` | Ward polygons | Yes if small |
 | `data/knowledge_base/` | RAG source PDFs (Phase 4) | No — licence-bound, list sources in `references.md` |
 | `models/` | Trained model + SHAP artifacts | No |

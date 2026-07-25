@@ -21,6 +21,42 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-21 — Phase 1 — features.parquet assembled
+
+**Done**
+- `data_pipeline/assemble.py` → `data/processed/features.parquet`: **11,944 rows × 42 columns,
+  3.3 MB GeoParquet**. Joins all 8 sources + the LST target on `cell_id`, derives
+  `impervious_fraction`, `ndvi_neigh_mean`, `built_neigh_mean`, validates, writes. Registered
+  as the final `run.py` stage. Zero nulls; every column inside its physical range.
+
+**Decided**
+- **GeoParquet with geometry in the table**, not a separate join — the API and notebooks read
+  one self-contained file (ADR-0004's "the file is the artifact").
+- **Neighbourhood aggregates by grid-index arithmetic**, not a spatial join. `grid_row`/`col`
+  make the 8 queen neighbours a lookup (ADR-0007 paying off); edge cells average what exists,
+  isolated cells fall back to own value.
+- **The validation gate asserts counts *and* magnitudes.** Row count, `cell_id` uniqueness,
+  zero nulls in 12 required columns, and a physical-range check on 27 columns — a broken join
+  or unit slip stops here, not in the model. This is the Phase 0 boundary lesson generalised:
+  a bad 12k-row join has no printed area to give it away, so the check has to be deliberate.
+
+**Learned — the correlation matrix is the whole project in one view**
+- Ranked univariate correlation with `lst_mean` confirms every Phase 1 finding at once:
+  warmers led by `ndbi_mean` +0.74 and the built/population cluster (~+0.55–0.60); coolers led
+  by mangrove/water/NDVI (~−0.46); weather at ±0.01 (noise); and `albedo` +0.67 sitting in the
+  *warmer* list — the confound, exactly where the albedo caveat said it would be.
+- `built_neigh_mean` (+0.60) edges `built_fraction` (+0.59) and `ndvi_neigh_mean` (−0.43) ≈
+  `ndvi_mean` (−0.45): the neighbourhood carries as much signal as the cell. That is strong
+  spatial autocorrelation stated numerically — the empirical case for spatial block CV
+  (ADR-0006) rather than a random split, which would leak.
+
+**Next**
+- The exploration notebook: LST + NDVI maps, correlation matrix, ward summary — renders
+  Mumbai's heat map. Together with this file it is the **Phase 1 ✅ exit criterion**.
+- Deferred: `lst_trend` (needs a separate per-year Landsat reduction; not required for the ✅).
+
+---
+
 ## 2026-07-21 — Phase 1 — Open-Meteo weather (the last predictor, and it is nearly noise)
 
 **Done**
