@@ -21,6 +21,50 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-20 — Phase 1 — OSM buildings, roads, parks — and what OSM misses
+
+**Done**
+- `sources/osm.py` → `data/interim/osm.parquet`: `building_count`, `building_density`,
+  `road_density`, `dist_park` over 11,944 cells. First non-Earth-Engine source — Overpass via
+  OSMnx, cell aggregation done locally, raw downloads cached in `data/raw/`. 95 s.
+- 80,842 buildings, 71,361 road segments, 1,646 parks over the city.
+- Added `osmnx>=2.0`.
+
+**Decided**
+- **Cache raw Overpass downloads to `data/raw/`.** Overpass is a shared free service; re-running
+  the stage reads the cache, `--force-download` re-fetches. The regenerate-from-scratch
+  contract still holds (ADR-0004) — the cache is a courtesy, not state.
+- **Buildings assigned by representative point, roads clipped to cells.** A building counts
+  once, in the cell containing its interior point; a road segment is split at cell borders and
+  its clipped length summed. `drive` network only — footways would multiply the data for
+  little heat signal.
+
+**Broke / learned — three honest limitations, all documented**
+- **OSM under-maps buildings, unevenly.** Median `building_density` is 0.02 and only 57% of
+  cells have any building; where WorldCover says >50% built, mean OSM density is 0.16 against
+  a real 0.4–0.6. Presence coverage is decent (92% of clearly-built cells have ≥1 building)
+  but magnitude is undercounted, worst in informal settlements — exactly where heat
+  vulnerability is highest. So `building_density` is a *relative* signal, partly redundant
+  with `built_fraction` (they correlate +0.60). Google Open Buildings is parked as a more
+  complete alternative for India.
+- **`road_density` is the trustworthy OSM feature** — +0.69 with `built_fraction`, +0.36 with
+  LST. Roads are mapped far better than individual buildings.
+- **`dist_park` does not mean what the name implies.** OSM "parks" are formal urban parks and
+  gardens, concentrated in the dense city; SGNP and Aarey are not tagged as parks, so
+  tree-dominated cells average 412 m from the nearest "park". The result is a counterintuitive
+  −0.18 correlation with LST (dense hot cores have gardens nearby; cool peripheries do not).
+  Green cover is already captured properly by `ndvi_mean` and `tree_fraction`; `dist_park` is
+  flagged for Phase 2 to keep or drop on evidence.
+- The pattern to take forward: **validate every new source against an independent one.** OSM
+  buildings vs WorldCover built, roads vs built, parks vs the tree cells — each cross-check is
+  what turned "OSM is a data source" into "here is precisely what OSM gets right and wrong".
+
+**Next**
+- Landsat albedo (Liang 2001) — back in Earth Engine, the cool-roof lever the scenario engine
+  needs. Then Open-Meteo weather, then assembly into `features.parquet`.
+
+---
+
 ## 2026-07-20 — Phase 1 — SRTM terrain and distance-to-coast
 
 **Done**

@@ -158,11 +158,23 @@ a normalised-difference ratio.
 |---|---|---|---|
 | `ndbi_mean` | index | −0.44 … +0.40, mean −0.02 | `(SWIR−NIR)/(SWIR+NIR)` = S2 `(B11−B8)/(B11+B8)`. Primary warming driver |
 | `built_fraction` | fraction | 0…1, mean 0.39 | WorldCover class 50 share |
-| `albedo` | fraction | 0…1 | Liang (2001) narrowband→broadband from Landsat SR. **Cool-roof lever** |
-| `building_density` | m²/m² | 0…~2 | OSM building footprint area ÷ cell area |
-| `building_count` | count | — | OSM buildings per cell |
-| `road_density` | m/m² | — | OSM road length ÷ cell area |
-| `impervious_fraction` | fraction | 0…1 | built + roads, capped at 1 |
+| `albedo` | fraction | *pending (Landsat stage)* | Liang (2001) narrowband→broadband from Landsat SR. **Cool-roof lever** |
+| `building_density` | m²/m² | 0…1, median 0.02 | OSM footprint area ÷ cell area (building assigned by representative point) |
+| `building_count` | count | 0…650, total 80,842 | OSM buildings per cell |
+| `road_density` | m/m² | 0…0.09, median 0.010 | OSM `drive`-network length clipped to the cell ÷ cell area |
+| `impervious_fraction` | fraction | *pending (assembly)* | `built_fraction` + road area, capped at 1 |
+
+**OSM validated — roads good, buildings under-mapped, `dist_park` misleading (Phase 1).**
+80,842 buildings, 71,361 road segments, 1,646 parks over the city (cached in `data/raw/`).
+
+- **`road_density` is the reliable OSM feature**: +0.69 with WorldCover `built_fraction`, +0.36
+  with `lst_mean`. Roads are well-mapped and behave as impervious surface should.
+- **Buildings under-map magnitude but capture presence.** `building_density` correlates +0.60
+  with `built_fraction`, and 92% of cells WorldCover calls >50% built have ≥1 OSM building —
+  but mean density there is only 0.16 (a dense Indian city is 0.4–0.6). OSM under-maps
+  buildings, unevenly (informal settlements worst). Treat as a **relative** indicator,
+  partly redundant with `built_fraction`. *(Google Open Buildings is a more complete
+  alternative for India — parked as a possible swap.)*
 
 **ESA WorldCover — full class set (Phase 1).** WorldCover v200, a single static 10 m mosaic
 (2021), reduced to per-class pixel *fractions* per cell via a frequency histogram. The sea is
@@ -239,7 +251,7 @@ for the report: in a dense tropical city the built-up signal outweighs the veget
 | `slope_mean` | ° | 0 … 39, median 3 | `ee.Terrain.slope` of SRTM, mean |
 | `dist_coast` | m | 0 … 9,648, median 2,920 | Surface-spread (`cumulativeCost`) distance to the **sea**: large connected permanent water (Arabian Sea + tidal creeks), excluding freshwater lakes |
 | `dist_water` | m | 0 … 5,861, median 1,808 | Distance to **any** permanent water (JRC GSW occurrence ≥ 80%) — sea, creeks and lakes |
-| `dist_park` | m | *pending (OSM stage)* | Distance to nearest OSM park/green polygon |
+| `dist_park` | m | 0…4,716, median 261 | Distance to nearest OSM park/garden. ⚠️ OSM parks are *formal urban* parks concentrated in the dense city — SGNP and Aarey are **not** tagged as parks (tree-dominated cells average 412 m from one), so this is not a greenness proxy and its LST correlation is a counterintuitive −0.18. Use `ndvi_mean`/`tree_fraction` for green cover; Phase 2 may drop `dist_park` |
 | `ndvi_neigh_mean` | index | *pending (assembly)* | Mean NDVI of adjacent cells — explicit spatial context (ADR-0006) |
 | `built_neigh_mean` | fraction | *pending (assembly)* | Mean built fraction of adjacent cells |
 

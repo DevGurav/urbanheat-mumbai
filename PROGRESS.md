@@ -84,7 +84,9 @@ Package: `data_pipeline/`
 - [x] SRTM → `elevation_mean`, `slope_mean`; plus `dist_coast`, `dist_water` → `data/interim/terrain.parquet`
       *(elevation finds SGNP hills at 459 m; +4 °C sea-breeze gradient over the first 6 km,
       reversing in the park. cumulativeCost not fastDistanceTransform; sea = large connected water)*
-- [ ] OSM via OSMnx → `building_density`, `building_count`, `road_density`, `dist_park`
+- [x] OSM via OSMnx → `building_density`, `building_count`, `road_density`, `dist_park` → `data/interim/osm.parquet`
+      *(80,842 buildings, cached in data/raw/. roads reliable (+0.69 vs built); buildings
+      under-mapped (relative only); dist_park misleading — SGNP isn't OSM-tagged as park)*
 - [ ] Landsat optical → `albedo` (Liang 2001) — the cool-roof lever
 - [ ] Neighbourhood aggregates → `ndvi_neigh_mean`, `built_neigh_mean`
 - [ ] Open-Meteo join *(expected near-constant at 11 km; Phase 2 decides if they stay)*
