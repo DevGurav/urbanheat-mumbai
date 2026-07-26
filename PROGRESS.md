@@ -178,9 +178,38 @@ location (`ward_code`, `centroid_lat/lon`) and the leakage columns (`lst_p90`,
 
 ## Phase 3 — Backend API · Weeks 8–10
 
-- [ ] FastAPI skeleton, settings, CORS, structured logging
-- [ ] `/city/grid` `/hotspots` `/predict` `/explain/{cell_id}` `/scenario` `/weather` `/trends`
-- [ ] Response caching + GeoJSON simplification/gzip
+**Goal:** a FastAPI backend over the trained model, HVI and scenario engine — everything
+demoable from Swagger `/docs`. No DB (ADR-0004: files in memory); no Redis (ADR-0003:
+in-process cache). Contracts in `api-reference.md`.
+
+**Approach.** A `backend/` package loads the processed artifacts once at startup
+(`features.parquet`, `hvi.parquet`, `wards.geojson`, `models/model.joblib`,
+`models/shap_values.parquet` — a few MB, ADR-0004) into an in-memory store. Routers read that
+store; pydantic schemas type every response and carry the `measurement` marker (ADR-0005).
+
+### Skeleton
+
+- [ ] `backend/` package: FastAPI app, `pydantic-settings`, CORS from `CORS_ORIGINS`, structured logging
+- [ ] Startup store: load model + tables once; `GET /health` returns model/data version + uptime
+- [ ] Response schemas (pydantic); the `measurement: land_surface_temperature` marker everywhere
+
+### Data-serving endpoints
+
+- [ ] `GET /city/grid` — choropleth GeoJSON (`layer=lst|ndvi|hvi|built`), geometry simplified + gzipped
+- [ ] `GET /hotspots` — ranked wards/cells by `hvi|lst`, each with its top SHAP driver
+- [ ] `GET /explain/{cell_id}` — per-cell SHAP attribution (the product's "why")
+- [ ] `GET /weather` — Open-Meteo passthrough, TTL-cached
+
+### Model / scenario endpoints
+
+- [ ] `GET /predict` — model LST prediction for a cell / supplied feature vector
+- [ ] `POST /scenario` — wraps `ml/scenario.py`: ΔLST + summary + cost range + the `clamped` disclosure
+- [ ] `GET /trends` — **stubbed** (501 / not-yet-available); real slopes need `lst_trend` (deferred)
+
+### Performance & exit
+
+- [ ] GZip middleware + geometry simplification for `/city/grid`; in-process TTL cache
+- [ ] Keep `api-reference.md` in sync as endpoints land
 - [ ] ✅ **Everything demoable from Swagger `/docs` locally**
 
 ---

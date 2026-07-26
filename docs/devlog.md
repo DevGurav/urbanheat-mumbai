@@ -21,6 +21,28 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-26 — Phase 3 — Kickoff: FastAPI backend planning pass
+
+**Done**
+- Closed out Phase 2 (CHANGELOG, architecture A→H, PROGRESS → 3). Read the `api-reference.md`
+  contracts; expanded Phase 3 into grouped tasks.
+
+**Decided**
+- **In-memory store, no DB** (ADR-0004): the backend loads `features.parquet`, `hvi.parquet`,
+  `wards.geojson`, `model.joblib` and `shap_values.parquet` once at startup (a few MB) and
+  serves from memory. No Redis — an in-process TTL cache (ADR-0003).
+- **`/trends` stubbed** (author-confirmed): it needs `lst_trend` (per-year slopes), deferred in
+  Phase 1. Ship a clear "not yet available" rather than fake data or a detour back through the
+  EE pipeline. The other six endpoints all serve real, built artifacts.
+- **`/city/grid`**: GeoJSON + gzip + geometry simplification now; vector tiles only if it stays
+  heavy (the api-reference bandwidth note). `/agent/chat` and `/alerts` remain Phase 4.
+
+**Next**
+- Skeleton first: `backend/` package (FastAPI app, `pydantic-settings`, CORS, structured
+  logging), the startup store, `GET /health`. Then the data-serving endpoints on top.
+
+---
+
 ## 2026-07-26 — Phase 2 — Scenario engine: the digital twin, honestly
 
 **Done**
