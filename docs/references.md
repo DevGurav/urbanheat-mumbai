@@ -86,10 +86,14 @@ the API both claim these are literature-derived (`api-reference.md`, `ml-methodo
 RAG corpus for the Copilot (`agents.md` §4). All public. Files → `data/knowledge_base/`
 (gitignored — listed here instead).
 
+**Phase 4 kickoff MVP (ADR-0009)** — the 3 most Mumbai/India-specific and load-bearing:
 - [ ] **Mumbai Climate Action Plan (MCAP)** — BMC. Primary local policy source
 - [ ] **NDMA heat-wave guidelines / National Action Plan** — <https://ndma.gov.in>
 - [ ] **IMD heat-wave criteria** — the thresholds the monitoring agent implements in code
       (`agents.md` §7). **Cite the exact definition used**
+
+**Later candidates** — not built this phase; add if a demo or report need surfaces material
+only they contain (ADR-0009):
 - [ ] **WHO heat and health** fact sheets
 - [ ] **IPCC AR6** — urban areas chapter, relevant excerpts
 - [ ] City-level Heat Action Plans from Indian cities (Ahmedabad's is the well-known

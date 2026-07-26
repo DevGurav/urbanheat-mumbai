@@ -21,6 +21,42 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — Kickoff: agentic core planning pass
+
+**Done**
+- Closed out Phase 3 (CHANGELOG, architecture — REST API layer now ✅, PROGRESS → 4).
+- Read `agents.md` and `BLUEPRINT.md` §6 against Phase 4's actual starting state and expanded
+  the phase into a grouped task board (dependencies, toolbelt, RAG, the four agents,
+  orchestration, rate-limit hygiene, monitoring cron).
+- Wrote ADR-0009, bundling the three coupled scope decisions below (the same reasoning ADR-0008
+  used for Phase 2's coupled choices).
+
+**Decided**
+- **Tools wired in-process** (`backend.store` / `data_pipeline.ml.*` imports), not HTTP
+  loopback — one process to run for a demo, no re-implementation of the Phase 3 services.
+- **RAG corpus is a 3-document MVP**: Mumbai Climate Action Plan, NDMA heat-wave guidelines,
+  IMD heat-wave criteria (the last also feeds the Monitoring agent's thresholds). WHO/IPCC/
+  other-cities' plans stay candidates in `references.md` §4, not built this phase.
+- **Agent 2 drops the cost axis**: ranks by ΔLST × population only. No cited cost-per-area
+  figure exists yet — the same gap Phase 3 hit and left `cost` out of `/scenario` for.
+  `estimate_cost`/`interventions.yaml` deferred until a real citation is logged.
+
+**Broke / learned**
+- Caught a genuine cross-document inconsistency while reading, not something introduced today:
+  `architecture.md`'s Components diagram and `agents.md`'s own §2 supervisor diagram numbered
+  the agents 1=Planning/2=Digital Twin/3=Monitoring/4=Copilot, while `agents.md`'s own §4–§7
+  prose headers and PROGRESS.md's old one-line bullet numbered them 1=Copilot/2=Planning/
+  3=Digital Twin/4=Monitoring. Canonicalized on the latter (matches prose + PROGRESS already;
+  Copilot is also the agent the exit criterion tests) and fixed both diagrams — including the
+  retrieval and notification arrows, which had to move with the renumbering, not just the
+  bracket labels.
+
+**Next**
+- Dependencies (`langchain`, `langgraph`, `chromadb`, `sentence-transformers`, `langchain-groq`)
+  then the shared toolbelt, per the new PROGRESS board.
+
+---
+
 ## 2026-07-27 — Phase 3 — Model/scenario endpoints: predict, scenario, trends stub
 
 **Done**

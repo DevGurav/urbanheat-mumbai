@@ -30,23 +30,32 @@ not an LLM-invented number. Plausible fabrication is the worst failure mode this
 ```mermaid
 flowchart TB
     IN[User message] --> SUP{{Supervisor<br/>route by intent}}
-    SUP -->|"where/why is it hot"| A4[Copilot]
-    SUP -->|"what should we do"| A1[Planning]
-    SUP -->|"what if"| A2[Digital Twin]
-    SUP -->|scheduled| A3[Monitoring]
-    A4 & A1 & A2 --> OUT[Response + optional map layer]
-    A3 --> FEED[(Alerts feed)]
+    SUP -->|"where/why is it hot"| A1[1 · Copilot]
+    SUP -->|"what should we do"| A2[2 · Planning]
+    SUP -->|"what if"| A3[3 · Digital Twin]
+    SUP -->|scheduled| A4[4 · Monitoring]
+    A1 & A2 & A3 --> OUT[Response + optional map layer]
+    A4 --> FEED[(Alerts feed)]
 ```
 
 Routing is a single classification call, not a negotiation between agents — chattier
 multi-agent patterns burn the rate limit for no gain at this scale.
 
+**Numbering note.** Earlier drafts of this diagram and `architecture.md`'s Components diagram
+numbered the agents in build order (1 Planning, 2 Digital Twin, 3 Monitoring, 4 Copilot),
+while this file's own §4–§7 headers and `PROGRESS.md` numbered them in exit-criterion order
+(1 Copilot, since it's the agent the Phase 4 exit criterion tests). Canonicalized on the
+latter at the Phase 4 kickoff (ADR-0009) — both diagrams now match §4–§7 below.
+
 ---
 
 ## 3. Shared toolbelt
 
-Thin wrappers over Phase 3 services. Same functions the REST API exposes — one
-implementation, two interfaces.
+Thin wrappers over Phase 3 services, called **in-process** — a LangChain tool imports
+`backend.store` / `data_pipeline.ml.*` directly rather than calling the REST API over HTTP
+(ADR-0009). Same functions the REST API exposes — one implementation, two interfaces: an
+HTTP router for `/city/grid` etc., a tool wrapper for the agents, never a re-implementation
+of either.
 
 | Tool | Signature | Returns |
 |---|---|---|
@@ -55,7 +64,7 @@ implementation, two interfaces.
 | `explain_cell` | `(cell_id: int)` | SHAP attribution, °C per driver |
 | `explain_ward` | `(ward: str)` | Aggregated SHAP + summary stats |
 | `simulate_scenario` | `(ward: str \| cell_ids: list, intervention: str, coverage: float)` | ΔLST per cell, summary, clamp warnings |
-| `estimate_cost` | `(intervention: str, area_m2: float)` | Cost range + citation |
+| ~~`estimate_cost`~~ | `(intervention: str, area_m2: float)` | **Deferred (ADR-0009)** — no cited cost-per-area figure exists yet in `references.md`; build once one is logged |
 | `get_weather` | `(days: int = 7)` | Open-Meteo forecast |
 | `get_trend` | `(ward: str \| None)` | LST trend °C/yr |
 | `search_knowledge` | `(query: str, k: int = 4)` | Policy-document passages + sources |
@@ -70,9 +79,12 @@ document + page) so the agent can cite rather than assert.
 **Role** Answer planner questions over city data and policy documents.
 **Tools** All read tools + `search_knowledge`.
 
-**RAG corpus** (`data/knowledge_base/`) — Mumbai Climate Action Plan · NDMA heat-wave
-guidelines · WHO heat-health fact sheets · IPCC AR6 urban excerpts · selected UHI papers.
-All public documents; sources listed in `references.md`.
+**RAG corpus** (`data/knowledge_base/`) — **Phase 4 MVP (ADR-0009):** Mumbai Climate Action
+Plan · NDMA heat-wave guidelines · IMD heat-wave criteria (also what the Monitoring agent's
+thresholds cite, §7). **Later candidates**, not built this phase: WHO heat-health fact
+sheets, IPCC AR6 urban excerpts, other cities' Heat Action Plans — added if a demo or report
+need surfaces material only they contain. All public documents; sources listed in
+`references.md` §4.
 
 **Retrieval** ChromaDB embedded · `sentence-transformers/all-MiniLM-L6-v2` on CPU
 (never a paid embedding API) · ~800-token chunks, 100 overlap · top-k 4.
@@ -92,20 +104,23 @@ All public documents; sources listed in `references.md`.
 
 ## 5. Agent 2 — Planning Decision Agent
 
-**Role** Turn hotspots into ranked, costed intervention plans.
-**Tools** `get_hotspots`, `explain_ward`, `simulate_scenario`, `estimate_cost`.
+**Role** Turn hotspots into ranked intervention plans.
+**Tools** `get_hotspots`, `explain_ward`, `simulate_scenario`.
 
 **Method** Rank by HVI → read SHAP to find *why* each ward is hot → choose interventions
 that target the actual driver (low NDVI → planting; high albedo deficit → cool roofs) →
-simulate → cost → rank by ΔLST per rupee × population affected.
+simulate → rank by ΔLST × population affected.
 
-**Coefficients** `backend/agents/data/interventions.yaml` — a curated table of
-literature-derived cost and effect ranges, each with a citation. The LLM reads this table;
-it never invents a coefficient.
+**Cost ranking deferred (ADR-0009).** The original design costed each recommendation via a
+curated `interventions.yaml` table and ranked by ΔLST per rupee. No cited cost-per-area figure
+exists yet in `references.md` — the same gap Phase 3 hit and left `cost` out of `/scenario`
+for (`api-reference.md`). Build `estimate_cost` and `interventions.yaml` once a real citation
+is logged; until then, the LLM never invents a coefficient, so the tool does not exist rather
+than existing with a placeholder.
 
-**Guardrails** Every recommendation carries ΔLST (modelled), cost range (literature), the
-SHAP driver that motivated it, and the correlational caveat from `ml-methodology.md` §6.
-Costs are order-of-magnitude, not quotes — and must be labelled that way.
+**Guardrails** Every recommendation carries ΔLST (modelled), the SHAP driver that motivated
+it, and the correlational caveat from `ml-methodology.md` §6. No cost figure is stated —
+silence here is preferable to an invented number.
 
 ## 6. Agent 3 — Digital Twin Simulation Agent
 

@@ -217,11 +217,72 @@ store; pydantic schemas type every response and carry the `measurement` marker (
 
 ## Phase 4 — Agentic core · Weeks 11–14
 
-- [ ] Services wrapped as LangChain tools
-- [ ] RAG: knowledge-base PDFs → Chroma + local embeddings
-- [ ] Agent 1 Urban AI Copilot · Agent 2 Planning Decision · Agent 3 Digital Twin · Agent 4 Monitoring
-- [ ] LangGraph supervisor + rate-limit hygiene (backoff, cache, Groq fallback)
-- [ ] GitHub Actions daily monitoring cron
+**Goal:** four LangGraph agents wrapping the Phase 3 services, a RAG-backed Copilot, and a
+daily monitoring cron — reachable through one new endpoint, `POST /agent/chat`. Contracts and
+guardrails in `agents.md`.
+
+**Settled at kickoff, 2026-07-27 (ADR-0009)**
+Tools wired **in-process** (`backend.store` / `data_pipeline.ml.*` imports, not HTTP loopback)
+· agent numbering canonicalized **1 Copilot · 2 Planning · 3 Digital Twin · 4 Monitoring**
+(fixed a diagram/diagram vs. prose/PROGRESS inconsistency found across `agents.md` and
+`architecture.md`) · RAG corpus is a **3-document MVP** (MCAP, NDMA guidelines, IMD criteria) —
+WHO/IPCC/other-cities' plans deferred · Agent 2 ranks by **ΔLST × population only**, no cost
+(`estimate_cost`/`interventions.yaml` deferred — no cited cost-per-area figure exists yet)
+
+### Dependencies & environment
+
+- [ ] Add `langchain`, `langgraph`, `chromadb`, `sentence-transformers`, `langchain-groq` to
+  `pyproject.toml`
+- [ ] Confirm `GEMINI_API_KEY` / `GROQ_API_KEY` / `CHROMA_DIR` flow through `pydantic-settings`
+  (already scaffolded in `.env.example`)
+
+### Shared toolbelt
+
+- [ ] `get_hotspots`, `get_cell_stats`, `explain_cell`, `explain_ward`, `simulate_scenario`,
+  `get_weather`, `get_trend`, `search_knowledge` — in-process LangChain wrappers over
+  `backend.store` / `data_pipeline.ml.*` (ADR-0009); Pydantic-validated args; every numeric
+  result carries `model_version`/provenance (`agents.md` §3)
+- [ ] Unit tests per tool against the real fixtures
+
+### RAG knowledge base
+
+- [ ] Collect the 3 MVP documents → `data/knowledge_base/` (gitignored); log as read in
+  `references.md` §4
+- [ ] `backend/rag/ingest.py` — chunk (~800 tok / 100 overlap) + embed
+  (`sentence-transformers/all-MiniLM-L6-v2`, CPU) → persisted Chroma at `CHROMA_DIR`
+- [ ] `search_knowledge` tool — top-k 4, passage + source + page
+
+### Agents
+
+- [ ] Agent 1 — Urban AI Copilot (RAG + data tools; guardrails in `agents.md` §4)
+- [ ] Agent 2 — Planning Decision (hotspots → SHAP → simulate → rank by ΔLST × population;
+  no cost field per kickoff scope, `agents.md` §5)
+- [ ] Agent 3 — Digital Twin (NL → structured scenario → `simulate_scenario` → narration,
+  `agents.md` §6)
+- [ ] Agent 4 — Monitoring (rule-based IMD thresholds in code, not LLM-judged; LLM drafts
+  alert wording only, `agents.md` §7)
+
+### Orchestration
+
+- [ ] LangGraph supervisor — single classification hop routes to one of the four agents;
+  bounded tool-call loop (max ~4) per agent (`agents.md` §2)
+- [ ] `POST /agent/chat` — narrative + `tool_calls` made (transparency) + optional GeoJSON
+  layer (`api-reference.md`)
+
+### Rate-limit hygiene
+
+- [ ] Response cache keyed on (question + `data_version`)
+- [ ] Exponential backoff on 429 (2s/4s/8s); Groq fallback on repeated 429
+- [ ] Runbook step: warm the cache with the scripted demo questions before a live demo
+
+### Monitoring cron
+
+- [ ] `.github/workflows/` — daily trigger (~06:00 IST)
+- [ ] Alert dedupe (one per event, not per run); written to file (Phase 4; Supabase from
+  Phase 6)
+
+### Exit
+
 - [ ] ✅ **Copilot answers a real planning question with real model numbers**
 
 ---

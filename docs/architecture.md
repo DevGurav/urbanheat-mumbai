@@ -54,10 +54,10 @@ flowchart TB
 
         subgraph AG["LangGraph orchestration ⬜"]
             SUP{{Supervisor}}
-            A1[1 · Planning<br/>Decision Agent]
-            A2[2 · Digital Twin<br/>Simulation Agent]
-            A3[3 · Monitoring<br/>Agent]
-            A4[4 · Urban AI<br/>Copilot · RAG]
+            A1[1 · Urban AI<br/>Copilot · RAG]
+            A2[2 · Planning<br/>Decision Agent]
+            A3[3 · Digital Twin<br/>Simulation Agent]
+            A4[4 · Monitoring<br/>Agent]
         end
 
         subgraph SVC["Agent tools & services ⬜"]
@@ -80,10 +80,10 @@ flowchart TB
     API --> SUP
     SUP --> A1 & A2 & A3 & A4
     A1 & A2 & A3 & A4 --> SVC
-    A4 -.retrieval.-> VEC
+    A1 -.retrieval.-> VEC
     MLS --> MDL
     MLS & GIS & SCN --> FEAT
-    A3 --> NTF --> SUPA
+    A4 --> NTF --> SUPA
     API --> SUPA
 ```
 
