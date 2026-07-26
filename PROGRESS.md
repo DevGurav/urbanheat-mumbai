@@ -137,16 +137,18 @@ location (`ward_code`, `centroid_lat/lon`) and the leakage columns (`lst_p90`,
 
 ### Data prep & validation harness
 
-- [ ] `ml/dataset.py` — build X, y from `features.parquet`; apply the training filter and the
-      feature/leakage exclusions; return the ward groups for CV
-- [ ] `ml/cv.py` — ward-grouped fold splitter + a spatial-CV scorer (R², RMSE, MAE per fold)
-- [ ] Show the random-split vs spatial-CV gap once, to evidence why spatial CV is used (ADR-0006)
+- [x] `ml/dataset.py` — X, y, ward groups from `features.parquet`; training filter + leakage/
+      location exclusions (30 features; dropped `population` as collinear, kept `land_fraction`)
+- [x] `ml/cv.py` — ward-grouped `GroupKFold` splitter + spatial/random scorer (R², RMSE, MAE)
+- [x] Random-vs-spatial gap reported — **tiny (~0.047)**, evidencing that excluding location
+      (ADR-0008) stopped the model memorising the map
 
 ### Models
 
-- [ ] Baseline — linear regression (the honest floor)
-- [ ] XGBoost, then LightGBM; light tuning only (defaults are near-optimal at 12k×~30)
-- [ ] Model comparison table → `docs/ml-methodology.md`; save the chosen model → `models/`
+- [x] Baseline — mean floor + ridge (the honest floor: mean is negative under spatial CV)
+- [x] Random forest → XGBoost → LightGBM; light defaults only
+- [x] Model comparison table → `docs/ml-methodology.md` §3; **XGBoost saved** (spatial R² 0.893,
+      RMSE 1.10 °C) → `models/model.joblib` + `model_meta.json`
 
 ### Explainability
 

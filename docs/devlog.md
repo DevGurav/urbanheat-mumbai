@@ -21,6 +21,40 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-26 — Phase 2 — Modelling harness and the model ladder
+
+**Done**
+- `data_pipeline/ml/`: `dataset.py` (X, y, ward groups under ADR-0008), `cv.py` (ward-grouped
+  spatial CV + naive random contrast), `train.py` (the model ladder). `scikit-learn`,
+  `xgboost`, `lightgbm`, `joblib` added; `model_dir` added to config.
+- Ran the ladder; **XGBoost selected, spatial R² 0.893, RMSE 1.10 °C** → `models/model.joblib`
+  + `model_meta.json`. Six new tests (dataset exclusions/alignment, CV scorers); 26 total green.
+
+**Decided**
+- **Borderline features, resolved by inspection:** dropped `population` (it is *exactly*
+  25 × `pop_density` — perfectly collinear), kept `land_fraction` (a real geographic property,
+  not location or leakage). 30 features from the 42 columns. Logged in `dataset.py`.
+- **Selection on spatial RMSE, floor excluded.** XGBoost and LightGBM tied (1.10 °C / 0.893);
+  kept XGBoost. Light defaults only — no tuning warranted at ~11k × 30 (ADR-0006).
+
+**Results — the honest number is strong, and its honesty is provable**
+- Spatial R² **0.893**, RMSE **1.10 °C**: the model predicts an *unseen ward's* surface
+  temperature to ~1.1 °C from physical drivers alone.
+- **The random-vs-spatial gap is tiny (~0.047).** That is ADR-0008 vindicated: because absolute
+  location is excluded, the model *cannot* memorise the map, so it generalises to held-out wards
+  almost as well as to random cells. A large gap would have meant the score was mostly
+  autocorrelation; the small gap means 0.893 is real driver-based skill. Had lat/lon been kept,
+  the random R² would balloon and the gap with it.
+- The mean floor is **negative** under spatial CV (−0.09) — held-out wards differ from the
+  training mean, which is the ward-to-ward variation the blocked split is designed to expose.
+
+**Next**
+- SHAP on the saved XGBoost: global importance + per-cell attribution, and the **physics gate**
+  — a positive `albedo` SHAP is the *expected* confound (ADR-0008), a vegetation-warms sign is a
+  stop-and-fix.
+
+---
+
 ## 2026-07-26 — Phase 2 — Kickoff: planning pass
 
 **Done**

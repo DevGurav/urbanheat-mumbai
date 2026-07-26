@@ -57,7 +57,11 @@ them is a finding, not an embarrassment — it quantifies how much of an apparen
 score is autocorrelation. Reporting only the blocked (lower, honest) number without the
 contrast wastes the insight.
 
-*[Phase 2]* Naive R²: ___ · Blocked R²: ___ · Gap: ___
+**Measured (Phase 2, XGBoost).** Naive (random-split) R² **0.941** · blocked (ward-grouped) R²
+**0.893** · gap **+0.047**. The gap is *small* — and that is the point: because absolute
+location is excluded (ADR-0008) the model cannot memorise the map, so it generalises to unseen
+wards almost as well as to random cells. A large gap would have meant the score was mostly
+autocorrelation; a small one means the 0.893 is real skill from physical drivers.
 
 ---
 
@@ -76,7 +80,21 @@ isolation says nothing.
 
 Selection: best blocked-CV RMSE, ties broken toward the simpler and more stable model.
 
-*[Phase 2]* Results table: model · naive R² · blocked R² · RMSE · MAE · fit time
+**Results (Phase 2 — ward-grouped 5-fold spatial CV; naive = random 5-fold).**
+
+| Model | naive R² | spatial R² | spatial RMSE °C | spatial MAE °C | fit |
+|---|---|---|---|---|---|
+| mean floor | −0.00 | −0.09 | 3.54 | 2.77 | 0.4 s |
+| ridge | 0.854 | 0.815 | 1.45 | 1.13 | 0.2 s |
+| random forest | 0.925 | 0.882 | 1.15 | 0.88 | 72 s |
+| **XGBoost** ✓ | 0.941 | **0.893** | **1.10** | 0.85 | 12 s |
+| LightGBM | 0.939 | 0.893 | 1.10 | 0.85 | 6 s |
+
+**Selected: XGBoost** on best spatial RMSE (1.10 °C), tied with LightGBM on R² 0.893 — it
+predicts an unseen ward's surface temperature to ~1.1 °C from physical drivers alone. Saved to
+`models/model.joblib` with `model_meta.json` (feature list, all metrics, CV scheme). The mean
+floor is *negative* under spatial CV — a held-out ward's temperature differs from the training
+mean, which is exactly the ward-to-ward variation the blocked split is meant to expose.
 
 **Metrics** RMSE (°C — primary, same unit as the target, penalises the large errors that
 matter), MAE (°C — typical error, robust), R² (variance explained — reported for
