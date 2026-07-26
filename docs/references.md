@@ -56,15 +56,25 @@ Needed for: LST retrieval practice, the HVI weighting argument, and — most imp
 the intervention coefficients in `interventions.yaml`, which must be cited rather than
 invented (`agents.md` §5).
 
-**To find and read** *(shortlist during Phase 2; log each once actually read)*
+**Read — scenario-engine coefficients (Phase 2)**
+- [x] **Cool / reflective roofs** — Li, D., Bou-Zeid, E. & Oppenheimer, M. (2014). *The
+  effectiveness of cool and green roofs as urban heat island mitigation strategies.*
+  Environmental Research Letters, 9(5), 055002. **Cool roof albedo 0.7 vs conventional 0.3;
+  ~1.0 °C surface-UHI reduction at 30 % roof coverage, ~1.7 °C at 50 %.** → the cool-roof ΔLST
+  coefficient (used *directly*, bypassing the model's confounded albedo term — ADR-0008).
+- [x] **Reflective surfaces review** — Santamouris, M. (2014). *Cooling the cities — A review
+  of reflective and green roof mitigation technologies…* Solar Energy, 103, 682–703. Albedo
+  0.15→0.5 lowers peak 2 m air temperature 0.25–0.5 K; surface reductions larger. Corroborates
+  the cool-roof magnitude and its order.
+- [x] **NDVI cooling, Indian metros** — Grover, A. & Singh, R. B. (2015). *Analysis of urban
+  heat island (UHI) in relation to NDVI: a comparative study of Delhi and Mumbai.* Environments,
+  2(2), 125–138. **~1.39 °C LST decrease per unit NDVI increase** — corroborates the model's
+  (SHAP-validated) NDVI cooling that the greening scenario relies on.
+
+**Still to find / read**
 - [ ] Foundational SUHI definition and LST-based measurement
-- [ ] LST ↔ NDVI / NDBI relationship studies
-- [ ] Urban tree canopy cooling magnitudes — **needed for the tree-planting coefficient**
-- [ ] Cool/reflective roof albedo–temperature studies — **needed for the albedo coefficient**
-- [ ] Green roof cooling effect
-- [ ] Water body cooling ("blue space") effect
+- [ ] Green roof cooling effect · Water body ("blue space") cooling — for those levers
 - [ ] Heat Vulnerability Index construction and weighting — for `ml-methodology.md` §5
-- [ ] UHI studies specific to Mumbai or Indian metros — for comparison of results
 - [ ] Landsat C2 L2 surface-temperature validation — accuracy expectations
 
 **Standing note.** Every intervention coefficient shipped in the scenario engine needs a
