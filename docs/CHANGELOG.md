@@ -6,6 +6,47 @@ detail belongs in [devlog.md](devlog.md).
 
 ---
 
+## Phase 3 — Backend API · completed 2026-07-27
+
+### Added
+- `backend/` package: FastAPI app with a `lifespan` startup store (`store.py`) loading
+  `features.parquet`, `hvi.parquet`, `wards.geojson`, `model.joblib` and `shap_values.parquet`
+  once into memory (ADR-0004 — no DB); CORS from `CORS_ORIGINS`, gzip middleware, structured
+  logging, `backend/errors.py` global exception handler (`{detail, error_code}` on every error)
+- `GET /health` — model/data version + uptime; `schemas.py` with the
+  `measurement: land_surface_temperature` marker carried on every model-bearing response
+- Data-serving endpoints: `GET /city/grid` (choropleth GeoJSON, `layer=lst|ndvi|hvi|built`,
+  geometry simplified + gzipped — ~4 MB to ~460 KB measured), `GET /hotspots` (ward/cell ranking
+  by `hvi`/`lst` with top SHAP driver), `GET /explain/{cell_id}` (per-cell SHAP attribution),
+  `GET /weather` (Open-Meteo forecast passthrough, TTL-cached via `backend/cache.py`)
+- Model/scenario endpoints: `GET /predict` (model vs. observed LST, transparency only),
+  `POST /scenario` (wraps `ml/scenario.py`'s `greening_delta`/`cool_roof_delta`, discloses
+  `clamped`/`clamped_cells`, no invented `cost` field), `GET /trends` (author-confirmed stub —
+  `lst_trend` was deferred in Phase 1, so this returns `{available: false, ...}` rather than a
+  fake slope)
+- `ml/scenario.py` gained `greening_clamped_mask()` (additive, own unit test) so the API reports
+  clamped cells honestly instead of asserting it from outside
+- pytest suite grown to 58 tests (backend + `ml/scenario`); `api-reference.md` kept in sync
+  endpoint-by-endpoint as each landed, including two corrections against the original draft
+  (`ward_code` not `ward_name`; `greening`/`cool_roof` not `tree_planting`)
+
+### Verified
+- ✅ **Exit criterion met** — every endpoint demoable from Swagger `/docs` locally. Magnitudes
+  checked, not just response shapes: `/predict`'s residual (0.13 °C) sits inside the model's
+  ~1.10 °C spatial-CV RMSE; `/scenario` cool-roof at 50% coverage on a fully-built cell lands at
+  exactly −1.7 °C, Li et al.'s cited figure reproduced; `/hotspots`' top-5 ward ranking matches
+  the HVI ranking already measured in Phase 2, evidence the join logic is correct, not just
+  non-empty.
+
+### Known limitations carried into Phase 4
+- No response caching beyond `/weather`'s TTL cache, and no rate limiting — deferred until
+  `/agent/chat` exists to actually need protecting against the free-tier LLM limit (ADR-0002)
+- `/trends` has no real data behind it; needs the deferred `lst_trend` per-year Landsat reduction
+- `/scenario` has no `cost` field — no cited cost-per-area figure exists yet in `references.md`
+- Still no DB, no Redis, no auth (ADR-0003, ADR-0004) — all slated for Phase 6
+
+---
+
 ## Phase 2 — ML: predict & explain · completed 2026-07-26
 
 ### Added

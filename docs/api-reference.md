@@ -3,8 +3,10 @@
 Endpoint contracts and the reasoning behind them. FastAPI generates the authoritative
 OpenAPI schema at `/docs`; this file carries the *why* that the schema cannot.
 
-**Status:** planned contract (Phase 3). Kept in sync as endpoints land — an endpoint added
-or changed requires an update here ([conventions.md](conventions.md)).
+**Status:** Phase 3 complete — all data/model/scenario endpoints below are ✅ *(landed)* and
+demoable from `/docs` locally. `/agent/chat`, `/alerts` and `/reports/generate` are Phase 4/7
+contracts, not yet built. Kept in sync as endpoints land — an endpoint added or changed
+requires an update here ([conventions.md](conventions.md)).
 
 **Base** `http://localhost:8000` (dev) · Render URL (prod)
 **Format** JSON; geometry as GeoJSON, EPSG:4326

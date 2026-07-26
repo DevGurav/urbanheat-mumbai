@@ -3,8 +3,8 @@
 Live task board. Newest phases get expanded into detailed tasks at their kickoff.
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
-**Current phase:** 3 — Backend API *(Phase 2 complete)*
-**Last updated:** 2026-07-26
+**Current phase:** 4 — Agentic core *(Phase 3 complete)*
+**Last updated:** 2026-07-27
 
 ---
 
@@ -189,29 +189,29 @@ store; pydantic schemas type every response and carry the `measurement` marker (
 
 ### Skeleton
 
-- [x] `backend/` package: FastAPI app, `pydantic-settings`, CORS from `CORS_ORIGINS`, gzip, logging
-- [x] Startup store (`store.py`): load model + tables once; `GET /health` → model/data version + uptime
-- [x] `schemas.py` scaffold + the `measurement: land_surface_temperature` marker (applied per endpoint)
+- [X] `backend/` package: FastAPI app, `pydantic-settings`, CORS from `CORS_ORIGINS`, gzip, logging
+- [X] Startup store (`store.py`): load model + tables once; `GET /health` → model/data version + uptime
+- [X] `schemas.py` scaffold + the `measurement: land_surface_temperature` marker (applied per endpoint)
 
 ### Data-serving endpoints
 
-- [x] `GET /city/grid` — choropleth GeoJSON (`layer=lst|ndvi|hvi|built`), geometry simplified + gzipped
-- [x] `GET /hotspots` — ranked wards/cells by `hvi|lst`, each with its top SHAP driver
-- [x] `GET /explain/{cell_id}` — per-cell SHAP attribution (the product's "why")
-- [x] `GET /weather` — Open-Meteo passthrough, TTL-cached
+- [X] `GET /city/grid` — choropleth GeoJSON (`layer=lst|ndvi|hvi|built`), geometry simplified + gzipped
+- [X] `GET /hotspots` — ranked wards/cells by `hvi|lst`, each with its top SHAP driver
+- [X] `GET /explain/{cell_id}` — per-cell SHAP attribution (the product's "why")
+- [X] `GET /weather` — Open-Meteo passthrough, TTL-cached
 
 ### Model / scenario endpoints
 
-- [x] `GET /predict` — model LST prediction for a cell (transparency: predicted vs. observed)
-- [x] `POST /scenario` — wraps `ml/scenario.py`: ΔLST + summary + the `clamped` disclosure
-      (no cost field — no cited cost figure exists yet, see api-reference.md)
-- [x] `GET /trends` — **stubbed**: `{available: false, note: ...}`; real slopes need `lst_trend` (deferred)
+- [X] `GET /predict` — model LST prediction for a cell (transparency: predicted vs. observed)
+- [X] `POST /scenario` — wraps `ml/scenario.py`: ΔLST + summary + the `clamped` disclosure
+  (no cost field — no cited cost figure exists yet, see api-reference.md)
+- [X] `GET /trends` — **stubbed**: `{available: false, note: ...}`; real slopes need `lst_trend` (deferred)
 
 ### Performance & exit
 
-- [x] GZip middleware + geometry simplification for `/city/grid`; in-process TTL cache
-- [x] Keep `api-reference.md` in sync as endpoints land
-- [ ] ✅ **Everything demoable from Swagger `/docs` locally**
+- [X] GZip middleware + geometry simplification for `/city/grid`; in-process TTL cache
+- [X] Keep `api-reference.md` in sync as endpoints land
+- [X] ✅ **Everything demoable from Swagger `/docs` locally**
 
 ---
 

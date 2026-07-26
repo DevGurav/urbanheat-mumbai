@@ -4,10 +4,12 @@ Text-based, editable re-creation of the system design. Diagrams are Mermaid so t
 diffable and render on GitHub.
 
 **Status:** target design. Components are marked ⬜ planned / 🟨 in progress / ✅ built,
-and updated as phases land. As of **Phase 2**, the whole **offline pipeline (§3) runs end to
-end** — sources → `features.parquet` → trained **XGBoost** model → SHAP → the HVI and the
-scenario engine (`data_pipeline/ml/`). The backend, agents, frontend and storage (§2, §6)
-remain ⬜ — Phase 3 puts a FastAPI over the model, HVI and scenarios.
+and updated as phases land. As of **Phase 3**, the **offline pipeline (§3)** still runs end to
+end — sources → `features.parquet` → trained **XGBoost** model → SHAP → the HVI and the
+scenario engine (`data_pipeline/ml/`) — and now the **REST API layer (§2)** sits over it: a
+FastAPI app with an in-memory startup store serving all seven data/model/scenario endpoints.
+The LangGraph agents, frontend and Supabase (§2, §6) remain ⬜ — Phase 4 wraps the services as
+agent tools.
 
 ---
 
@@ -47,10 +49,10 @@ flowchart TB
         ALR[Alerts feed]
     end
 
-    subgraph BE["Backend ⬜ — FastAPI on Render"]
-        API[REST API layer<br/>Pydantic · CORS · cache]
+    subgraph BE["Backend 🟨 — FastAPI local, Render deploy is Phase 6"]
+        API[REST API layer ✅<br/>Pydantic · CORS · gzip · TTL cache]
 
-        subgraph AG["LangGraph orchestration"]
+        subgraph AG["LangGraph orchestration ⬜"]
             SUP{{Supervisor}}
             A1[1 · Planning<br/>Decision Agent]
             A2[2 · Digital Twin<br/>Simulation Agent]
@@ -58,7 +60,7 @@ flowchart TB
             A4[4 · Urban AI<br/>Copilot · RAG]
         end
 
-        subgraph SVC["Agent tools & services"]
+        subgraph SVC["Agent tools & services ⬜"]
             MLS[ML prediction<br/>service]
             GIS[GIS processing<br/>service]
             SCN[Scenario &<br/>optimisation engine]
