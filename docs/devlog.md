@@ -21,6 +21,69 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 3 — Data-serving endpoints: grid, hotspots, explain, weather
+
+**Done**
+- `GET /city/grid` — choropleth GeoJSON (`layer=lst|ndvi|hvi|built`), `bbox` viewport filter
+  (400 on malformed input), geometry `simplify`. Verified live: default settings + gzip bring
+  the full-city `lst` layer from ~4 MB to ~460 KB.
+- `GET /hotspots` — ward or cell ranking by `hvi`/`lst`, each with its top SHAP driver
+  (mean |SHAP| per feature for wards, that cell's own SHAP row for cells).
+- `GET /explain/{cell_id}` — per-cell SHAP drivers, `city_mean`/`deviation`, the `measurement`
+  marker. 404 `cell_not_found` for an unknown id, distinct 404 `cell_not_explained` for a real
+  cell below the SHAP training threshold (mostly sea).
+- `GET /weather` — Open-Meteo forecast passthrough for a city-representative point, TTL-cached
+  (`backend/cache.py`, 30 min) — separate from the pipeline's historical per-cell weather stage.
+- `backend/errors.py` + a global exception handler in `main.py`: every error is now a flat
+  `{detail, error_code}` body (api-reference.md conventions), not FastAPI's default nested shape.
+- 11 new tests (50 total green); `ruff format`/`check` clean.
+
+**Decided**
+- `/city/grid` and `/hotspots` return `ward_code`, not `ward_name` — `data-dictionary.md` §grid
+  already records that `ward_name` was never populated (BMC source has no name field; an
+  official mapping needs a citable source). `api-reference.md` updated to match reality instead
+  of carrying the stale placeholder forward.
+- `/weather` hits Open-Meteo's *forecast* API for one point, not the pipeline's per-cell
+  archive — this endpoint is live dashboard context, not a model feature, and the weather
+  stage's own finding (ERA5-scale weather barely varies across 458 km²) means one point suffices.
+
+**Broke / learned**
+- Nothing broke; the live smoke test doubled as a correctness check — the top-5 `hotspots`
+  ward ranking (`B, L, C, H/E, F/S`) landed exactly on the HVI ranking already measured and
+  documented in Phase 2 (`data-dictionary.md`), a good sign the join logic is right, not just
+  non-empty.
+- Caught before writing tests: the earlier skeleton commit (`899a957`) never got a devlog entry
+  — added retroactively below so the record isn't missing that step.
+
+**Next**
+- Model/scenario endpoints: `GET /predict`, `POST /scenario` (wrap `ml/scenario.py`, surface
+  `clamped`), `GET /trends` stub. Then the Phase 3 exit criterion (author-verified from Swagger).
+
+---
+
+## 2026-07-26 — Phase 3 — Backend skeleton: startup store + `/health`
+
+**Done**
+- `backend/` package: FastAPI app with a `lifespan` that loads `features.parquet`, `hvi.parquet`,
+  `wards.geojson`, `model.joblib` and `shap_values.parquet` once into `app.state.store`
+  (ADR-0004 — files, not a DB). CORS from `CORS_ORIGINS`, gzip middleware ahead of the coming
+  GeoJSON payloads (ADR-0003), structured logging.
+- `GET /health` → `model_version`, `data_version`, `uptime_s`, `n_cells`. `schemas.py` scaffold
+  with the `measurement: land_surface_temperature` marker for later endpoints.
+- Added `fastapi`, `uvicorn[standard]` to deps, `httpx` to dev deps (TestClient); `backend`
+  added to the hatch wheel packages. `tests/test_backend.py`: boots the real app, skips cleanly
+  on a fresh clone if artifacts are missing. 39 green.
+
+**Decided**
+- No response caching or rate limiting yet — premature before there's a second endpoint to
+  compare against.
+
+**Next**
+- Data-serving endpoints on top of the store: `/city/grid`, `/hotspots`, `/explain/{cell_id}`,
+  `/weather`.
+
+---
+
 ## 2026-07-26 — Phase 3 — Kickoff: FastAPI backend planning pass
 
 **Done**

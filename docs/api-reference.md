@@ -31,42 +31,55 @@ Liveness + versions. Also the endpoint used to wake Render before a demo.
 {"status": "ok", "model_version": "...", "data_version": "...", "uptime_s": 12}
 ```
 
-## `GET /city/grid`
+## `GET /city/grid` ✅ *(landed)*
 The choropleth layer — the dashboard's main payload.
 
 | Param | Type | Default | Notes |
 |---|---|---|---|
 | `layer` | `lst` \| `ndvi` \| `hvi` \| `built` | `lst` | Which value to return |
-| `simplify` | float | `0.0001` | Geometry tolerance (°) |
-| `bbox` | `minx,miny,maxx,maxy` | — | Optional viewport filter |
+| `simplify` | float | `0.0001` | Geometry tolerance (°); `0` disables simplification |
+| `bbox` | `minx,miny,maxx,maxy` | — | Optional viewport filter; 400 if malformed |
 
-Returns GeoJSON FeatureCollection: `cell_id`, `value`, `ward_name`.
+Returns GeoJSON FeatureCollection: `cell_id`, `value`, `ward_code`. The `hvi` layer only
+covers land cells (`hvi.parquet` is built over `land_fraction >= 0.5`, ADR-0008) — it is a
+strict subset of the other three layers, not an error.
 
-> **Bandwidth.** ~20k polygons is multi-MB raw — real money against Render's 5 GB/mo free
-> allowance (ADR-0003). Hence geometry simplification, gzip, and a long cache TTL: the grid
-> only changes when the pipeline re-runs. If this still proves heavy, the fallback is
-> pre-rendered vector tiles rather than a bigger plan.
+> **Bandwidth.** ~12k polygons is multi-MB raw — real money against Render's 5 GB/mo free
+> allowance (ADR-0003). Measured: default simplify + gzip brings the full-city `lst` layer
+> from ~4 MB to **~460 KB**. Geometry simplification, gzip, and a long client-side cache TTL
+> (the grid only changes when the pipeline re-runs) are enough; vector tiles are not needed.
 
-## `GET /hotspots`
-`n` (default 10) · `by` = `hvi` | `lst` · `unit` = `ward` | `cell`
-Ranked list with value, population, and the top SHAP driver per entry.
+## `GET /hotspots` ✅ *(landed)*
+`n` (default 10, max 100) · `by` = `hvi` | `lst` · `unit` = `ward` | `cell`
+Ranked list with value, population, and the top SHAP driver per entry (mean |SHAP| per
+feature for `unit=ward`; that cell's own SHAP row for `unit=cell`). `top_driver_shap_c` (the
+signed °C contribution) is only meaningful at `unit=cell` — a ward's driver is a mean-|SHAP|
+ranking, not one signed number, so it's `null` there.
 
-## `GET /explain/{cell_id}`
+## `GET /explain/{cell_id}` ✅ *(landed)*
 Per-cell SHAP attribution — **the product's core answer to "why".**
 ```json
 {
-  "cell_id": 8421, "ward_name": "Kurla",
-  "lst_mean": 41.3, "city_mean": 36.8, "deviation": 4.5,
+  "cell_id": 10453001345, "ward_code": "A",
+  "lst_mean": 36.65, "city_mean": 39.96, "deviation": -3.31,
   "measurement": "land_surface_temperature",
   "drivers": [
-    {"feature": "ndvi_mean", "value": 0.08, "shap_c": 2.1, "direction": "warming"},
-    {"feature": "built_fraction", "value": 0.87, "shap_c": 1.4, "direction": "warming"},
-    {"feature": "dist_coast", "value": 6200, "shap_c": 0.9, "direction": "warming"}
+    {"feature": "water_fraction", "value": 0.263, "shap_c": -1.049, "direction": "cooling"},
+    {"feature": "ndbi_mean", "value": -0.019, "shap_c": -0.774, "direction": "cooling"},
+    {"feature": "dist_water", "value": 127.8, "shap_c": -0.712, "direction": "cooling"}
   ],
-  "model_version": "lgbm-v1"
+  "model_version": "xgboost-v1"
 }
 ```
-*(Illustrative shape — values are placeholders until Phase 2.)*
+*(Real response, captured from a local run — no longer a placeholder.)* `top` query param
+(default 3, max 10) controls how many drivers come back. 404 with `cell_not_found` for an
+unknown `cell_id`; 404 with `cell_not_explained` for a real cell below the training
+land-fraction threshold (mostly sea — SHAP was never computed for it, `ml/explain.py`).
+
+> **Deviation from the original contract:** every field named `ward_name` above is
+> `ward_code` in the real response. `data-dictionary.md` §grid records that `ward_name` was
+> never populated — the BMC source supplies only the ward code, and an official name mapping
+> needs a citable source before it's added (not invented here).
 
 ## `POST /scenario`
 The digital twin.

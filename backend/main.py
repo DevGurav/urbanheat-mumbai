@@ -8,11 +8,12 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
 
-from backend.routers import health
+from backend.routers import explain, grid, health, hotspots, weather
 from backend.store import load_store
 from data_pipeline.config import get_settings
 
@@ -54,6 +55,22 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(grid.router)
+app.include_router(hotspots.router)
+app.include_router(explain.router)
+app.include_router(weather.router)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Flatten `backend.errors.api_error`'s `{detail: {detail, error_code}}` to one level, so
+    every error response is `{detail, error_code}` with a real HTTP status (api-reference.md).
+    """
+    if isinstance(exc.detail, dict) and "error_code" in exc.detail:
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+    return JSONResponse(
+        status_code=exc.status_code, content={"detail": exc.detail, "error_code": None}
+    )
 
 
 @app.get("/", include_in_schema=False)

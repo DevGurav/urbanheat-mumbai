@@ -195,10 +195,10 @@ store; pydantic schemas type every response and carry the `measurement` marker (
 
 ### Data-serving endpoints
 
-- [ ] `GET /city/grid` — choropleth GeoJSON (`layer=lst|ndvi|hvi|built`), geometry simplified + gzipped
-- [ ] `GET /hotspots` — ranked wards/cells by `hvi|lst`, each with its top SHAP driver
-- [ ] `GET /explain/{cell_id}` — per-cell SHAP attribution (the product's "why")
-- [ ] `GET /weather` — Open-Meteo passthrough, TTL-cached
+- [x] `GET /city/grid` — choropleth GeoJSON (`layer=lst|ndvi|hvi|built`), geometry simplified + gzipped
+- [x] `GET /hotspots` — ranked wards/cells by `hvi|lst`, each with its top SHAP driver
+- [x] `GET /explain/{cell_id}` — per-cell SHAP attribution (the product's "why")
+- [x] `GET /weather` — Open-Meteo passthrough, TTL-cached
 
 ### Model / scenario endpoints
 
@@ -208,8 +208,8 @@ store; pydantic schemas type every response and carry the `measurement` marker (
 
 ### Performance & exit
 
-- [ ] GZip middleware + geometry simplification for `/city/grid`; in-process TTL cache
-- [ ] Keep `api-reference.md` in sync as endpoints land
+- [x] GZip middleware + geometry simplification for `/city/grid`; in-process TTL cache
+- [x] Keep `api-reference.md` in sync as endpoints land
 - [ ] ✅ **Everything demoable from Swagger `/docs` locally**
 
 ---
