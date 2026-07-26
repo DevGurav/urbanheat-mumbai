@@ -31,11 +31,12 @@ class Settings(BaseSettings):
 
     gee_project_id: str = Field(description="Cloud project registered for Earth Engine")
     data_dir: Path = Field(default=Path("data"))
+    model_dir: Path = Field(default=Path("models"))
 
-    @field_validator("data_dir")
+    @field_validator("data_dir", "model_dir")
     @classmethod
     def _resolve_against_repo_root(cls, value: Path) -> Path:
-        """`.env` ships `DATA_DIR=./data`, which is only correct from the repo root."""
+        """`.env` ships relative paths like `./data`, only correct from the repo root."""
         return value if value.is_absolute() else (REPO_ROOT / value).resolve()
 
     @property

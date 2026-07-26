@@ -19,6 +19,11 @@ dependencies = [
     "osmnx>=2.0",
     # Open-Meteo historical weather archive (keyless HTTP).
     "requests>=2.32",
+    # --- ML (Phase 2+) ---
+    "scikit-learn>=1.5",
+    "xgboost>=2.0",
+    "lightgbm>=4.3",
+    "joblib>=1.4",
     # --- Config ---
     "python-dotenv>=1.0",
     "pydantic-settings>=2.4",
