@@ -189,9 +189,9 @@ store; pydantic schemas type every response and carry the `measurement` marker (
 
 ### Skeleton
 
-- [ ] `backend/` package: FastAPI app, `pydantic-settings`, CORS from `CORS_ORIGINS`, structured logging
-- [ ] Startup store: load model + tables once; `GET /health` returns model/data version + uptime
-- [ ] Response schemas (pydantic); the `measurement: land_surface_temperature` marker everywhere
+- [x] `backend/` package: FastAPI app, `pydantic-settings`, CORS from `CORS_ORIGINS`, gzip, logging
+- [x] Startup store (`store.py`): load model + tables once; `GET /health` → model/data version + uptime
+- [x] `schemas.py` scaffold + the `measurement: land_surface_temperature` marker (applied per endpoint)
 
 ### Data-serving endpoints
 

@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=Path("data"))
     model_dir: Path = Field(default=Path("models"))
 
+    # --- Backend (Phase 3+) ---
+    app_env: str = Field(default="development")
+    log_level: str = Field(default="INFO")
+    cors_origins: str = Field(default="http://localhost:5173")  # comma-separated
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
     @field_validator("data_dir", "model_dir")
     @classmethod
     def _resolve_against_repo_root(cls, value: Path) -> Path:
