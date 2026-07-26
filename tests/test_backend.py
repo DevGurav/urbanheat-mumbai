@@ -86,6 +86,53 @@ def test_explain_non_land_cell_is_404_but_distinct(client):
     assert resp.json()["error_code"] == "cell_not_explained"
 
 
+def test_predict_known_land_cell(client):
+    body = client.get("/predict", params={"cell_id": 10453001345}).json()
+    assert body["ward_code"] == "A"
+    assert body["residual"] == round(body["observed_lst"] - body["predicted_lst"], 2)
+    # The model should land in the right ballpark of the observed value, not just return *a*
+    # number — spatial-CV RMSE was ~1.10 °C (model_meta.json), so a few °C is a loose sanity gate.
+    assert abs(body["residual"]) < 5.0
+
+
+def test_predict_non_land_cell_is_404(client):
+    resp = client.get("/predict", params={"cell_id": 10452001345})
+    assert resp.status_code == 404
+    assert resp.json()["error_code"] == "cell_not_predictable"
+
+
+def test_scenario_greening_cools_and_discloses_clamping(client):
+    body = client.post(
+        "/scenario", json={"ward_code": "A", "intervention": "greening", "coverage": 1.0}
+    ).json()
+    assert body["mean_dlst"] <= 0
+    assert body["n_cells"] == len(body["cells"])
+    assert isinstance(body["clamped"], bool)
+    assert body["clamped"] == (body["clamped_cells"] > 0)
+
+
+def test_scenario_cool_roof_never_clamps(client):
+    body = client.post(
+        "/scenario", json={"ward_code": "A", "intervention": "cool_roof", "coverage": 0.5}
+    ).json()
+    assert body["clamped"] is False
+    assert body["clamped_cells"] == 0
+    assert body["mean_dlst"] <= 0  # cool roofs only cool
+
+
+def test_scenario_unknown_ward_is_404(client):
+    resp = client.post(
+        "/scenario", json={"ward_code": "ZZ", "intervention": "greening", "coverage": 1.0}
+    )
+    assert resp.status_code == 404
+    assert resp.json()["error_code"] == "ward_not_found"
+
+
+def test_trends_is_an_honest_stub(client):
+    body = client.get("/trends").json()
+    assert body["available"] is False
+
+
 def test_weather_uses_mocked_upstream(client, monkeypatch):
     fake_daily = {
         "time": ["2026-07-26", "2026-07-27"],

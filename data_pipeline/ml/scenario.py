@@ -66,6 +66,29 @@ def greening_delta(
     return pd.Series(model.predict(new) - model.predict(X), index=land.index)
 
 
+def greening_clamped_mask(
+    land: pd.DataFrame,
+    feature_names: list[str],
+    envelope: dict[str, tuple[float, float]],
+    *,
+    ndvi_target: float = GREENING_NDVI_TARGET,
+) -> pd.Series:
+    """Which cells' post-greening feature vector fell outside the training envelope and had to
+    be clamped — the honesty check the `/scenario` API's `clamped` field reports (ADR-0006).
+    Mirrors `greening_delta`'s NDVI rise but stops short of predicting, since only the
+    in/out-of-bounds question is needed here."""
+    X = land[feature_names].copy()
+    rise = (ndvi_target - X["ndvi_mean"]).clip(lower=0)
+    X["ndvi_mean"] = X["ndvi_mean"] + rise
+    if "ndvi_neigh_mean" in X:
+        X["ndvi_neigh_mean"] = X["ndvi_neigh_mean"] + 0.5 * rise
+
+    out_of_bounds = pd.Series(False, index=land.index)
+    for feat, (lo, hi) in envelope.items():
+        out_of_bounds |= (X[feat] < lo) | (X[feat] > hi)
+    return out_of_bounds
+
+
 def cool_roof_delta(land: pd.DataFrame, *, coverage: float = 1.0) -> pd.Series:
     """ΔLST from cool roofs — a cited coefficient scaled by built fraction, NOT the model."""
     return -COOL_ROOF_C_PER_BUILT * land["built_fraction"] * coverage

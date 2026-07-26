@@ -81,26 +81,53 @@ land-fraction threshold (mostly sea — SHAP was never computed for it, `ml/expl
 > never populated — the BMC source supplies only the ward code, and an official name mapping
 > needs a citable source before it's added (not invented here).
 
-## `POST /scenario`
+## `GET /predict` ✅ *(landed)*
+The model's own LST prediction for one cell, alongside the observed value — a transparency
+endpoint, not a what-if tool (that's `/scenario`). `cell_id` required.
+```json
+{"cell_id": 10453001345, "ward_code": "A", "predicted_lst": 36.52, "observed_lst": 36.65,
+ "residual": 0.13, "measurement": "land_surface_temperature", "model_version": "xgboost-v1"}
+```
+404 `cell_not_found` / `cell_not_predictable` (below the training land-fraction threshold —
+same restriction as `/explain`, the model was never trained on mostly-sea cells).
+
+## `POST /scenario` ✅ *(landed)*
 The digital twin.
 ```json
-{"target": {"ward": "Kurla"}, "intervention": "tree_planting", "coverage": 0.2}
+{"ward_code": "L", "intervention": "greening", "coverage": 1.0}
 ```
-Returns per-cell ΔLST, summary stats, cost range, **and**:
+`intervention` is `greening` | `cool_roof` (not the draft's `tree_planting` — matches
+`ml/scenario.py`'s two actual levers). `coverage` only applies to `cool_roof`; greening always
+raises NDVI to a fixed target rather than a coverage fraction, and `coverage` is ignored for it
+— a real limitation of the current model, not hidden.
+
+Returns per-cell ΔLST + summary stats, **and**:
 ```json
-{"clamped": true, "clamped_cells": 12,
- "caveat": "Correlational model. Cells with similar characteristics but higher NDVI show
-            ~1.8 °C lower surface temperature; this is not a causal prediction."}
+{"clamped": false, "clamped_cells": 0,
+ "caveat": "Correlational model, SHAP-validated NDVI cooling (Grover & Singh 2015 report
+            ~1.39 °C per unit NDVI in Indian metros). 'Cells like this but greener are
+            cooler' — not a causal guarantee for this specific cell."}
 ```
 > `clamped` is not decoration. Scenarios pushing features past the training envelope get
 > clamped (ADR-0006) and the response **must** disclose it — a silently capped number that
-> looks like a real one is the failure mode this field exists to prevent.
+> looks like a real one is the failure mode this field exists to prevent. Cool-roof never
+> clamps by construction (it's a cited formula, not a model call).
+
+**No `cost` field.** The original contract sketched a `{min, max, currency, basis}` cost
+range. `references.md` has no cited cost-per-area figure for either lever — "a cost or ΔLST
+figure without a source is a fabrication" applies to cost exactly as it does to the cooling
+coefficients. Add the field once a source is logged there, not before.
 
 ## `GET /trends`
 `ward` optional. Per-year Mar–May median LST + fitted slope (°C/yr). Needs ≥5 years.
+**Stubbed ✅** (author-confirmed at Phase 3 kickoff): `lst_trend` was never built (deferred in
+Phase 1), so this returns `{"available": false, "note": "..."}` rather than fake a slope.
 
-## `GET /weather`
-Open-Meteo passthrough, cached. `days` (default 7).
+## `GET /weather` ✅ *(landed)*
+Open-Meteo *forecast* passthrough for one city-representative point, TTL-cached (30 min,
+in-process). `days` (default 7, max 16). Distinct from the pipeline's `sources/weather.py`
+stage, which builds historical per-cell dry-season means as a model feature — that stage's own
+finding (ERA5-scale weather barely varies across 458 km²) is why one point is enough here.
 
 ## `POST /agent/chat`
 ```json

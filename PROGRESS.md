@@ -202,9 +202,10 @@ store; pydantic schemas type every response and carry the `measurement` marker (
 
 ### Model / scenario endpoints
 
-- [ ] `GET /predict` — model LST prediction for a cell / supplied feature vector
-- [ ] `POST /scenario` — wraps `ml/scenario.py`: ΔLST + summary + cost range + the `clamped` disclosure
-- [ ] `GET /trends` — **stubbed** (501 / not-yet-available); real slopes need `lst_trend` (deferred)
+- [x] `GET /predict` — model LST prediction for a cell (transparency: predicted vs. observed)
+- [x] `POST /scenario` — wraps `ml/scenario.py`: ΔLST + summary + the `clamped` disclosure
+      (no cost field — no cited cost figure exists yet, see api-reference.md)
+- [x] `GET /trends` — **stubbed**: `{available: false, note: ...}`; real slopes need `lst_trend` (deferred)
 
 ### Performance & exit
 

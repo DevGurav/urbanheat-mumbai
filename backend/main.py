@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.routers import explain, grid, health, hotspots, weather
+from backend.routers import explain, grid, health, hotspots, predict, scenario, trends, weather
 from backend.store import load_store
 from data_pipeline.config import get_settings
 
@@ -59,6 +59,9 @@ app.include_router(grid.router)
 app.include_router(hotspots.router)
 app.include_router(explain.router)
 app.include_router(weather.router)
+app.include_router(predict.router)
+app.include_router(scenario.router)
+app.include_router(trends.router)
 
 
 @app.exception_handler(HTTPException)

@@ -7,6 +7,7 @@ from data_pipeline.ml.scenario import (
     COOL_ROOF_C_PER_BUILT,
     _clamp,
     cool_roof_delta,
+    greening_clamped_mask,
     greening_delta,
 )
 
@@ -46,3 +47,14 @@ def test_greening_cools_under_a_cooling_model():
     delta = greening_delta(land, _CoolingModel(), features, envelope, ndvi_target=0.4)
     assert (delta <= 1e-9).all()  # cooling everywhere
     assert delta.iloc[0] < delta.iloc[2]  # the greyest cell (biggest NDVI rise) cools most
+
+
+def test_greening_clamped_mask_flags_only_out_of_envelope_cells():
+    # Both cells rise to ndvi_mean 0.40, but their smaller NDVI rise (target - start) means a
+    # smaller neighbourhood rise too: cell 0's neighbourhood lands at 0.25 (0.10 + 0.5*0.30),
+    # cell 1's at 0.375 (0.35 + 0.5*0.05) — only cell 1 pierces the 0.3 envelope ceiling below.
+    land = pd.DataFrame({"ndvi_mean": [0.10, 0.35], "ndvi_neigh_mean": [0.10, 0.35]})
+    features = ["ndvi_mean", "ndvi_neigh_mean"]
+    envelope = {"ndvi_mean": (0.0, 1.0), "ndvi_neigh_mean": (0.0, 0.3)}
+    mask = greening_clamped_mask(land, features, envelope, ndvi_target=0.4)
+    assert mask.tolist() == [False, True]

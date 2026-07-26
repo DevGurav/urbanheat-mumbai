@@ -77,3 +77,55 @@ class WeatherDay(BaseModel):
 class WeatherResponse(BaseModel):
     source: str = "open-meteo"
     days: list[WeatherDay]
+
+
+class PredictResponse(BaseModel):
+    """The model's own LST prediction for a cell, alongside the observed value."""
+
+    cell_id: int
+    ward_code: str
+    predicted_lst: float
+    observed_lst: float
+    residual: float = Field(description="observed - predicted")
+    measurement: str = MEASUREMENT
+    model_version: str
+
+
+class ScenarioRequest(BaseModel):
+    ward_code: str
+    intervention: Literal["greening", "cool_roof"]
+    coverage: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Cool-roof coverage fraction (0-1). Ignored for greening, which always raises "
+            "NDVI to a fixed target rather than a coverage fraction (ml/scenario.py)."
+        ),
+    )
+
+
+class ScenarioCell(BaseModel):
+    cell_id: int
+    lst_mean: float
+    dlst: float = Field(description="Predicted change in surface temperature, °C")
+
+
+class ScenarioResponse(BaseModel):
+    ward_code: str
+    intervention: Literal["greening", "cool_roof"]
+    coverage: float
+    measurement: str = MEASUREMENT
+    n_cells: int
+    mean_dlst: float
+    best_dlst: float
+    clamped: bool = Field(description="Whether any cell's feature vector needed clamping")
+    clamped_cells: int
+    caveat: str
+    model_version: str
+    cells: list[ScenarioCell]
+
+
+class TrendsResponse(BaseModel):
+    available: bool = False
+    note: str

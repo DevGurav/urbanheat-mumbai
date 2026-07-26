@@ -21,6 +21,40 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 3 — Model/scenario endpoints: predict, scenario, trends stub
+
+**Done**
+- `GET /predict` — the model's own LST prediction for a cell vs. the observed value. Same
+  land-fraction restriction as `/explain` (`cell_not_predictable` 404 below it), since the
+  model was never trained on mostly-sea cells.
+- `POST /scenario` — wraps `ml/scenario.py`'s `greening_delta`/`cool_roof_delta` directly, no
+  reimplementation. Added `greening_clamped_mask()` to `ml/scenario.py` (purely additive, its
+  own unit test, existing 37 scenario tests untouched) so the API can honestly report which
+  cells needed clamping instead of asserting `clamped` from the outside.
+- `GET /trends` — the author-confirmed stub: `{available: false, note: ...}`.
+- 7 new backend tests + 1 new `ml/scenario` test (58 total green); `ruff` clean.
+- Live-verified magnitudes, not just shapes: `/predict`'s residual (0.13 °C) sits well inside
+  the model's ~1.10 °C spatial-CV RMSE; `/scenario` cool-roof at 50% coverage on a fully-built
+  cell lands at exactly −1.7 °C — Li et al.'s cited figure, reproduced, not approximated.
+
+**Decided**
+- **No `cost` field on `/scenario`**, despite the original api-reference draft sketching one.
+  `references.md` has no cited cost-per-area figure for either lever, and "a cost or ΔLST
+  figure without a source is a fabrication" (references.md) applies to cost the same as it does
+  to cooling coefficients. Left out until a real source is logged — not estimated, not guessed.
+- `intervention` is `greening` | `cool_roof` (matching `ml/scenario.py`'s actual two levers),
+  not the draft's `tree_planting`. `coverage` only means something for `cool_roof`; greening
+  always raises NDVI to a fixed target regardless of it — documented as a real model
+  limitation, not silently ignored.
+- `/predict` is a transparency endpoint only (one cell, its own stored features) — no supplied
+  feature-vector override. That "what-if" role belongs to `/scenario`; giving `/predict` the
+  same power would just be two endpoints doing one job.
+
+**Next**
+- Phase 3 exit: everything demoable from Swagger `/docs` — author to verify, not me.
+
+---
+
 ## 2026-07-27 — Phase 3 — Data-serving endpoints: grid, hotspots, explain, weather
 
 **Done**
