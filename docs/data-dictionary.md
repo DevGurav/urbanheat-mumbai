@@ -355,12 +355,20 @@ zero. What little spatial structure they have is a coarse proxy for the coast (h
 `dist_coast` = −0.43, wind = −0.45), which the model already has at 200 m. Retained for now so
 Phase 2 selection has them to reject on the record; the final call goes in `ml-methodology.md`.
 
-### Derived indices
+### Derived indices → `data/processed/hvi.parquet` (Phase 2, **not** in `features.parquet`)
 
-| Column | Unit | Range | Derivation |
+`hvi` is derived from `lst_mean` (the model's target), so it is kept out of the feature table —
+using it as a predictor would be leakage. It lives in its own file, keyed on `cell_id`.
+
+| Column | Unit | Observed | Derivation |
 |---|---|---|---|
-| `hvi` | index | 0…1 | **Heat Vulnerability Index** — normalised weighted blend of heat exposure (`lst_mean`), population (`pop_density`) and lack of green (`1 − ndvi_mean`). Weights + justification in `ml-methodology.md`. A **relative prioritisation tool, not a health-risk score** (ADR-0005) |
-| `hotspot_rank` | int | — | City-wide rank by `hvi` |
+| `hvi` | index | 0…1 | **Heat Vulnerability Index** — `0.4·norm(lst_mean) + 0.4·norm(pop_density) + 0.2·norm(1 − ndvi_mean)`, min–max over land cells (ml-methodology §5). A **relative prioritisation tool, not a health-risk score** (ADR-0005) |
+| `hvi_heat`, `hvi_exposure`, `hvi_lack_green` | index | 0…1 | The three normalised components, for transparency / re-weighting |
+| `hotspot_rank` | int | 1…N | City-wide rank by `hvi` (1 = most vulnerable) |
+
+**Measured (Phase 2).** Most-vulnerable wards: B, L, C, H/E, F/S, K/E, G/N (Dharavi), E — the
+dense, hot wards. The top-10 ward ranking is robust to the weights (9–10/10 overlap, Spearman
+ρ ≥ 0.98 across five variants), so it is publishable.
 
 ---
 
@@ -418,6 +426,7 @@ exactly why spatial block CV is mandatory (ADR-0006).
 | `data/raw/` | Earth Engine exports, OSM dumps | No — regenerate via `data-pipeline/` |
 | `data/interim/` | Per-source intermediate tables | No |
 | `data/processed/features.parquet` | **The feature table** — 11,944 rows × 42 cols, GeoParquet | No (regenerable) |
+| `data/processed/hvi.parquet` | Heat Vulnerability Index + hotspot rank per land cell (Phase 2) | No (regenerable) |
 | `data/processed/wards.geojson` | Ward polygons | Yes if small |
 | `data/knowledge_base/` | RAG source PDFs (Phase 4) | No — licence-bound, list sources in `references.md` |
 | `models/` | Trained model + SHAP artifacts | No |

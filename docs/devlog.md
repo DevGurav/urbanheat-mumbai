@@ -21,6 +21,35 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-26 — Phase 2 — Heat Vulnerability Index + ward hotspot ranking
+
+**Done**
+- `data_pipeline/ml/hvi.py`: HVI = 0.4·norm(lst) + 0.4·norm(pop_density) + 0.2·norm(1−ndvi),
+  min–max over land cells → `data/processed/hvi.parquet` (per-cell `hvi`, the three components,
+  `hotspot_rank`). Ward ranking + the mandatory sensitivity analysis. Four tests; 34 green.
+
+**Decided**
+- **HVI lives in its own `hvi.parquet`, not `features.parquet`.** It is derived from `lst_mean`
+  (the model's target), so putting it in the feature table would invite leakage. Kept separate,
+  keyed on `cell_id`. Updated the data-dictionary accordingly.
+- **Weights 0.4/0.4/0.2** (ml-methodology §5) — kept as a parameter of `compute_hvi`, so the
+  Phase 3 API can expose re-weighting.
+
+**Results — the index is robust, which is the whole point**
+- Most-vulnerable wards: B, L, C, H/E, F/S, K/E, G/N (Dharavi), E — the dense, hot wards, and
+  they match the "hot AND dense" cells Phase 1 flagged. The HVI is doing what it should:
+  surfacing where heat *and* people coincide, not just the hottest empty ground.
+- **Sensitivity check passes decisively** — across five weight variants the top-10 ward ranking
+  holds at 9–10/10 overlap, Spearman ρ ≥ 0.98. ml-methodology §5 made this the go/no-go gate
+  (fragile ranking = don't publish); the ranking does not flip, so it ships.
+
+**Next**
+- Scenario engine v1 — `simulate(feature_deltas) → ΔLST`, clamped to the training envelope, with
+  the cool-roof lever using a **cited** albedo coefficient (not the model's confounded one). The
+  intervention coefficients need the UHI papers read and logged in `references.md` first.
+
+---
+
 ## 2026-07-26 — Phase 2 — SHAP, and the physics gate earns its keep
 
 **Done**

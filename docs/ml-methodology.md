@@ -163,6 +163,15 @@ lever (planting) applies.
   fragile to publish and needs rethinking.
 - Expose weights as API parameters so a planner can re-weight to their own policy.
 
+**Measured (Phase 2, `data_pipeline/ml/hvi.py`).** Most-vulnerable wards at the base weights:
+**B, L, C, H/E, F/S, K/E, G/N (Dharavi), E** — the dense, hot wards, matching the "hot AND
+dense" cells identified in Phase 1. **The sensitivity check passes decisively:** across five
+weight variants (heat-heavy, exposure-heavy, equal, green-heavy, heat+exposure-only) the top-10
+ward ranking holds at **9–10/10 overlap with Spearman ρ ≥ 0.98**. The ranking does not flip
+under reasonable re-weighting, so the index is robust enough to publish. Written to
+`data/processed/hvi.parquet` (kept out of the model's feature table — it is derived from the
+target `lst_mean`, so using it as a feature would be leakage).
+
 **HVI is a relative prioritisation tool, not a health-risk score** (ADR-0005). It is built
 on mid-morning surface temperature and contains no health, age or income data.
 

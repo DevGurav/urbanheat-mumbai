@@ -159,9 +159,10 @@ location (`ward_code`, `centroid_lat/lon`) and the leakage columns (`lst_p90`,
 
 ### Heat Vulnerability Index
 
-- [ ] `hvi` — normalised weighted blend of heat / population / lack-of-green; weights + rationale
-      in `ml-methodology.md` §5. A **relative** tool, never a health-risk score (ADR-0005)
-- [ ] `hotspot_rank` + ward hotspot ranking
+- [x] `hvi` — 0.4/0.4/0.2 blend of heat / pop_density / lack-of-green → `data/processed/hvi.parquet`
+      (own file, not a model feature — derived from the target). Weight-sensitivity **passes**:
+      top-10 wards stable 9–10/10, Spearman ρ ≥ 0.98
+- [x] `hotspot_rank` + ward hotspot ranking (top: B, L, C, H/E, F/S, K/E, G/N, E — dense & hot)
 
 ### Scenario engine v1
 
