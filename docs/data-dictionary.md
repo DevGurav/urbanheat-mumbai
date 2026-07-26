@@ -427,6 +427,9 @@ exactly why spatial block CV is mandatory (ADR-0006).
 | `data/interim/` | Per-source intermediate tables | No |
 | `data/processed/features.parquet` | **The feature table** — 11,944 rows × 42 cols, GeoParquet | No (regenerable) |
 | `data/processed/hvi.parquet` | Heat Vulnerability Index + hotspot rank per land cell (Phase 2) | No (regenerable) |
+| `data/processed/scenario_greening.parquet` | Per-cell ΔLST for the greening + cool-roof scenarios (Phase 2) | No (regenerable) |
+| `models/model.joblib` + `model_meta.json` | Trained XGBoost + metadata | No (regenerable) |
+| `models/shap_global.json` + `shap_values.parquet` | SHAP global importance + per-cell attribution | No (regenerable) |
 | `data/processed/wards.geojson` | Ward polygons | Yes if small |
 | `data/knowledge_base/` | RAG source PDFs (Phase 4) | No — licence-bound, list sources in `references.md` |
 | `models/` | Trained model + SHAP artifacts | No |

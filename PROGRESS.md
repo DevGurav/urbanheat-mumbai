@@ -166,10 +166,13 @@ location (`ward_code`, `centroid_lat/lon`) and the leakage columns (`lst_p90`,
 
 ### Scenario engine v1
 
-- [ ] `simulate(feature_deltas) → ΔLST`, clamped to the training envelope (no extrapolation)
-- [ ] Intervention → feature-delta map with **cited** coefficients (`references.md` §3 — read
-      the papers first); **cool-roof uses a literature albedo coefficient, not the model's**
+- [x] `simulate(feature_deltas) → ΔLST`, clamped to the training envelope (no extrapolation)
+- [x] Intervention → feature-delta map with **cited** coefficients (Li et al. 2014, Grover &
+      Singh 2015 in `references.md`); **cool-roof uses the cited albedo coefficient, not the
+      model's** (albedo confound, ADR-0008). Greening floored at ΔLST ≤ 0 (off-manifold warming)
 - [ ] ✅ **Saved model + metrics; a greening scenario produces a sensible ΔLST map**
+      — model saved (XGBoost, spatial R² 0.893); greening cools 7,410 cells (mean −0.65, best
+      −4.88 °C) in the hot grey wards. **Awaiting the author's check of the ΔLST map to tick.**
 
 ---
 

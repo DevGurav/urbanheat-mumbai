@@ -21,6 +21,44 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-26 — Phase 2 — Scenario engine: the digital twin, honestly
+
+**Done**
+- Read and logged the intervention-coefficient literature in `references.md`: Li et al. (2014)
+  for cool roofs, Santamouris (2014), Grover & Singh (2015) for NDVI cooling in Indian metros.
+- `data_pipeline/ml/scenario.py`: `simulate` = perturb features → clamp to the training
+  envelope → re-predict. Greening and cool-roof levers, four tests; 37 green. Demonstration
+  greening + cool-roof map → `data/processed/scenario_greening.parquet`.
+
+**Decided — the engine is a hybrid, by necessity**
+- **Greening goes through the model** (raise NDVI toward 0.4, re-predict). Defensible because
+  SHAP validated NDVI's cooling and Grover & Singh (2015) corroborate ~1.39 °C/unit NDVI.
+- **Cool roofs do NOT** — the model's albedo coefficient is the confound (ADR-0008), so raising
+  albedo through the model would predict *warming*. ΔLST comes from Li et al. (2014) directly:
+  `−(1.7/0.5)·built_fraction·coverage`. This is where a full phase of albedo caution pays off —
+  the one lever that would have silently backfired is the one built on a cited coefficient.
+- **Every value clamped to the training envelope** — no extrapolation into confident nonsense.
+
+**Broke / learned — greening warmed 482 cells, and how to handle it honestly**
+- The raw model cooled 7,410 cells but *warmed* 482 under greening. Cause: raising NDVI while
+  holding built/NDBI fixed creates off-manifold combinations (high built *and* high NDVI, rare
+  in training) where a correlational tree model is unconstrained and can predict either way.
+- **Fix, honestly:** greening cannot warm a cell all-else-equal, so the delivered map floors
+  ΔLST at 0 and *reports the floored count* — not hidden. The principled v2 is a
+  monotone-constrained model (NDVI forced cooling); the floor is the honest interim. Logged in
+  ml-methodology §6.
+
+**Results**
+- Greening cools 7,410 cells, mean −0.65 °C, best −4.88 °C, concentrated in the hot dense grey
+  wards (B, C, L) — targets exactly where greening helps most. Cool-roof: mean −1.38 °C, best
+  −3.40 °C over built cells.
+
+**Next**
+- Phase 2 ✅ ready for the author to verify (a sensible greening ΔLST map). Then phase-close and
+  Phase 3 (the FastAPI backend over the model, HVI and scenarios).
+
+---
+
 ## 2026-07-26 — Phase 2 — Heat Vulnerability Index + ward hotspot ranking
 
 **Done**

@@ -190,13 +190,13 @@ simulate(cell_ids, deltas) → ΔLST
 
 **Intervention → feature mapping** *[Phase 2 — coefficients from literature, each cited]*
 
-| Intervention | Feature changes | Source |
+| Intervention | Feature changes | Mechanism / source |
 |---|---|---|
-| Urban forestry / tree planting | `ndvi_mean` ↑, `tree_fraction` ↑, `albedo` slight ↑ | *cite* |
-| Cool/reflective roofs | `albedo` ↑ (~0.13→0.6 on treated area) | *cite* — see 🚨 below |
-| Green roofs | `ndvi_mean` ↑, `built_fraction` unchanged | *cite* |
-| Water body / restoration | `ndwi_mean` ↑, `dist_water` ↓ | *cite* |
-| Depaving / permeable surfaces | `impervious_fraction` ↓, `ndvi_mean` ↑ | *cite* |
+| **Urban forestry / greening** ✅ | `ndvi_mean` ↑ (toward 0.4), `ndvi_neigh_mean` ↑ | **through the model** — NDVI cooling is SHAP-validated; magnitude corroborated by Grover & Singh (2015), ~1.39 °C/unit NDVI |
+| **Cool / reflective roofs** ✅ | `albedo` ↑ on the built area | **cited coefficient, NOT the model** (albedo confound, ADR-0008) — Li et al. (2014): ΔLST = −(1.7/0.5)·`built_fraction`·coverage |
+| Green roofs | `ndvi_mean` ↑, `built_fraction` unchanged | *[future]* |
+| Water body / restoration | `ndwi_mean` ↑, `dist_water` ↓ | *[future]* |
+| Depaving / permeable surfaces | `impervious_fraction` ↓, `ndvi_mean` ↑ | *[future]* |
 
 🚨 **`albedo` is confounded and must not use the model's own coefficient.** Phase 1 measured
 `albedo` correlating **+0.70** with `lst_mean` in the observational data — brighter reads
@@ -206,6 +206,19 @@ the twin would predict **warming** and the cool-roof recommendation would backfi
 ΔLST **must** come from a cited albedo-cooling study, never from the model's learned coefficient,
 and the physics gate below must treat a positive albedo SHAP as expected confounding, not a
 model bug. This is the one intervention where the data's sign is actively wrong.
+
+**Measured (Phase 2, `data_pipeline/ml/scenario.py`).** A city-wide greening scenario (raise
+every cell below NDVI 0.4 toward it, re-predict through the model, clamp to the envelope) cools
+**7,410 cells, mean −0.65 °C, best −4.88 °C**, concentrated in the hot dense grey wards
+(B −1.49, C −1.13, L −1.05) — the map is sensible and targets exactly where greening helps most.
+The cool-roof lever (cited Li et al. coefficient) gives mean −1.38 °C, best −3.40 °C over built
+cells. Written to `data/processed/scenario_greening.parquet`.
+
+⚠️ **Greening is floored at ΔLST ≤ 0.** The correlational tree model predicted small *spurious*
+warming for 482 cells where raising NDVI pushed them off the training manifold (high built
+fraction *and* high NDVI, rare in the data). Greening cannot warm a cell all-else-equal, so the
+delivered map floors at zero and reports the floored count. The principled v2 fix is a
+monotone-constrained model (NDVI forced monotonically cooling); the floor is the honest interim.
 
 **Limitations that must ship with every scenario output — stating these is the difference
 between a defensible tool and a fabrication:**
