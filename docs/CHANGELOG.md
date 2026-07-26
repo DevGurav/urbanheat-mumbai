@@ -6,6 +6,37 @@ detail belongs in [devlog.md](devlog.md).
 
 ---
 
+## Phase 2 — ML: predict & explain · completed 2026-07-26
+
+### Added
+- `data_pipeline/ml/` — `dataset` (X/y/ward-groups under ADR-0008), `cv` (ward-grouped spatial
+  CV + naive contrast), `train` (the model ladder), `explain` (SHAP + physics gate), `hvi`
+  (Heat Vulnerability Index), `scenario` (the digital twin)
+- Trained **XGBoost** LST model → `models/model.joblib` + `model_meta.json`; SHAP global
+  importance + per-cell attribution → `models/shap_*`
+- `data/processed/hvi.parquet` (HVI + hotspot rank) and `data/processed/scenario_greening.parquet`
+  (a demonstration greening + cool-roof ΔLST map)
+- ADR-0008 (spatial CV, training set, feature policy); intervention-coefficient literature
+  logged in `references.md`; pytest suite grown to 37 tests
+
+### Verified
+- ✅ **Exit criterion met** — saved model + metrics, and a greening scenario produces a sensible
+  ΔLST map. The model predicts an *unseen ward's* surface temperature to **1.10 °C** (spatial
+  R² 0.893); the small random-vs-spatial gap (0.047) confirms it learned physical drivers, not
+  location. The SHAP physics gate passes on every load-bearing driver. The HVI ward ranking is
+  robust to its weights (top-10 stable 9–10/10, Spearman ρ ≥ 0.98). Greening cools 7,410 cells
+  (mean −0.65 °C, best −4.88 °C), concentrated in the hot dense wards.
+
+### Known limitations carried into Phase 3
+- **Cool-roof ΔLST uses a cited coefficient (Li et al. 2014), not the model** — the albedo
+  confound (ADR-0008); the one lever that would have silently backfired through the model.
+- Greening warmed 482 off-manifold cells (high built *and* high NDVI, rare in training); ΔLST is
+  floored at 0 and the count reported. The principled v2 is a monotone-constrained model.
+- Scenario outputs are correlational ("cells like this, but greener, are ~X cooler"), not causal;
+  the model has no feedback effects between cells.
+
+---
+
 ## Phase 1 — Data pipeline · completed 2026-07-21
 
 ### Added

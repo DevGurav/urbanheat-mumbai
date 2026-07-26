@@ -3,7 +3,7 @@
 Live task board. Newest phases get expanded into detailed tasks at their kickoff.
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
-**Current phase:** 2 — ML: predict & explain *(Phase 1 complete)*
+**Current phase:** 3 — Backend API *(Phase 2 complete)*
 **Last updated:** 2026-07-26
 
 ---
@@ -137,42 +137,42 @@ location (`ward_code`, `centroid_lat/lon`) and the leakage columns (`lst_p90`,
 
 ### Data prep & validation harness
 
-- [x] `ml/dataset.py` — X, y, ward groups from `features.parquet`; training filter + leakage/
-      location exclusions (30 features; dropped `population` as collinear, kept `land_fraction`)
-- [x] `ml/cv.py` — ward-grouped `GroupKFold` splitter + spatial/random scorer (R², RMSE, MAE)
-- [x] Random-vs-spatial gap reported — **tiny (~0.047)**, evidencing that excluding location
-      (ADR-0008) stopped the model memorising the map
+- [X] `ml/dataset.py` — X, y, ward groups from `features.parquet`; training filter + leakage/
+  location exclusions (30 features; dropped `population` as collinear, kept `land_fraction`)
+- [X] `ml/cv.py` — ward-grouped `GroupKFold` splitter + spatial/random scorer (R², RMSE, MAE)
+- [X] Random-vs-spatial gap reported — **tiny (~0.047)**, evidencing that excluding location
+  (ADR-0008) stopped the model memorising the map
 
 ### Models
 
-- [x] Baseline — mean floor + ridge (the honest floor: mean is negative under spatial CV)
-- [x] Random forest → XGBoost → LightGBM; light defaults only
-- [x] Model comparison table → `docs/ml-methodology.md` §3; **XGBoost saved** (spatial R² 0.893,
-      RMSE 1.10 °C) → `models/model.joblib` + `model_meta.json`
+- [X] Baseline — mean floor + ridge (the honest floor: mean is negative under spatial CV)
+- [X] Random forest → XGBoost → LightGBM; light defaults only
+- [X] Model comparison table → `docs/ml-methodology.md` §3; **XGBoost saved** (spatial R² 0.893,
+  RMSE 1.10 °C) → `models/model.joblib` + `model_meta.json`
 
 ### Explainability
 
-- [x] SHAP TreeExplainer — global importance + per-cell attribution → `models/shap_values.parquet`
-      *(top: ndbi 1.41, albedo 0.51, pop_density 0.37, built 0.36)*
-- [x] **Physics gate** — enforced on 8 load-bearing drivers (all pass); `albedo` warm = the
-      expected confound (ADR-0008); collinear features reported as SHAP credit-sharing, not gated
+- [X] SHAP TreeExplainer — global importance + per-cell attribution → `models/shap_values.parquet`
+  *(top: ndbi 1.41, albedo 0.51, pop_density 0.37, built 0.36)*
+- [X] **Physics gate** — enforced on 8 load-bearing drivers (all pass); `albedo` warm = the
+  expected confound (ADR-0008); collinear features reported as SHAP credit-sharing, not gated
 
 ### Heat Vulnerability Index
 
-- [x] `hvi` — 0.4/0.4/0.2 blend of heat / pop_density / lack-of-green → `data/processed/hvi.parquet`
-      (own file, not a model feature — derived from the target). Weight-sensitivity **passes**:
-      top-10 wards stable 9–10/10, Spearman ρ ≥ 0.98
-- [x] `hotspot_rank` + ward hotspot ranking (top: B, L, C, H/E, F/S, K/E, G/N, E — dense & hot)
+- [X] `hvi` — 0.4/0.4/0.2 blend of heat / pop_density / lack-of-green → `data/processed/hvi.parquet`
+  (own file, not a model feature — derived from the target). Weight-sensitivity **passes**:
+  top-10 wards stable 9–10/10, Spearman ρ ≥ 0.98
+- [X] `hotspot_rank` + ward hotspot ranking (top: B, L, C, H/E, F/S, K/E, G/N, E — dense & hot)
 
 ### Scenario engine v1
 
-- [x] `simulate(feature_deltas) → ΔLST`, clamped to the training envelope (no extrapolation)
-- [x] Intervention → feature-delta map with **cited** coefficients (Li et al. 2014, Grover &
-      Singh 2015 in `references.md`); **cool-roof uses the cited albedo coefficient, not the
-      model's** (albedo confound, ADR-0008). Greening floored at ΔLST ≤ 0 (off-manifold warming)
-- [ ] ✅ **Saved model + metrics; a greening scenario produces a sensible ΔLST map**
-      — model saved (XGBoost, spatial R² 0.893); greening cools 7,410 cells (mean −0.65, best
-      −4.88 °C) in the hot grey wards. **Awaiting the author's check of the ΔLST map to tick.**
+- [X] `simulate(feature_deltas) → ΔLST`, clamped to the training envelope (no extrapolation)
+- [X] Intervention → feature-delta map with **cited** coefficients (Li et al. 2014, Grover &
+  Singh 2015 in `references.md`); **cool-roof uses the cited albedo coefficient, not the
+  model's** (albedo confound, ADR-0008). Greening floored at ΔLST ≤ 0 (off-manifold warming)
+- [X] ✅ **Saved model + metrics; a greening scenario produces a sensible ΔLST map**
+  — model saved (XGBoost, spatial R² 0.893); greening cools 7,410 cells (mean −0.65, best
+  −4.88 °C) in the hot grey wards. **Awaiting the author's check of the ΔLST map to tick.**
 
 ---
 

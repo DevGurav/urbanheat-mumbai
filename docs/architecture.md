@@ -4,10 +4,10 @@ Text-based, editable re-creation of the system design. Diagrams are Mermaid so t
 diffable and render on GitHub.
 
 **Status:** target design. Components are marked ⬜ planned / 🟨 in progress / ✅ built,
-and updated as phases land. As of **Phase 1**, the **offline pipeline (§3) is built end to
-end** — every source reduces to `data/processed/features.parquet` (11,944 cells × 42 cols).
-The backend, agents, frontend and storage (§2, §6) remain ⬜; model training and SHAP (the
-right of §3) are Phase 2.
+and updated as phases land. As of **Phase 2**, the whole **offline pipeline (§3) runs end to
+end** — sources → `features.parquet` → trained **XGBoost** model → SHAP → the HVI and the
+scenario engine (`data_pipeline/ml/`). The backend, agents, frontend and storage (§2, §6)
+remain ⬜ — Phase 3 puts a FastAPI over the model, HVI and scenarios.
 
 ---
 
@@ -111,13 +111,14 @@ flowchart LR
 ~12k-row table is downloaded. Pulling rasters to the laptop would blow both the RAM budget
 and the Earth Engine compute quota.
 
-**Built in Phase 1 (boxes A→E ✅).** The whole left half runs: server-side compositing
+**Built through Phase 2 (boxes A→H ✅).** The whole pipeline runs: server-side compositing
 (A) → per-cell reduction of every source (B) → join on `cell_id` + Open-Meteo (C) → feature
 engineering incl. neighbourhood aggregates and `impervious_fraction` (D) → `features.parquet`
 (E), 11,944 cells × 42 columns, validated. Only aggregates come down the wire, never rasters —
-the constraint above working as designed. **Boxes F→H (train, SHAP, `model.pkl`) are Phase 2**;
-the HVI in box D is also Phase 2 (it needs the model). `data_pipeline/run.py --stage all`
-drives A→E.
+the constraint above working as designed. Then the modelling half: train **XGBoost** under
+ward-grouped spatial CV (F) → SHAP attribution (G) → `models/model.joblib` + `shap_*` (H). The
+HVI (`hvi.parquet`) and scenario engine sit alongside in `data_pipeline/ml/`.
+`data_pipeline/run.py --stage all` drives A→E; the `ml/` modules run on top of `features.parquet`.
 
 ## 4. Request flow — a scenario query
 
