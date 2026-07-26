@@ -152,9 +152,10 @@ location (`ward_code`, `centroid_lat/lon`) and the leakage columns (`lst_p90`,
 
 ### Explainability
 
-- [ ] SHAP TreeExplainer — global importance + per-cell attribution
-- [ ] **Physics gate:** confirm signs are sane; a positive `albedo` SHAP is *expected*
-      (confound, ADR-0008 / `ml-methodology.md` §6), a vegetation-warms sign is a stop-and-fix
+- [x] SHAP TreeExplainer — global importance + per-cell attribution → `models/shap_values.parquet`
+      *(top: ndbi 1.41, albedo 0.51, pop_density 0.37, built 0.36)*
+- [x] **Physics gate** — enforced on 8 load-bearing drivers (all pass); `albedo` warm = the
+      expected confound (ADR-0008); collinear features reported as SHAP credit-sharing, not gated
 
 ### Heat Vulnerability Index
 

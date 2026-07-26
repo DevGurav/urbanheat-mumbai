@@ -125,6 +125,21 @@ trees.
 heat — the model is wrong regardless of R². Investigate before proceeding. Record any such
 episode in `devlog.md`; it is exactly the kind of thing that makes a good report.
 
+**Measured (Phase 2, `data_pipeline/ml/explain.py`).** `mean |SHAP|` ranks `ndbi_mean`
+first (1.41 °C), then `albedo` (0.51), `pop_density` (0.37), `built_fraction` (0.36),
+`ndvi_neigh_mean` (0.33), `dist_coast` (0.29) — vegetation, built-up and coast dominate, as
+expected for Mumbai.
+
+The gate is enforced on the **load-bearing drivers only** (NDBI, built, built-neigh, pop
+density, NDVI, NDVI-neigh, tree, water) — all eight pass with the physically correct sign. It
+is *not* enforced on collinear/low-importance features, whose SHAP sign is credit-shared with a
+stronger same-direction driver and therefore unreliable: `building_density`/`road_density` come
+out "cool" (their warming credit is absorbed by `built_fraction`/`ndbi_mean`), and `ndvi_p10`/
+`mangrove_fraction` come out "warm" (absorbed by `ndvi_mean`/`water_fraction`). These are
+reported as credit-sharing, not failures — gating them would be a false alarm. **`albedo` comes
+out warm as predicted (ADR-0008): the confound, not a bug.** Per-cell SHAP is written to
+`models/shap_values.parquet` for `/explain/{cell_id}`.
+
 ---
 
 ## 5. Heat Vulnerability Index

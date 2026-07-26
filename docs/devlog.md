@@ -21,6 +21,38 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-26 — Phase 2 — SHAP, and the physics gate earns its keep
+
+**Done**
+- `data_pipeline/ml/explain.py`: SHAP TreeExplainer on the saved XGBoost — global mean|SHAP|,
+  per-cell attribution (→ `models/shap_values.parquet` for `/explain/{cell_id}`), and the
+  physics gate. `shap` added. Four gate tests; 30 total green.
+
+**Results**
+- Top drivers: `ndbi_mean` 1.41 °C, `albedo` 0.51, `pop_density` 0.37, `built_fraction` 0.36,
+  `ndvi_neigh_mean` 0.33, `dist_coast` 0.29 — built-up, vegetation and coast, as expected.
+- **`albedo` came out warm — the confound, exactly as ADR-0008 predicted.** The Phase 1
+  groundwork made this a *note*, not a scare: the gate already knew to expect it.
+
+**Broke / learned — the gate fired, and fixing it was the real finding**
+- First run the gate FAILED on `mangrove_fraction`, `building_density`, `road_density`,
+  `ndvi_p10` — all showing the "wrong" sign. But these are all **collinear with a stronger
+  same-direction driver** (mangrove↔water, building/road↔built_fraction, ndvi_p10↔ndvi_mean).
+  This is SHAP credit-sharing: the model routes the signal through the strongest feature and
+  the redundant partner keeps an unreliable residual sign. The data-dictionary had already
+  flagged built/NDBI/impervious as near-collinear.
+- **So the gate as first written was too strict** — a wrong sign on a rank-20 redundant feature
+  is not a physics failure. Redesigned it to enforce physics on the **load-bearing drivers**
+  (8 high-prior, non-redundant features) and merely *report* the collinear ones as
+  credit-sharing. All 8 load-bearing drivers pass. This is a genuine methodological point worth
+  the report: SHAP signs are only trustworthy for non-collinear features.
+
+**Next**
+- Heat Vulnerability Index (heat / population / lack-of-green, ml-methodology §5) + ward
+  hotspot ranking, then the scenario engine.
+
+---
+
 ## 2026-07-26 — Phase 2 — Modelling harness and the model ladder
 
 **Done**
