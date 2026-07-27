@@ -395,9 +395,73 @@ originally assumed — measured live from a real `429` during the Phase 4 agents
 
 ## Phase 5 — React dashboard · Weeks 15–19
 
-- [ ] Vite + TS + MUI scaffold, API client, typed schemas
-- [ ] Interactive map with layer toggles · Analytics views · Scenario simulator · Copilot chat · Alerts feed
-- [ ] ✅ **Full end-to-end local demo**
+**Goal:** a single-page dashboard over the ten endpoints Phases 3–4 already serve — heat map,
+analytics, scenario simulator, Copilot chat, alerts feed. Everything Phase 4 built stays
+backend-only otherwise; this phase is purely the UI over it.
+
+**Settled at kickoff, 2026-07-27** (implementation patterns within `BLUEPRINT.md`'s already-
+locked stack — React + TS + Vite + MUI + react-leaflet + Recharts — not new architectural
+decisions, so no new ADR):
+**TanStack Query** for fetching/caching (matters more than usual here — `/agent/chat` is slow
+and quota-limited at 20 req/day, and a caching layer prevents accidental refetch spam the
+backend's own cache already assumes won't happen) · **hand-written TypeScript types** mirroring
+`backend/schemas.py` (`conventions.md`'s literal wording; no OpenAPI codegen step) ·
+**single page with a section switcher**, no router (five sections, no need for shareable
+per-section URLs) · **Definition of Done is manual/visual verification** in a running dev
+server, not an automated component test suite (the standing UI-work instruction, not a new
+Vitest/RTL suite for a solo dashboard).
+
+### Scaffold & plumbing
+
+- [ ] `npm create vite@latest` (React + TS template) in `frontend/`; MUI theme; strict
+  `tsconfig` (`conventions.md`: no `any` without a comment justifying it)
+- [ ] API client — thin `fetch` wrapper reading `VITE_API_BASE_URL`; one typed function per
+  endpoint, request/response types mirroring `backend/schemas.py`
+- [ ] TanStack Query setup — `QueryClientProvider`, one hook per endpoint (`useCityGrid`,
+  `useHotspots`, `useExplainCell`, `useWeather`, `usePredict`, `useScenario`, `useAgentChat`,
+  `useAlerts`, `useMonitoringCheck` isn't client-facing — cron-only)
+- [ ] App shell — MUI `AppBar`/`Drawer` or tab strip switching between the five sections, all
+  state in one `App` component (no router, per kickoff decision)
+
+### Heat map
+
+- [ ] `react-leaflet` map, free OSM/CARTO basemap tiles (no tile cost, `BLUEPRINT.md` §5)
+- [ ] `/city/grid` GeoJSON layer, layer toggle (`lst`/`ndvi`/`hvi`/`built`); **canvas
+  renderer** (`preferCanvas`), not SVG — ~12k polygons per layer
+- [ ] Click a cell → `/explain/{cell_id}` side panel (SHAP drivers, the product's "why")
+
+### Analytics
+
+- [ ] `/hotspots` ranking (ward/cell, `hvi`/`lst`) — table + Recharts bar chart
+- [ ] `/weather` forecast widget
+- [ ] `/trends` — an honest "not yet available" state, matching the backend's own stub
+  (`{available: false}`) rather than hiding or faking the section
+
+### Scenario simulator
+
+- [ ] Ward + intervention (`greening`/`cool_roof`) + coverage form → `POST /scenario`
+- [ ] ΔLST summary + per-cell map overlay of the affected cells
+- [ ] `clamped`/`clamped_cells` surfaced prominently, not buried — the disclosure exists
+  precisely so a capped number never reads as a normal one (ADR-0006)
+
+### Copilot chat
+
+- [ ] Chat UI → `POST /agent/chat`; multi-second "thinking" state (LLM-bound, not a bug)
+- [ ] Tool-call transparency — show what was called, `api-reference.md`'s "the panel will ask"
+- [ ] Honest handling of both 503s (`agent_layer_unavailable`, `agent_upstream_unavailable`)
+  and a visible quota-awareness cue, given the real measured 20 req/day cap (`BLUEPRINT.md`,
+  ADR-0011) — this is the one section most likely to hit a real rate limit during a live demo
+- [ ] Render the optional GeoJSON `layer` on the map when a response includes one
+
+### Alerts feed
+
+- [ ] `GET /alerts` polling list (ADR-0003 — polled, not pushed), severity-coded
+- [ ] Honest empty state — "no active alerts" reads as calm, not broken (most days, per
+  ADR-0010, there won't be any)
+
+### Exit
+
+- [ ] ✅ **Full end-to-end local demo** — author-verified live in the browser, not assumed
 
 ---
 

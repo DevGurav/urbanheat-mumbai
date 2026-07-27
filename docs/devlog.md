@@ -21,6 +21,36 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 5 — Kickoff: React dashboard planning pass
+
+**Done**
+- Planning pass before code, per `BLUEPRINT.md` §8. `BLUEPRINT.md`'s stack map already locks
+  React + TS + Vite + MUI + react-leaflet + Recharts, so the kickoff questions were about
+  implementation patterns within that stack, not the stack itself. Expanded PROGRESS.md's
+  Phase 5 board into scaffold/map/analytics/scenario/chat/alerts groups.
+
+**Decided (author-confirmed, all four recommended)**
+- **TanStack Query**, not plain `fetch`+`useState` — declarative caching matters more than
+  usual here, since `/agent/chat` is slow and quota-limited (20 req/day, measured in Phase 4)
+  and an accidental refetch is a real cost, not just wasted latency.
+- **Hand-written TypeScript types**, not generated from `/openapi.json` — matches
+  `conventions.md`'s literal wording ("API response types mirror the backend Pydantic
+  schemas") and avoids a codegen dependency for a backend that's still evolving.
+- **Single page, section switcher, no router** — five sections on one internal dashboard, no
+  need for shareable per-section URLs.
+- **Manual/visual verification is the Definition of Done** — no Vitest/RTL suite this phase;
+  every feature clicked through in a running dev server, matching the standing UI-work
+  instruction rather than adding a parallel test framework to maintain.
+- No new ADR: these are patterns within an already-locked stack, not new architectural
+  commitments with long-term consequences — matches Phase 3's kickoff precedent (no ADR),
+  not Phase 2/4's (ADR-0008/0009, genuine scope/methodology decisions).
+
+**Next**
+- Scaffold & plumbing: `npm create vite@latest`, the API client, hand-written types, TanStack
+  Query setup, the app shell — the board's first unchecked group.
+
+---
+
 ## 2026-07-27 — Phase 4 — Close-out
 
 **Done**
