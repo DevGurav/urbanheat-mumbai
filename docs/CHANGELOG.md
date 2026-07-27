@@ -6,6 +6,70 @@ detail belongs in [devlog.md](devlog.md).
 
 ---
 
+## Phase 4 — Agentic core · completed 2026-07-27
+
+### Added
+- `backend/services.py` — the Phase 3 route handlers' logic extracted into plain functions
+  taking a `Store`, so the HTTP routes and the new agent toolbelt call the same code
+  (ADR-0009's "one implementation, two interfaces"); two genuinely new services, not
+  extractions — `cell_stats` and `explain_ward`
+- `backend/agents/tools.py` — 8 in-process LangChain `StructuredTool`s (`get_hotspots`,
+  `get_cell_stats`, `explain_cell`, `explain_ward`, `simulate_scenario`, `get_weather`,
+  `get_trend`, `search_knowledge`), Pydantic-validated, every domain error returned as a
+  labelled `{error, error_code}` dict rather than raised
+- `backend/rag/` — `ingest.py` + `retrieve.py`, a Chroma index built from 3 real,
+  primary-source policy documents (Mumbai Climate Action Plan, NDMA's heat-wave hazard page,
+  IMD's FAQ on Heat Wave — `references.md` §4); the IMD document is also the source of the
+  Monitoring agent's exact trigger thresholds
+- Four agents (`backend/agents/{copilot,planning,digital_twin,monitoring}.py`): Copilot and
+  Planning and Digital Twin as `langchain.agents.create_agent` tool-calling loops bound to
+  per-agent tool subsets (`agents.md` §4–§6); Monitoring as a deterministic threshold check
+  that only calls the LLM once, to draft wording after a real trigger (`agents.md` §7,
+  ADR-0010)
+- `backend/agents/supervisor.py` — one classification call routes chat to Copilot, Planning
+  or Digital Twin (`agents.md` §2); owns the response cache (`(question, data_version)`, 24h
+  TTL); `build_agent_layer()` turns a `simulate_scenario` call into a `/city/grid`-shaped
+  GeoJSON layer
+- `backend/agents/alerts.py` — file-based alert dedupe (`agents.md` §7: one alert per event,
+  not per run), backing `POST /monitoring/check` and `GET /alerts`
+- New endpoints: `POST /agent/chat`, `POST /monitoring/check`, `GET /alerts`
+  (`api-reference.md`)
+- `.github/workflows/monitoring.yml` — the daily cron trigger (`architecture.md` §6);
+  correct as code, inert until Phase 6 sets a `BACKEND_URL` secret
+- ADR-0009 (agent layer wiring: in-process tools, 3-doc RAG MVP, Agent 2's cost ranking
+  descoped), ADR-0010 (Monitoring's absolute-threshold-only heat-wave rule), ADR-0011 (drop
+  the Groq fallback)
+- pytest suite grown to 122 tests (mock-model tool-calling loops, RAG retrieval, cache/dedupe
+  logic, all three new endpoints)
+
+### Verified
+- ✅ **Exit criterion met** — live-verified against the real Gemini API, not just the mock
+  suite (`devlog.md`, 2026-07-27). Copilot answered "which ward is hottest and why" by
+  chaining `get_hotspots` → `explain_ward` into a cited answer with real numbers (Ward L,
+  43.18 °C, +3.22 °C over the city mean, ranked SHAP drivers). Planning compared cool-roof and
+  greening for the same ward via two real `simulate_scenario` calls, ranked them by ΔLST ×
+  population, and never stated a cost — ADR-0009's scope holding under a real model, not just
+  the system prompt. Digital Twin correctly refused to apply an unsupported coverage fraction
+  to a greening request and phrased its result as analogy, not a promise. The supervisor
+  routed three distinct test messages to their correct agent, 3 for 3.
+
+### Known limitations carried into Phase 5
+- **No Groq fallback** (ADR-0011) — a fully exhausted daily quota (measured live at 20
+  req/day for this project, not the ~1,500 originally assumed) has no recovery until reset;
+  the response cache is the primary mitigation
+- **Monitoring's rule is threshold-only, not IMD's full criteria** (ADR-0010) — no real
+  climatological normal to depart from, so it will rarely trigger for Mumbai in practice
+- **No persisted chat memory** — `session_id` is accepted for contract compatibility but
+  unused; every `/agent/chat` call is a stateless dispatch
+- **The monitoring cron is a correct no-op** until Phase 6 deploys a backend and sets
+  `BACKEND_URL` — there is nothing for it to trigger yet
+- RAG corpus stays a 3-document MVP (ADR-0009); WHO/IPCC/other cities' Heat Action Plans are
+  logged as candidates, not built
+- Agent 2 ranks interventions by ΔLST × population only — no cost axis, since no cited
+  cost-per-area figure exists yet in `references.md`
+
+---
+
 ## Phase 3 — Backend API · completed 2026-07-27
 
 ### Added

@@ -21,6 +21,32 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — Close-out
+
+**Done**
+- Author confirmed the exit criterion and ticked it: ✅ *Copilot answers a real planning
+  question with real model numbers* — the live verification earlier this session (real Ward L
+  numbers, real SHAP drivers, real citations, no fabricated cost) is what's being confirmed
+  here, not a fresh check.
+- `docs/CHANGELOG.md` gets the Phase 4 entry: the toolbelt/services split, RAG over 3 real
+  documents, the four agents, the supervisor + cache, alert dedupe, three new endpoints, three
+  new ADRs (0009–0011), 122 tests. Known limitations carried forward listed plainly — no Groq
+  fallback, Monitoring's threshold-only rule, no chat memory, the cron's inert state, the RAG
+  MVP subset, no cost axis on Planning's recommendations.
+- `docs/architecture.md` updated to reality: LangGraph orchestration and the agent
+  tools/services layer are ✅ in the Components diagram (Report generation stays ⬜, Phase 7);
+  the deployment diagram's GitHub Actions node is 🟨 (built, inert until `BACKEND_URL`
+  exists); the Groq-fallback bullet in the free-tier realities list corrected to match
+  ADR-0011 and the real measured 20 req/day quota.
+- `PROGRESS.md` rolled to Phase 5.
+
+**Next**
+- Phase 5 kickoff: React dashboard over what Phases 3–4 already serve (map, analytics,
+  scenario simulator, Copilot chat, alerts feed) — a planning pass before code, per
+  `BLUEPRINT.md` §8, same as every prior phase kickoff.
+
+---
+
 ## 2026-07-27 — Phase 4 — Monitoring cron: dedupe, two endpoints, the GH Actions trigger
 
 **Done**

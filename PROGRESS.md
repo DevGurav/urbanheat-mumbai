@@ -3,7 +3,7 @@
 Live task board. Newest phases get expanded into detailed tasks at their kickoff.
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
-**Current phase:** 4 — Agentic core *(Phase 3 complete)*
+**Current phase:** 5 — React dashboard *(Phase 4 complete)*
 **Last updated:** 2026-07-27
 
 ---
@@ -389,7 +389,7 @@ originally assumed — measured live from a real `429` during the Phase 4 agents
 
 ### Exit
 
-- [ ] ✅ **Copilot answers a real planning question with real model numbers**
+- [X] ✅ **Copilot answers a real planning question with real model numbers**
 
 ---
 

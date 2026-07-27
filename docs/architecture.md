@@ -4,12 +4,13 @@ Text-based, editable re-creation of the system design. Diagrams are Mermaid so t
 diffable and render on GitHub.
 
 **Status:** target design. Components are marked ⬜ planned / 🟨 in progress / ✅ built,
-and updated as phases land. As of **Phase 3**, the **offline pipeline (§3)** still runs end to
+and updated as phases land. As of **Phase 4**, the **offline pipeline (§3)** still runs end to
 end — sources → `features.parquet` → trained **XGBoost** model → SHAP → the HVI and the
-scenario engine (`data_pipeline/ml/`) — and now the **REST API layer (§2)** sits over it: a
-FastAPI app with an in-memory startup store serving all seven data/model/scenario endpoints.
-The LangGraph agents, frontend and Supabase (§2, §6) remain ⬜ — Phase 4 wraps the services as
-agent tools.
+scenario engine (`data_pipeline/ml/`) — the **REST API layer (§2)** sits over it (all ten
+data/model/scenario/agent endpoints), and the **LangGraph orchestration (§2)** now runs on
+top of that: a supervisor routing to three tool-calling agents, plus a fourth, deterministic
+Monitoring agent reachable only from a cron trigger, never from chat. Frontend and Supabase
+(§2, §6) remain ⬜ — Phase 5 puts a React dashboard over what Phases 3–4 already serve.
 
 ---
 
@@ -52,20 +53,20 @@ flowchart TB
     subgraph BE["Backend 🟨 — FastAPI local, Render deploy is Phase 6"]
         API[REST API layer ✅<br/>Pydantic · CORS · gzip · TTL cache]
 
-        subgraph AG["LangGraph orchestration ⬜"]
+        subgraph AG["LangGraph orchestration ✅"]
             SUP{{Supervisor}}
             A1[1 · Urban AI<br/>Copilot · RAG]
             A2[2 · Planning<br/>Decision Agent]
             A3[3 · Digital Twin<br/>Simulation Agent]
-            A4[4 · Monitoring<br/>Agent]
+            A4[4 · Monitoring<br/>Agent ✅ — cron only]
         end
 
-        subgraph SVC["Agent tools & services ⬜"]
-            MLS[ML prediction<br/>service]
-            GIS[GIS processing<br/>service]
-            SCN[Scenario &<br/>optimisation engine]
-            RPT[Report<br/>generation]
-            NTF[Notification<br/>service]
+        subgraph SVC["Agent tools & services 🟨"]
+            MLS[ML prediction<br/>service ✅]
+            GIS[GIS processing<br/>service ✅]
+            SCN[Scenario &<br/>optimisation engine ✅]
+            RPT[Report<br/>generation ⬜ — Phase 7]
+            NTF[Notification<br/>service ✅ — file only]
         end
     end
 
@@ -166,7 +167,7 @@ flowchart LR
     R --> S[(Supabase free<br/>Postgres + Auth ⬜)]
     R -->|keyed| G[Gemini Flash<br/>free tier]
     R --> OM[Open-Meteo]
-    GA[GitHub Actions<br/>daily cron ⬜] -->|trigger| R
+    GA[GitHub Actions<br/>daily cron 🟨 — built, inert until BACKEND_URL exists] -->|trigger| R
     GA -.CI.-> V
 ```
 
@@ -176,8 +177,10 @@ flowchart LR
   user-facing may depend on sub-second first response.
 - Render free gives **5 GB/mo bandwidth** → grid GeoJSON is simplified and gzipped, and
   the heavy tiles come from public OSM/CARTO basemaps, not from us.
-- Gemini free tier is **Flash-only, ~10 req/min** → agent responses are cached, retried
-  with backoff, and fall back to Groq.
+- Gemini free tier is **Flash-only, measured at 20 req/day for this project** (not the
+  ~1,500/day originally assumed — `BLUEPRINT.md`, `devlog.md` 2026-07-27) → agent responses
+  are cached (`Supervisor`'s `(question, data_version)` cache) and retried with backoff; **no
+  Groq fallback** (ADR-0011) — an exhausted daily quota has no recovery until it resets.
 - Earth Engine compute is quota'd monthly → pipeline runs are deliberate, not on a loop.
 - No Redis, no WebSockets (ADR-0003) → in-process cache; alerts are polled, written by a
   GitHub Actions cron rather than a live queue.
