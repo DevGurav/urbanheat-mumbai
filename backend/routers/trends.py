@@ -2,13 +2,15 @@
 
 Per-year dry-season LST slopes need `lst_trend`, which needs per-year Landsat composites that
 were never built in Phase 1 (deferred, PROGRESS.md). An honest "not yet available" beats faking
-a trend off a single multi-year composite.
+a trend off a single multi-year composite. Logic lives in `backend/services.py` (ADR-0009 — the
+same function the Phase 4 agent toolbelt calls in-process); this router just wires the request.
 """
 
 from __future__ import annotations
 
 from fastapi import APIRouter
 
+from backend import services
 from backend.schemas import TrendsResponse
 
 router = APIRouter(tags=["model"])
@@ -16,7 +18,4 @@ router = APIRouter(tags=["model"])
 
 @router.get("/trends", response_model=TrendsResponse)
 def trends(ward: str | None = None) -> TrendsResponse:
-    return TrendsResponse(
-        available=False,
-        note="Per-year LST trend needs `lst_trend`, deferred in Phase 1 — not built.",
-    )
+    return services.get_trend(ward)

@@ -142,7 +142,7 @@ def test_weather_uses_mocked_upstream(client, monkeypatch):
         "wind_speed_10m_max": [4.2, 3.9],
         "precipitation_sum": [0.0, 2.5],
     }
-    monkeypatch.setattr("backend.routers.weather._fetch", lambda days: {"daily": fake_daily})
+    monkeypatch.setattr("backend.services._fetch_weather", lambda days: {"daily": fake_daily})
     body = client.get("/weather", params={"days": 2}).json()
     assert body["source"] == "open-meteo"
     assert len(body["days"]) == 2

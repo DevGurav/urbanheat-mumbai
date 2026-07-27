@@ -241,11 +241,17 @@ WHO/IPCC/other-cities' plans deferred · Agent 2 ranks by **ΔLST × population 
 
 ### Shared toolbelt
 
-- [ ] `get_hotspots`, `get_cell_stats`, `explain_cell`, `explain_ward`, `simulate_scenario`,
-  `get_weather`, `get_trend`, `search_knowledge` — in-process LangChain wrappers over
-  `backend.store` / `data_pipeline.ml.*` (ADR-0009); Pydantic-validated args; every numeric
-  result carries `model_version`/provenance (`agents.md` §3)
-- [ ] Unit tests per tool against the real fixtures
+- [X] `get_hotspots`, `get_cell_stats`, `explain_cell`, `explain_ward`, `simulate_scenario`,
+  `get_weather`, `get_trend` — in-process LangChain `StructuredTool`s (`backend/agents/tools.py`)
+  over `backend/services.py` (ADR-0009). Router logic for the five existing endpoints moved
+  into `services.py` so the HTTP routes and the tools call the same functions, not two
+  implementations; `get_cell_stats` and `explain_ward` are new logic, not wraps of an existing
+  endpoint. Pydantic-validated args per tool; every result carries `model_version`/provenance,
+  and a domain error (unknown cell/ward) comes back as a labelled `{error, error_code}` dict
+  instead of raising, so a bad lookup reads as "couldn't find that", not a crash
+  (`agents.md` §1). `search_knowledge` stays with the **RAG knowledge base** group below — it
+  needs the Chroma index that group builds, so it can't be wired before that
+- [X] Unit tests per tool against the real fixtures — `tests/test_agent_tools.py`, 12 tests
 
 ### RAG knowledge base
 

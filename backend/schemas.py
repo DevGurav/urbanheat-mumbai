@@ -129,3 +129,44 @@ class ScenarioResponse(BaseModel):
 class TrendsResponse(BaseModel):
     available: bool = False
     note: str
+
+
+class CellStatsResponse(BaseModel):
+    """A cell's raw model-input feature vector, for the agent toolbelt's `get_cell_stats`
+    (`agents.md` §3) — distinct from `/explain`, which returns SHAP attribution, not inputs.
+    """
+
+    cell_id: int
+    ward_code: str
+    lst_mean: float
+    measurement: str = MEASUREMENT
+    land_fraction: float
+    features: dict[str, float] = Field(description="The model's own input feature vector")
+    model_version: str
+
+
+class WardDriver(BaseModel):
+    """One feature's aggregated contribution across a ward's cells — the ward-level analogue
+    of `Driver`, which is per-cell. Values are means, not one cell's signed SHAP.
+    """
+
+    feature: str
+    mean_value: float = Field(description="Mean of the feature's raw value across ward cells")
+    mean_shap_c: float = Field(description="Mean signed SHAP contribution in °C across cells")
+    direction: Literal["warming", "cooling"]
+
+
+class WardExplainResponse(BaseModel):
+    """Aggregated SHAP + summary stats for a ward — the agent toolbelt's `explain_ward`
+    (`agents.md` §3), used by the Planning Decision agent to find *why* a ward is hot.
+    """
+
+    ward_code: str
+    n_cells: int
+    lst_mean: float
+    city_mean: float = Field(description="Mean lst_mean over land cells (land_fraction >= 0.5)")
+    deviation: float
+    population: float
+    measurement: str = MEASUREMENT
+    drivers: list[WardDriver]
+    model_version: str

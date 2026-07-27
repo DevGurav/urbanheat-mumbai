@@ -21,6 +21,64 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — Shared toolbelt: 7 in-process LangChain tools
+
+**Done**
+- New `backend/services.py`: the actual logic for `hotspots`, `explain_cell`, `predict`,
+  `scenario`, `get_weather`, `get_trend` moved out of the route handlers (which took a FastAPI
+  `Request` and couldn't be called without one) into plain functions taking a `Store`. The six
+  routers are now thin — pull `store` off `request.app.state.store`, call `services.xxx(...)`,
+  return it. Behavior unchanged: all 17 existing backend tests pass unmodified except one
+  monkeypatch target (`backend.routers.weather._fetch` → `backend.services._fetch_weather`,
+  since the fetch/cache logic moved too).
+- Two new, genuinely new (not extracted) functions in `services.py`: `cell_stats` (a cell's raw
+  model-input feature vector — distinct from `explain_cell`'s SHAP attribution) and
+  `explain_ward` (aggregated SHAP + summary stats for a whole ward, mean |SHAP| per feature
+  across the ward's cells). Two matching schemas: `CellStatsResponse` and `WardExplainResponse`
+  with a new `WardDriver` (kept separate from the per-cell `Driver` — its docstring says "for
+  this cell", which would be wrong for a ward mean).
+- `backend/agents/tools.py`: `build_toolbelt(store) -> list[StructuredTool]`, one
+  `StructuredTool.from_function` per tool with an explicit Pydantic `args_schema` (`agents.md`
+  §3's "Pydantic validates them", made concrete). 7 of the 8 toolbelt entries from `agents.md`
+  §3 — `search_knowledge` needs the Chroma index the RAG task group builds next.
+- `tests/test_agent_tools.py` — 12 tests, `.invoke({...})` against real fixtures, no HTTP
+  layer, same skip-on-fresh-clone pattern as `test_backend.py`. 67 tests total, green;
+  `ruff` clean.
+
+**Decided**
+- **Errors come back as a labelled dict, not a raised exception.** Every `services.py`
+  function still raises `HTTPException` (via `api_error`) on a domain error — routers need
+  that for FastAPI's status codes. But a LangChain tool that raises looks like a crash to the
+  agent loop, so each tool wraps its `services` call and turns `HTTPException` into
+  `{"error": ..., "error_code": ...}`. Verified: `get_cell_stats(999999999999)` returns
+  `error_code="cell_not_found"` rather than raising (`agents.md` §1 — "fail loudly, never
+  plausibly" means a legible failure, not a Python traceback).
+- **`simulate_scenario` is ward-only.** `agents.md` §3's draft signature sketched
+  `ward: str | cell_ids: list`; only ward-level scenarios exist anywhere in the ML layer
+  (`ml/scenario.py`, `/scenario`'s own contract). Building cell-level targeting now would be
+  new, untested ML surface, not a wrapper — out of scope for "wrap Phase 3 services."
+  Documented in the tool description rather than silently dropped.
+- A few tool signatures added an optional parameter beyond `agents.md` §3's draft table
+  (`get_hotspots`' `unit`, `explain_cell`/`explain_ward`'s `top`) — all already real parameters
+  on the underlying `services.py` functions. `agents.md` §3 calls its own signatures drafts,
+  "updated as built"; this is that.
+
+**Broke / learned**
+- One test I wrote was wrong, not the code: `explain_ward`'s `deviation` is computed from
+  the *unrounded* ward/city means, then rounded — same pattern `explain_cell` already used and
+  `test_explain_known_land_cell` already asserts on. My first version of
+  `test_explain_ward_known_ward` asserted `deviation == round(lst_mean - city_mean, 2)` using
+  the *already-rounded* response fields, which fails at a 0.005 rounding boundary (ward A:
+  38.72 − 39.96 → −1.24, but the true deviation rounds to −1.25). Fixed with
+  `pytest.approx(..., abs=0.02)` — two independently-rounded floats aren't guaranteed to
+  satisfy that identity exactly, so the test shouldn't have demanded it.
+
+**Next**
+- RAG knowledge base: collect the 3 MVP documents, `backend/rag/ingest.py`, then
+  `search_knowledge` — the eighth tool.
+
+---
+
 ## 2026-07-27 — Phase 4 — Dependencies & environment
 
 **Done**
