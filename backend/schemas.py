@@ -156,6 +156,36 @@ class WardDriver(BaseModel):
     direction: Literal["warming", "cooling"]
 
 
+class AgentChatRequest(BaseModel):
+    message: str
+    session_id: str | None = Field(
+        default=None,
+        description=(
+            "Accepted for the api-reference.md contract; no persisted conversation memory "
+            "yet, so it is not used — every call is a fresh, stateless dispatch"
+        ),
+    )
+
+
+class AgentToolCall(BaseModel):
+    name: str
+    args: dict
+    result: str = Field(description="The tool's own JSON result, verbatim")
+
+
+class AgentChatResponse(BaseModel):
+    agent: Literal["copilot", "planning", "digital_twin"]
+    text: str
+    tool_calls: list[AgentToolCall]
+    layer: dict | None = Field(
+        default=None,
+        description=(
+            "GeoJSON FeatureCollection built from a simulate_scenario call, if the agent "
+            "made one; null otherwise — not every answer has a map"
+        ),
+    )
+
+
 class WardExplainResponse(BaseModel):
     """Aggregated SHAP + summary stats for a ward — the agent toolbelt's `explain_ward`
     (`agents.md` §3), used by the Planning Decision agent to find *why* a ward is hot.

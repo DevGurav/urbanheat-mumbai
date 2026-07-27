@@ -13,7 +13,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.routers import explain, grid, health, hotspots, predict, scenario, trends, weather
+from backend.routers import (
+    agent,
+    explain,
+    grid,
+    health,
+    hotspots,
+    predict,
+    scenario,
+    trends,
+    weather,
+)
 from backend.store import load_store
 from data_pipeline.config import get_settings
 
@@ -35,12 +45,35 @@ async def lifespan(app: FastAPI):
         app.state.store.data_version,
         len(app.state.store.features),
     )
+
+    # The agent layer (Phase 4) is genuinely optional at startup: a fresh clone hasn't run
+    # `backend.rag.ingest` yet, and a broken/missing GEMINI_API_KEY is a real, currently-open
+    # issue (devlog.md 2026-07-27). Neither should stop the seven Phase 3 endpoints from
+    # serving — /agent/chat degrades to a 503 instead (backend/routers/agent.py).
+    app.state.retriever = None
+    app.state.supervisor = None
+    try:
+        from backend.rag.retrieve import Retriever
+
+        app.state.retriever = Retriever()
+    except FileNotFoundError as exc:
+        log.warning("RAG index not built, /agent/chat will 503: %s", exc)
+
+    if app.state.retriever is not None:
+        try:
+            from backend.agents.supervisor import Supervisor
+
+            app.state.supervisor = Supervisor(app.state.store, app.state.retriever)
+            log.info("agent supervisor ready")
+        except RuntimeError as exc:
+            log.warning("agent supervisor unavailable, /agent/chat will 503: %s", exc)
+
     yield
 
 
 app = FastAPI(
     title="UrbanHeat AI API",
-    version="0.3.0",
+    version="0.4.0",
     summary="Surface urban heat, its drivers, and mitigation scenarios for Mumbai.",
     lifespan=lifespan,
 )
@@ -62,6 +95,7 @@ app.include_router(weather.router)
 app.include_router(predict.router)
 app.include_router(scenario.router)
 app.include_router(trends.router)
+app.include_router(agent.router)
 
 
 @app.exception_handler(HTTPException)

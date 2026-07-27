@@ -63,16 +63,7 @@ def test_load_chunks_every_chunk_has_real_provenance(knowledge_base_dir):
 
 
 # --- against the persisted Chroma index -------------------------------------------------------
-
-
-@pytest.fixture
-def retriever(settings):
-    from backend.rag.retrieve import Retriever
-
-    try:
-        return Retriever(chroma_dir=settings.chroma_dir)
-    except FileNotFoundError as exc:
-        pytest.skip(f"Chroma index not built: {exc}")
+# `retriever` is a session-scoped fixture from conftest.py.
 
 
 def test_retriever_finds_the_imd_criteria_passage(retriever):

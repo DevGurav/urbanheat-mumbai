@@ -44,28 +44,7 @@ def _tool_names(graph) -> set[str]:
     return set(graph.nodes["tools"].bound._tools_by_name)
 
 
-@pytest.fixture
-def store():
-    from backend.store import load_store
-
-    try:
-        return load_store()
-    except FileNotFoundError as exc:
-        pytest.skip(f"artifacts not built: {exc}")
-    except Exception as exc:  # noqa: BLE001 - a missing .env should skip, not error
-        if ".env" in str(exc) or "config" in str(exc).lower():
-            pytest.skip(str(exc))
-        raise
-
-
-@pytest.fixture
-def retriever(settings):
-    from backend.rag.retrieve import Retriever
-
-    try:
-        return Retriever(chroma_dir=settings.chroma_dir)
-    except FileNotFoundError as exc:
-        pytest.skip(f"Chroma index not built: {exc}")
+# `store` and `retriever` are session-scoped fixtures from conftest.py.
 
 
 # --- tool wiring per agent --------------------------------------------------------------------

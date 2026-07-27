@@ -131,14 +131,35 @@ in-process). `days` (default 7, max 16). Distinct from the pipeline's `sources/w
 stage, which builds historical per-cell dry-season means as a model feature — that stage's own
 finding (ERA5-scale weather barely varies across 458 km²) is why one point is enough here.
 
-## `POST /agent/chat`
+## `POST /agent/chat` ✅ *(landed)*
 ```json
-{"message": "Which 5 wards need trees most urgently?", "session_id": "uuid"}
+{"message": "Which 5 wards need trees most urgently?", "session_id": null}
 ```
-Returns narrative text, `tool_calls` made (transparency — the panel will ask), optional
-GeoJSON layer, `agent` that handled it.
+`session_id` is accepted for contract compatibility but not yet used — no persisted
+conversation memory (`agents.md` didn't specify a multi-turn design; each call is a fresh,
+stateless dispatch). One classification call routes to Copilot, Planning or Digital Twin
+(`agents.md` §2); Monitoring is never reachable here — it is cron-triggered, not chat-triggered
+(`agents.md` §7).
+```json
+{
+  "agent": "digital_twin",
+  "text": "Cells like this one, but greener, run about 0.65 °C cooler on average...",
+  "tool_calls": [
+    {"name": "simulate_scenario", "args": {"ward_code": "A", "intervention": "greening"},
+     "result": "{\"ward_code\": \"A\", \"mean_dlst\": -0.65, ...}"}
+  ],
+  "layer": {"type": "FeatureCollection", "features": ["..."]}
+}
+```
+`layer` is a GeoJSON FeatureCollection built from a `simulate_scenario` call, or `null` if the
+agent didn't make one — not every answer has a map. `503 agent_layer_unavailable` if the RAG
+index or `GEMINI_API_KEY` isn't configured at all; `503 agent_upstream_unavailable` if a
+present key fails at call time (a broken key can't be caught at startup without spending a
+real call to check — `runbook.md`'s `403 PERMISSION_DENIED` entry is exactly this case, open
+as of 2026-07-27).
 > Slow (multi-second, LLM-bound) and rate-limited (~10/min — ADR-0002). The client shows a
-> thinking state and surfaces 429s honestly rather than retrying silently.
+> thinking state and surfaces 429s honestly rather than retrying silently. **Response caching
+> and 429 backoff/Groq-fallback are not built yet** — Rate-limit hygiene, the next task group.
 
 ## `GET /alerts`
 Polled, not pushed (ADR-0003). Daily-refreshed feed: severity, wards, summary, timestamp.

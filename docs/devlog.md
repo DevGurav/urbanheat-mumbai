@@ -21,6 +21,76 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — Orchestration: supervisor + `POST /agent/chat`
+
+**Done**
+- `backend/agents/supervisor.py` — `Supervisor`, built once per app lifetime like `Store`
+  (ADR-0004's posture applied to the agent layer). `route()` is a plain one-word
+  classification (`copilot`/`planning`/`digital_twin`), parsed and validated in Python rather
+  than `BaseChatModel.with_structured_output()` — its default implementation routes through
+  `bind_tools()` and a provider-specific tool-calling flow, a layer of indirection this simple
+  a decision doesn't need. An unparseable reply falls back to `copilot` (the general-purpose
+  agent), not a guess at intent. `handle()` routes then dispatches to the chosen agent's own
+  `run_agent()` loop — one router LLM call, then up to `MAX_TOOL_CALLS` more inside whichever
+  agent handles it, matching `agents.md` §2's "single classification call, not a negotiation."
+- `build_agent_layer()` (same module — orchestration-only logic, not a `services.py` function,
+  since nothing else calls it): if the dispatched agent called `simulate_scenario`, builds a
+  `/city/grid`-shaped GeoJSON FeatureCollection scoped to just those cells; any other tool
+  call, or none, returns `None` — an unmappable answer stays unmappable, not padded with an
+  invented layer.
+- `backend/routers/agent.py` — `POST /agent/chat`. Two distinct 503s: `agent_layer_unavailable`
+  when `app.state.supervisor` is `None` (RAG index or `GEMINI_API_KEY` missing entirely, set at
+  startup) vs. `agent_upstream_unavailable` when a *present* key fails at call time
+  (`ChatGoogleGenerativeAIError` caught around `supervisor.handle()`) — construction alone
+  doesn't spend a real call to validate a key, so a broken-but-present key can only be caught
+  here, not at startup.
+- `main.py`'s `lifespan` now also builds `app.state.retriever` and `app.state.supervisor`,
+  both optional: wrapped in `try/except FileNotFoundError`/`RuntimeError` so a fresh clone (no
+  RAG index) or a missing key degrades to `/agent/chat` 503ing, not the whole app failing to
+  start. App version bumped to 0.4.0.
+- `tests/test_orchestration.py` — 13 tests: routing + the fallback (parametrized over five
+  raw responses), `handle()` dispatching and surfacing tool calls, `build_agent_layer` against
+  a *real* `simulate_scenario` result (not a stub), and the endpoint's three response shapes
+  (200, both 503s) via `TestClient` with a stand-in supervisor.
+- **Fixture cleanup while here**: `store` and `retriever` had become duplicated, function-
+  scoped fixtures across `test_agents.py`, `test_rag.py`, and now `test_orchestration.py` —
+  each test was reloading the feature table and the sentence-transformers embedding model
+  from scratch. Moved both to `tests/conftest.py`, session-scoped, matching the
+  `settings`/`features`/`wards_gdf` fixtures already there. Full suite is noticeably faster;
+  now 107 tests, green; `ruff` clean.
+
+**Decided**
+- Router logic lives with `Supervisor` in `backend/agents/supervisor.py`, not `services.py`.
+  `services.py` is specifically the "one implementation, two interfaces" layer the HTTP routes
+  and the agent toolbelt both call (ADR-0009) — `build_agent_layer` has exactly one caller
+  (`/agent/chat`), so putting it in `services.py` would misrepresent it as more reusable than
+  it is.
+- Plain-text routing over `with_structured_output`: fewer moving parts to explain at a viva,
+  and this project's own fake-model test harness (`FakeToolCallingModel`) already proved that
+  `with_structured_output`'s default tool-calling path needs more scripting to fake correctly
+  — a sign it's more machinery than a one-of-three classification needs.
+
+**Broke / learned — the "new key" attempt, and what it actually told us**
+- Author generated a fresh `GEMINI_API_KEY` from AI Studio and swapped it into `.env`. Same
+  live test, same result: `403 PERMISSION_DENIED: Your project has been denied access.`
+  **Same error text as the first key** — that's the useful signal. A stale/expired key
+  produces a *different* error (usually `INVALID_ARGUMENT` or `UNAUTHENTICATED`); getting the
+  identical `PERMISSION_DENIED` from a brand-new key means the denial is scoped to the AI
+  Studio *project*, not the key. Documented in `runbook.md` and `PROGRESS.md`: the fix is a
+  key from a *new* project, not another key from this one.
+- This is exactly why `main.py`'s startup check only catches *absence* (no key at all), not
+  *validity* — validating a key would mean spending a real call on every restart, and the
+  fresh-key test above shows validity can change out from under a previously-passing key
+  anyway. The request-time 503 (`agent_upstream_unavailable`) is the layer that actually needs
+  to carry this, and now does.
+
+**Next**
+- Rate-limit hygiene: response cache keyed on (question, `data_version`), 429 backoff, Groq
+  fallback. Doesn't need a working Gemini key to build — the cache and backoff logic wrap
+  `Supervisor.handle()` regardless of whether the call underneath succeeds.
+
+---
+
 ## 2026-07-27 — Phase 4 — The four agents: built, tested, live verification blocked
 
 **Done**

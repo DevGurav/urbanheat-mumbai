@@ -294,17 +294,38 @@ WHO/IPCC/other-cities' plans deferred · Agent 2 ranks by **ΔLST × population 
   catch). Monitoring's `_severity()` thresholds tested directly (pure logic), its LLM-drafted
   wording tested with a mocked call
 - [ ] **Blocked: live LLM verification.** `GEMINI_API_KEY` in `.env` returns `403
-  PERMISSION_DENIED` on a real call (not a rate limit — the key doesn't look like a valid AI
-  Studio key either); `GROQ_API_KEY` is unset. A real smoke test per agent is still needed
-  before this task is fully done — runbook.md's troubleshooting table has the fix and the
-  pointer back here once a working key exists
+  PERMISSION_DENIED` on a real call; `GROQ_API_KEY` is unset. **2026-07-27, retried with a
+  freshly generated key from the same AI Studio project — same error, same message
+  ("Your project has been denied access").** That confirms this is a project-level denial,
+  not a stale/malformed key — a new key from the *same* project inherits the same block.
+  Fix needs either a new AI Studio project (create a fresh one at key-creation time, don't
+  reuse the denied one) or contacting Google support, per the error's own text. A real smoke
+  test per agent is still needed before this task is fully done — `runbook.md`'s
+  troubleshooting table has the detail
 
 ### Orchestration
 
-- [ ] LangGraph supervisor — single classification hop routes to one of the four agents;
-  bounded tool-call loop (max ~4) per agent (`agents.md` §2)
-- [ ] `POST /agent/chat` — narrative + `tool_calls` made (transparency) + optional GeoJSON
-  layer (`api-reference.md`)
+- [X] Supervisor — single classification hop routes to one of three agents (`agents.md` §2);
+  Monitoring is never chat-routed, only cron-triggered (§7). `backend/agents/supervisor.py`:
+  a plain one-word classification, parsed and validated in Python (not `with_structured_output`
+  — its default tool-calling flow adds a layer this project doesn't need), falling back to
+  Copilot on an unparseable reply rather than guessing intent. One `Supervisor` built once at
+  startup, sharing one LLM binding across the router and all three agents' own tool-call loops
+  (bounded to `MAX_TOOL_CALLS=4` each, already built in the Agents task group)
+- [X] `POST /agent/chat` — narrative + `tool_calls` made (transparency) + optional GeoJSON
+  layer (`api-reference.md`, `backend/routers/agent.py`). The layer comes from
+  `build_agent_layer()`: if the dispatched agent called `simulate_scenario`, build a
+  `/city/grid`-shaped GeoJSON scoped to just those cells; otherwise `null`, not invented.
+  `app.state.supervisor` is built once at startup and stays `None` — a clean 503, not a crash
+  — if the RAG index isn't built or `GEMINI_API_KEY` is unset entirely; a *present but broken*
+  key (this repo's current state, `403 PERMISSION_DENIED`) surfaces as a 503 at request time
+  instead, since Supervisor construction alone doesn't spend a call to check
+- [X] `tests/test_orchestration.py` — 13 tests: routing/fallback (parametrized), dispatch +
+  tool-call surfacing, `build_agent_layer` (real scenario call, non-scenario call, errored
+  call, no calls), and the endpoint's three response paths (200, both 503s) via `TestClient`
+  with a mocked supervisor. Moved `store`/`retriever` fixtures to `conftest.py`, session-scoped
+  — they were duplicated function-scoped in three test files and had started measurably
+  slowing the suite (repeated store/embedding-model reloads)
 
 ### Rate-limit hygiene
 

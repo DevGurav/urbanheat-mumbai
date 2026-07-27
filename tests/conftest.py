@@ -36,3 +36,34 @@ def wards_gdf(settings):
     if not path.exists():
         pytest.skip("wards.geojson not built — run: uv run python -m data_pipeline.boundary")
     return gpd.read_file(path)
+
+
+@pytest.fixture(scope="session")
+def store():
+    """The in-memory artifact store `backend/services.py` and the agent toolbelt read.
+    Session-scoped: it's loaded once and never mutated (ADR-0004), so every test in the run
+    shares one instance rather than re-reading the parquet files per test.
+    """
+    from backend.store import load_store
+
+    try:
+        return load_store()
+    except FileNotFoundError as exc:
+        pytest.skip(f"artifacts not built: {exc}")
+    except Exception as exc:  # noqa: BLE001 - a missing .env should skip, not error
+        if ".env" in str(exc) or "config" in str(exc).lower():
+            pytest.skip(str(exc))
+        raise
+
+
+@pytest.fixture(scope="session")
+def retriever(settings):
+    """The RAG retriever (`backend/rag/retrieve.py`). Session-scoped so the embedding model
+    loads once per test run, not once per test — it's the slow part (~seconds).
+    """
+    from backend.rag.retrieve import Retriever
+
+    try:
+        return Retriever(chroma_dir=settings.chroma_dir)
+    except FileNotFoundError as exc:
+        pytest.skip(f"Chroma index not built: {exc}")
