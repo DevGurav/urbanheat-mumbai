@@ -21,6 +21,56 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 5 — Heat map
+
+**Done**
+- `src/sections/HeatMap.tsx` — `react-leaflet` `MapContainer` (`preferCanvas`) over a CARTO
+  Positron basemap, `/city/grid` as a `GeoJSON` layer with a `lst`/`ndvi`/`hvi`/`built` toggle,
+  a hover tooltip per cell, and a click handler opening an MUI `Drawer` with
+  `/explain/{cell_id}`'s SHAP drivers.
+- Loaded the dataviz skill before choosing any color, since a choropleth is exactly what it's
+  scoped for. `src/viz/color.ts`: the sequential-blue ramp (steps 100→700) and the blue↔red
+  diverging pair, both copied verbatim from the skill's `references/palette.md` — no
+  eyeballed hex values, per its "documented palette only" rule. Sequential blue colors the
+  four magnitude layers (one shared ramp, since only one layer renders at a time — no need
+  for per-layer hues); the diverging pair colors SHAP driver direction in the explain drawer,
+  since that's a polarity question (warming vs cooling), not a magnitude one. Didn't re-run
+  the categorical validator script — sequential/diverging ramps are validated by lightness
+  monotonicity and by being copied from the documented instance, not by the adjacency-CVD
+  checks that script runs (the skill's own note: running it on a sequential ramp fails by
+  design and isn't a real failure).
+- `SequentialLegend.tsx` — a labeled gradient bar (title, min, max) so the map is never
+  color-alone, per the skill's accessibility pass.
+- Verified live, backend and frontend both actually running, not just compiled: real ~12k-cell
+  grid, a real 29.8–50.6 °C legend range, a real clicked cell's real SHAP drivers, a real NDVI
+  layer switch. Zero console errors.
+
+**Decided**
+- One shared sequential ramp across all four layers, not four different hues. Only one layer
+  is visible at a time (a toggle, not simultaneous layers), so there's no CVD-adjacency
+  concern between them — the palette's categorical machinery (fixed hue order, adjacency
+  checks) is for when multiple series share a canvas at once, which never happens here.
+
+**Broke / learned**
+- First verification attempt looked for `.leaflet-interactive` DOM elements to click — that
+  class only exists under Leaflet's *SVG* renderer. `preferCanvas` (used deliberately, per
+  the kickoff task's own performance note for ~12k polygons) draws every feature onto one
+  `<canvas>` element with no per-shape DOM node at all. Fixed by clicking raw screen
+  coordinates instead — Leaflet's canvas renderer does its own hit-testing internally, so a
+  coordinate click still resolves to the right feature and fires the bound handlers; there's
+  just nothing to `querySelector` for it.
+- The layer-toggle `ToggleButtonGroup` and Leaflet's own zoom control both default to
+  top-left — found genuinely overlapping in the first screenshot (LST button partly hidden
+  behind the +/− control), not caught by `tsc` or lint since it's a pure layout collision.
+  Fixed by offsetting the toggle group's `left` past the zoom control's width; re-screenshot
+  confirmed the fix.
+
+**Next**
+- Analytics: `/hotspots` ranking (table + Recharts bar chart — the dataviz skill's ordinal
+  and sequential guidance applies again), `/weather` widget, `/trends`' honest stub state.
+
+---
+
 ## 2026-07-27 — Phase 5 — Scaffold & plumbing
 
 **Done**

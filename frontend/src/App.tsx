@@ -1,6 +1,7 @@
 import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material";
 import { useState } from "react";
 
+import { HeatMap } from "./sections/HeatMap";
 import { Placeholder } from "./sections/Placeholder";
 
 const SECTIONS = [
@@ -37,7 +38,7 @@ function App() {
       </AppBar>
 
       <Box sx={{ flex: 1, overflow: "auto" }}>
-        {section === "map" && <Placeholder title="Heat map" />}
+        {section === "map" && <HeatMap />}
         {section === "analytics" && <Placeholder title="Analytics" />}
         {section === "scenario" && <Placeholder title="Scenario simulator" />}
         {section === "chat" && <Placeholder title="Copilot" />}

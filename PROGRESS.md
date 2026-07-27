@@ -441,10 +441,26 @@ Vitest/RTL suite for a solo dashboard).
 
 ### Heat map
 
-- [ ] `react-leaflet` map, free OSM/CARTO basemap tiles (no tile cost, `BLUEPRINT.md` §5)
-- [ ] `/city/grid` GeoJSON layer, layer toggle (`lst`/`ndvi`/`hvi`/`built`); **canvas
-  renderer** (`preferCanvas`), not SVG — ~12k polygons per layer
-- [ ] Click a cell → `/explain/{cell_id}` side panel (SHAP drivers, the product's "why")
+- [X] `react-leaflet` map (`src/sections/HeatMap.tsx`), free CARTO Positron basemap tiles (no
+  tile cost, `BLUEPRINT.md` §5)
+- [X] `/city/grid` GeoJSON layer, layer toggle (`lst`/`ndvi`/`hvi`/`built`); **canvas
+  renderer** (`preferCanvas`), not SVG — ~12k polygons per layer. Colored with the dataviz
+  skill's validated sequential-blue ramp (`src/viz/color.ts`, copied verbatim from
+  `references/palette.md` — no eyeballed hex values), one shared ramp across all four layers
+  since only one renders at a time; a labeled gradient legend (`SequentialLegend.tsx`) so the
+  map is never color-alone
+- [X] Click a cell → `/explain/{cell_id}` side panel (SHAP drivers, the product's "why") — the
+  driver list uses the dataviz skill's diverging blue↔red pair for warming/cooling direction,
+  the one place on this map where the choice is polarity, not magnitude
+- [X] Verified live with the real backend running (not just `tsc`/lint): real ~12k-cell grid
+  rendered, legend showed a real 29.8–50.6 °C LST range; clicking a canvas-rendered cell
+  (no per-shape DOM in canvas mode, confirmed by dropping the `.leaflet-interactive` selector
+  approach and clicking screen coordinates instead) opened the drawer with real SHAP drivers
+  for a real cell (Ward P/S, 41.5 °C, +1.6 °C vs city mean); switching to NDVI updated data
+  and legend range correctly (−0.2 to 0.7); zero console errors throughout. **Caught and
+  fixed live, not in review:** the layer-toggle buttons initially overlapped Leaflet's default
+  zoom control (both top-left) — found in the first screenshot, fixed by offsetting the toggle
+  group, re-verified in a second screenshot
 
 ### Analytics
 
