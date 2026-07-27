@@ -21,6 +21,76 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — The four agents: built, tested, live verification blocked
+
+**Done**
+- `backend/agents/llm.py` — `get_llm()`, one place reading `GEMINI_API_KEY` (ADR-0002). No
+  retry/backoff/Groq-fallback here on purpose — that's the next task group, Rate-limit hygiene.
+- `backend/agents/prompts.py` — plain-text system prompts for Copilot, Planning, Digital Twin,
+  carrying the guardrail language from `agents.md` §4–§6 (measurement caveats, no-invented-
+  numbers, ask-don't-guess, clamped-must-be-disclosed).
+- `backend/agents/result.py` — `AgentResult`/`ToolCallRecord` + `run_agent()`: invokes a
+  compiled LangGraph agent, flattens its message trace into final text + the tool calls made
+  (the transparency `POST /agent/chat` will need later), bounded to `MAX_TOOL_CALLS=4` via
+  `recursion_limit` (agents.md §8's "bounded tool-call loop"). Catches `GraphRecursionError`
+  and returns an honest "ran out of budget" message instead of letting a runaway loop hang or
+  crash the request.
+- Three tool-calling agents via `langchain.agents.create_agent` (the current, non-deprecated
+  API — `langgraph.prebuilt.create_react_agent` is deprecated as of langgraph 1.x, moved
+  there): `copilot.py` (every toolbelt tool except `simulate_scenario`, requires a real
+  `Retriever` — no silent RAG-less Copilot), `planning.py` (`get_hotspots`, `explain_ward`,
+  `simulate_scenario`), `digital_twin.py` (`simulate_scenario`, `get_cell_stats`,
+  `explain_ward`).
+- `monitoring.py` — deliberately *not* a tool-calling agent (agents.md §7: the trigger is
+  deterministic code, the LLM only drafts wording). `check_heatwave()` calls
+  `services.get_weather` and `services.hotspots` directly, applies `_severity()`, and only
+  calls the LLM if a trigger actually fired.
+- `tests/test_agents.py` — 16 tests. Built a small local `FakeToolCallingModel`
+  (`BaseChatModel` subclass, `bind_tools` returns `self`, `_generate` pops a scripted
+  response) since none of `langchain_core`'s built-in fakes implement `bind_tools`. Runs the
+  *real* tool-calling loop against *real* tools and the *real* store — only the model is
+  fake — so `run_agent`'s extraction, each agent's tool membership, tool-error-as-labelled-
+  result, and the recursion-limit catch are all genuinely exercised, not just asserted.
+- 94 tests total, green; `ruff` clean.
+
+**Decided**
+- **ADR-0010: Monitoring's heat-wave rule is absolute-threshold-only** (37/45/47 °C from the
+  IMD FAQ, `data/knowledge_base/imd_faq_heatwave.txt`), not IMD's full coastal-station rule.
+  IMD's real rule needs a departure from the station's climatological normal maximum
+  temperature; this project's only candidate baseline is Phase 1's ERA5 dry-season *mean* air
+  temperature, already found near-constant across the city and flagged as low-signal — using
+  it as an IMD "normal" would misrepresent both what IMD's criteria mean and what the data
+  supports. Author-confirmed via AskUserQuestion before building. Consequence, stated plainly
+  in the ADR: the agent will rarely trigger for Mumbai in practice (45 °C+ is uncommon at a
+  coastal station) — a live demo may need a mocked forecast to show the alert path.
+- **`create_agent`, not `create_react_agent`.** Tried the latter first per older tutorials;
+  langgraph 1.2.9 raises a deprecation warning and points at `langchain.agents.create_agent`,
+  which is what actually ships now.
+- **Fake-model test ids must be unique per turn.** First draft of the runaway-loop test reused
+  one `tool_call` id across every scripted response — langgraph's internal routing threw a
+  `KeyError` on the *n*th repeat (an artifact of an internal branch spec, not a real bug in
+  our code — a real model never emits the same id twice). Fixed by generating a unique id per
+  turn in the test, which is also more realistic.
+
+**Broke / learned — the live LLM check surfaced a real, external blocker**
+- `GEMINI_API_KEY` fails every real call with `403 PERMISSION_DENIED: Your project has been
+  denied access. Please contact support.` — not a rate limit. The key also doesn't match a
+  valid AI Studio key's shape (`AIzaSy...`); this one starts `AQ.Ab8R...`, suggesting the
+  wrong credential was pasted into `.env`, not that a real key expired. `GROQ_API_KEY` is
+  unset, so there is currently no working LLM credential in this environment at all.
+- Author-confirmed path forward (AskUserQuestion, before building): build all four agents now
+  with mock-tested wiring, fix the credential separately, then run one real smoke test per
+  agent. `runbook.md`'s troubleshooting table now has this exact error + fix + a pointer back
+  to this entry, so future-me doesn't have to rediscover it.
+
+**Next**
+- Once `GEMINI_API_KEY` (or `GROQ_API_KEY`) works: one live call per agent to confirm real
+  behavior, then tick PROGRESS's "Blocked: live LLM verification" line. Otherwise, Orchestration
+  — the LangGraph supervisor and `POST /agent/chat` — can proceed on the mock-tested agents as
+  they stand; the supervisor's own routing logic doesn't need a working key to build or test.
+
+---
+
 ## 2026-07-27 — Phase 4 — RAG knowledge base: real documents, Chroma index, 8th tool
 
 **Done**

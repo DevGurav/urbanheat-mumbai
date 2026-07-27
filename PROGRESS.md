@@ -273,13 +273,31 @@ WHO/IPCC/other-cities' plans deferred · Agent 2 ranks by **ΔLST × population 
 
 ### Agents
 
-- [ ] Agent 1 — Urban AI Copilot (RAG + data tools; guardrails in `agents.md` §4)
-- [ ] Agent 2 — Planning Decision (hotspots → SHAP → simulate → rank by ΔLST × population;
-  no cost field per kickoff scope, `agents.md` §5)
-- [ ] Agent 3 — Digital Twin (NL → structured scenario → `simulate_scenario` → narration,
-  `agents.md` §6)
-- [ ] Agent 4 — Monitoring (rule-based IMD thresholds in code, not LLM-judged; LLM drafts
-  alert wording only, `agents.md` §7)
+- [X] Agent 1 — Urban AI Copilot (RAG + data tools; guardrails in `agents.md` §4) —
+  `backend/agents/copilot.py`, every toolbelt tool except `simulate_scenario`
+- [X] Agent 2 — Planning Decision (hotspots → SHAP → simulate → rank by ΔLST × population;
+  no cost field per kickoff scope, `agents.md` §5) — `backend/agents/planning.py`
+- [X] Agent 3 — Digital Twin (NL → structured scenario → `simulate_scenario` → narration,
+  `agents.md` §6) — `backend/agents/digital_twin.py`
+- [X] Agent 4 — Monitoring (rule-based IMD thresholds in code, not LLM-judged; LLM drafts
+  alert wording only, `agents.md` §7) — `backend/agents/monitoring.py`. Not a tool-calling
+  loop like the other three: absolute-temperature-only trigger (37/45/47 °C, real IMD FAQ
+  numbers), because IMD's full coastal criteria need a "departure from normal" baseline this
+  project doesn't have as a real climatological normal (ADR-0010)
+- [X] `backend/agents/llm.py` (Gemini binding, no retry/fallback yet — that's Rate-limit
+  hygiene's job), `prompts.py` (the 4 system prompts), `result.py` (`run_agent`: flattens a
+  compiled graph's message trace into text + `tool_calls`, bounded to `MAX_TOOL_CALLS=4` via
+  `recursion_limit`, catches a runaway loop instead of hanging)
+- [X] `tests/test_agents.py` — 16 tests against the real tool-calling loop (real tools, real
+  store, a small local fake chat model in place of Gemini — verifies tool wiring per agent,
+  `run_agent`'s extraction, error-as-labelled-result (not a crash), and the recursion-limit
+  catch). Monitoring's `_severity()` thresholds tested directly (pure logic), its LLM-drafted
+  wording tested with a mocked call
+- [ ] **Blocked: live LLM verification.** `GEMINI_API_KEY` in `.env` returns `403
+  PERMISSION_DENIED` on a real call (not a rate limit — the key doesn't look like a valid AI
+  Studio key either); `GROQ_API_KEY` is unset. A real smoke test per agent is still needed
+  before this task is fully done — runbook.md's troubleshooting table has the fix and the
+  pointer back here once a working key exists
 
 ### Orchestration
 

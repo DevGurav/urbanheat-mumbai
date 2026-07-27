@@ -162,6 +162,7 @@ Env vars set in each dashboard, never committed. Steps filled in when this is re
 | SHAP says vegetation warms | Model or feature bug | Stop. Investigate before proceeding — physics gate (`ml-methodology.md` §4) |
 | Gemini 429 | Free tier ~10 req/min | Backoff; fallback to Groq; cache |
 | Gemini 429 all day | Daily 1,500 exhausted | Resets midnight Pacific; use Groq meanwhile |
+| Gemini 403 `PERMISSION_DENIED` — "Your project has been denied access" | Not a rate limit — either the wrong credential is in `GEMINI_API_KEY` (a valid AI Studio key starts `AIzaSy...`; anything else, e.g. an `AQ....` token, is not one) or the AI Studio project itself lost API access | Generate a fresh key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey), confirm it starts `AIzaSy`, replace `GEMINI_API_KEY` in `.env`. **Hit at the Phase 4 agents build (2026-07-27)** — see `devlog.md` — both `GEMINI_API_KEY` and `GROQ_API_KEY` were unusable at that point, so the four agents shipped with mock-tested wiring only; run one live call per agent once a key works, per that devlog entry |
 | Agent states a number no tool returned | Prompt/guardrail failure | Serious — fix before demo (`agents.md` §1) |
 | Render first request ~60 s | Free-tier cold start | Expected; wake beforehand |
 | Render 5 GB bandwidth warning | `/city/grid` payload | Simplify geometry, gzip, raise cache TTL |
