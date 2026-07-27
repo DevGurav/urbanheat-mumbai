@@ -21,6 +21,57 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 5 — Scaffold & plumbing
+
+**Done**
+- `frontend/`: `npm create vite@latest . -- --template react-ts`, then the real stack on top
+  (MUI, react-leaflet + leaflet, Recharts, `@tanstack/react-query`). React 19.2, TS 6.0, Vite
+  8.1 — current as of this scaffold.
+- `src/api/types.ts` + `client.ts` + `hooks.ts` — hand-written types mirroring
+  `backend/schemas.py`, one `fetch` function and one TanStack Query hook per client-facing
+  endpoint.
+- `src/App.tsx` + `main.tsx` — the MUI `AppBar`/`Tabs` shell, `QueryClientProvider` with
+  `refetchOnWindowFocus: false`, five `Placeholder` sections.
+- Verified live: dev server up, Playwright-driven headless Chromium (no `chromium-cli` on
+  this Windows box — installed `playwright` locally with `--no-save`, used it, removed it;
+  `package.json`/`package-lock.json` confirmed untouched by the temporary install) navigated
+  the app, clicked all 5 tabs, screenshotted each, checked `console --errors`. Clean.
+
+**Decided**
+- `strict: true` wasn't in the fresh Vite scaffold's `tsconfig.app.json` — a real gap against
+  `conventions.md`'s explicit requirement, not a style preference. Added it before writing
+  anything else, and confirmed `npx tsc -b` actually enforces it (not just present in the
+  file — ran it before and after to see the difference).
+- Deleted the scaffold's default `App.css`/hero-and-logo assets and rewrote `index.css`. The
+  default template is a centered 1126px-wide marketing column (`#root { width: 1126px; ...
+  text-align: center; }`) — directly incompatible with a full-height `AppBar` + content
+  dashboard layout. Left in place, it would have silently constrained every section to a
+  narrow centered column no matter what the section components did.
+- `frontend/README.md` rewritten from Vite's generic template boilerplate — pointed at the
+  actual backend dependency, env var, and the three kickoff decisions baked into `src/api/`.
+
+**Broke / learned**
+- First draft of `client.ts` included `cellStats` and `explainWard` functions calling
+  `/cell/{id}/stats` and `/explain-ward/{code}` — endpoints that don't exist.
+  `get_cell_stats` and `explain_ward` (`backend/agents/tools.py`) were built as agent-toolbelt
+  functions only, never given their own HTTP routes (Phase 4 never needed them as REST
+  endpoints, only as LLM tool calls). Caught by grepping `backend/routers/*.py` for every
+  actual `@router.get`/`@router.post` before trusting what I'd written from memory — 11 real
+  routes, not 13. Removed both functions and their now-orphaned types
+  (`CellStatsResponse`/`WardExplainResponse`) from `types.ts` rather than leaving dead code
+  that implies a capability the backend doesn't have.
+- `@types/geojson`'s global `GeoJSON` namespace didn't resolve at first —
+  `tsconfig.app.json`'s `"types": ["vite/client"]` explicitly lists which `@types/*` packages
+  auto-include, which suppresses the normal automatic pickup of every installed `@types/*`
+  package. Added `"geojson"` to that list once diagnosed (`@types/geojson` was already present
+  transitively via `@types/leaflet`, just not wired in).
+
+**Next**
+- Heat map: `react-leaflet` + `/city/grid` GeoJSON layer, canvas renderer, layer toggle,
+  click-to-explain via `/explain/{cell_id}`.
+
+---
+
 ## 2026-07-27 — Phase 5 — Kickoff: React dashboard planning pass
 
 **Done**

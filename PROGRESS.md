@@ -413,15 +413,31 @@ Vitest/RTL suite for a solo dashboard).
 
 ### Scaffold & plumbing
 
-- [ ] `npm create vite@latest` (React + TS template) in `frontend/`; MUI theme; strict
-  `tsconfig` (`conventions.md`: no `any` without a comment justifying it)
-- [ ] API client — thin `fetch` wrapper reading `VITE_API_BASE_URL`; one typed function per
-  endpoint, request/response types mirroring `backend/schemas.py`
-- [ ] TanStack Query setup — `QueryClientProvider`, one hook per endpoint (`useCityGrid`,
-  `useHotspots`, `useExplainCell`, `useWeather`, `usePredict`, `useScenario`, `useAgentChat`,
-  `useAlerts`, `useMonitoringCheck` isn't client-facing — cron-only)
-- [ ] App shell — MUI `AppBar`/`Drawer` or tab strip switching between the five sections, all
-  state in one `App` component (no router, per kickoff decision)
+- [X] `npm create vite@latest` (React + TS template) in `frontend/`; strict `tsconfig`
+  (`conventions.md`: no `any` without a comment justifying it) — **the scaffold didn't set
+  `strict: true` by default**, added explicitly to `tsconfig.app.json`, verified by `npx tsc -b`
+  actually failing before the fix. MUI theme (`createTheme`, heat-red primary, not MUI's
+  default blue) in `main.tsx`. Removed the scaffold's marketing-page boilerplate
+  (`App.css`, hero/react/vite images, the fixed-1126px-column `index.css`) — it would have
+  visually conflicted with a full-height app layout
+- [X] API client (`src/api/client.ts`) — thin `fetch` wrapper reading `VITE_API_BASE_URL`;
+  one typed function per endpoint; types (`src/api/types.ts`) mirroring `backend/schemas.py`.
+  **Caught before it shipped:** an early draft invented two client functions
+  (`cellStats`/`explainWard`) for endpoints that don't exist — `get_cell_stats` and
+  `explain_ward` are agent-toolbelt-only (`backend/agents/tools.py`), never exposed as REST
+  routes. Cross-checked against `grep "@router\." backend/routers/*.py`'s actual 11 routes
+  before trusting the client; removed both
+- [X] TanStack Query setup — `QueryClientProvider` (`refetchOnWindowFocus: false` — the real
+  20 req/day quota makes aggressive refetch defaults a real cost, not just noise), one hook
+  per client-facing endpoint (`src/api/hooks.ts`). No `useMonitoringCheck` — that endpoint is
+  cron-only, never called from the browser
+- [X] App shell — MUI `AppBar` + `Tabs` switching between the five sections, all state in one
+  `App` component (no router, per kickoff decision); each section is a `Placeholder` until
+  its own task group lands
+- [X] Verified live in a browser (Playwright, headless Chromium — no `chromium-cli` available
+  on this Windows environment, installed `playwright` locally with `--no-save` for the check
+  and removed it after): AppBar renders, all 5 tabs switch content correctly, zero console
+  errors. Screenshots confirmed MUI theming applied, not unstyled HTML
 
 ### Heat map
 
