@@ -64,5 +64,10 @@ def run_agent(
                 name=call["name"], args=call["args"], result=str(m.content)
             )
 
-    final_text = messages[-1].content if messages else ""
+    # `.content` is not reliably a plain string: Gemini (and other providers) can return a
+    # list of content blocks (`[{"type": "text", "text": "...", "extras": {...}}]`, carrying
+    # e.g. a response signature) instead of `str`. `BaseMessage.text` normalizes either shape
+    # to the joined text — found via a live smoke test (devlog.md), not by the mock suite,
+    # since the fake model only ever returned plain strings.
+    final_text = str(messages[-1].text) if messages else ""
     return AgentResult(text=final_text, tool_calls=list(tool_calls.values()))

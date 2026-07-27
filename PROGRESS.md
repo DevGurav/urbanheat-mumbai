@@ -293,15 +293,28 @@ WHO/IPCC/other-cities' plans deferred · Agent 2 ranks by **ΔLST × population 
   `run_agent`'s extraction, error-as-labelled-result (not a crash), and the recursion-limit
   catch). Monitoring's `_severity()` thresholds tested directly (pure logic), its LLM-drafted
   wording tested with a mocked call
-- [ ] **Blocked: live LLM verification.** `GEMINI_API_KEY` in `.env` returns `403
-  PERMISSION_DENIED` on a real call; `GROQ_API_KEY` is unset. **2026-07-27, retried with a
-  freshly generated key from the same AI Studio project — same error, same message
-  ("Your project has been denied access").** That confirms this is a project-level denial,
-  not a stale/malformed key — a new key from the *same* project inherits the same block.
-  Fix needs either a new AI Studio project (create a fresh one at key-creation time, don't
-  reuse the denied one) or contacting Google support, per the error's own text. A real smoke
-  test per agent is still needed before this task is fully done — `runbook.md`'s
-  troubleshooting table has the detail
+- [X] **Live LLM verification — resolved 2026-07-27.** A key from a genuinely different
+  Google account (not a new key on the same denied project) worked immediately, confirming
+  the block really was project-level (`runbook.md`, `devlog.md`). Live-verified all four
+  agents plus the supervisor: Copilot correctly chained `get_hotspots` → `explain_ward` for a
+  cited, well-formatted answer; Planning chained `explain_ward` → `get_hotspots` →
+  `simulate_scenario` ×2 (both interventions) and ranked them with no cost mentioned (ADR-0009
+  scope holding under a real model, not just the system prompt); Digital Twin correctly
+  refused to apply an unsupported coverage fraction to greening and phrased its result as
+  analogy, not causation; Monitoring's real forecast check didn't trigger (expected, ADR-0010)
+  and its wording-drafting path produced a properly caveated advisory when forced; the
+  supervisor routed all three test messages to their correct agent. **Two real bugs found live
+  that 94 mock-tested cases had missed**, both the same shape: `AIMessage.content` from real
+  Gemini is a list of content blocks, not a plain string (carries a response `signature`) —
+  `str(response.content)` silently produced garbage. Fixed in `result.py`'s final-answer
+  extraction and `monitoring.py`'s summary draft using `.text` (a `BaseMessage` accessor that
+  normalizes either shape) instead of `.content`. The same bug in `supervisor.py`'s `route()`
+  was the more serious one: it would have silently routed every message to the `copilot`
+  fallback, since the stringified block list never equals `"planning"`/`"digital_twin"` —
+  fixed identically. Also hit and correctly handled a real `429` quota error (confirms the
+  `agent_upstream_unavailable` path works, not just the happy path) — and that error revealed
+  the real free-tier daily quota is 20 req/day, not the ~1,500 `BLUEPRINT.md` documented;
+  corrected there with a dated note
 
 ### Orchestration
 

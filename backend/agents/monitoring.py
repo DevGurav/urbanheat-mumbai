@@ -67,7 +67,9 @@ def _draft_summary(
         "official IMD warning — say so."
     )
     response = llm.invoke(prompt)
-    return str(response.content)
+    # `.content` is not reliably a plain string (`backend/agents/result.py`'s same fix,
+    # found live: Gemini can return a list of content blocks). `.text` normalizes it.
+    return str(response.text)
 
 
 def check_heatwave(store: Store, llm: BaseChatModel | None = None) -> HeatwaveAlert | None:

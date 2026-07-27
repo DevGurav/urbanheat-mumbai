@@ -21,6 +21,85 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — Live LLM verification: the key, and two real bugs it found
+
+**Done — the key**
+- Regenerated `GEMINI_API_KEY` twice from the same AI Studio project: identical `403
+  PERMISSION_DENIED: Your project has been denied access` both times. Pushed back on an
+  AI-generated explanation the author found ("Google changed key formats to `AQ.`, old SDKs
+  reject it") — the traceback shows the request reaching Google's servers and getting a real,
+  structured JSON error back (`google/genai/_api_client.py`'s `raise_for_response`), which
+  only happens *after* the key is accepted and parsed; a format-rejection would fail
+  client-side before any network call. Also: `google-genai` was already at the latest
+  release (2.14.0, confirmed via `uv pip install --dry-run`), so "outdated SDK" didn't hold
+  either.
+- A key from a genuinely **different Google account** worked on the first try, no code
+  changes. Confirms the diagnosis: project-level denial, not a key-format or SDK issue.
+  `runbook.md` and `PROGRESS.md` updated so the record reflects what was actually verified,
+  not the AI-search theory.
+
+**Done — live verification, all four agents + the supervisor**
+- **Copilot**: "Which ward is hottest and why?" → `get_hotspots` then `explain_ward`, real
+  numbers (Ward L, 43.18 °C, +3.22 °C over city mean), correctly labelled *surface*
+  temperature, SHAP drivers cited with values and units.
+- **Planning**: "What should we do about ward L?" → `explain_ward`, `get_hotspots`, then
+  `simulate_scenario` for *both* `cool_roof` and `greening`, ranked by ΔLST × population,
+  zero mention of cost anywhere in the answer — ADR-0009's descope holding under a real model,
+  not just enforced by the system prompt's wording.
+- **Digital Twin**: "What if we plant trees across 30% of ward A?" → correctly explained that
+  greening doesn't take a coverage fraction (rather than silently applying 30% somewhere it
+  doesn't apply), ran the scenario, phrased the result as "cells like these... run cooler" —
+  analogy, not a promise — and disclosed `clamped: false` explicitly.
+- **Monitoring**: real forecast check → no trigger (expected — Mumbai rarely hits 45 °C,
+  ADR-0010's own stated consequence). Forced the wording-draft path directly: correct
+  severity, correct wards, ends with "not an official IMD warning" unprompted beyond what the
+  prompt already asks for.
+- **Supervisor.route**: three test messages ("where/why hot", "what should we do", "what
+  if... cool-roof") routed to `copilot`/`planning`/`digital_twin` respectively — all three
+  correct.
+
+**Broke / learned — two real bugs, found only by going live**
+- `AIMessage.content` from real Gemini responses is a **list of content blocks**
+  (`[{"type": "text", "text": "...", "extras": {"signature": "..."}}]`), not a plain string.
+  Every mock test used `AIMessage(content="plain string")`, so 94 passing tests never
+  exercised this shape. Two places assumed `str`:
+  - `result.py`'s final-answer extraction — would have handed `AgentChatResponse`'s
+    `text: str` field a Python list-repr string like `"[{'type': 'text', ...}]"` instead of
+    the actual answer.
+  - `monitoring.py`'s `_draft_summary` — same failure, would have produced an unreadable
+    alert.
+  - **The more serious one**: `supervisor.py`'s `route()` did `str(response.content)` then
+    compared it to `"copilot"`/`"planning"`/`"digital_twin"`. A stringified block list never
+    equals any of those, so this would have **silently routed every single message to the
+    `copilot` fallback**, permanently, with no error and no test catching it — the fallback
+    path was specifically designed to look like a reasonable default, which is exactly what
+    made it dangerous here.
+  - Fix, all three: `BaseMessage.text` (a `TextAccessor` that normalizes either `str` or
+    `list[dict]` content) instead of `.content`, wrapped in `str()`. Verified live after the
+    fix: real routing now correctly discriminates all three agents.
+  - `ToolMessage.content` (used in `result.py`'s tool-call recording) does **not** have this
+    problem — it comes from our own `StructuredTool`/`ToolNode` JSON-serializing a dict
+    return, a different code path from the model's own response, confirmed still a plain
+    JSON string.
+- Hit a real `429 RESOURCE_EXHAUSTED` after enough live calls in one session — and the
+  `agent_upstream_unavailable` handling (`backend/routers/agent.py`) worked exactly as
+  designed: clean `503`, real error text, no crash. The quota error itself was informative:
+  Google named the limit explicitly — `generate_content_free_tier_requests`,
+  `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, `quotaValue: 20` — **20 requests/day**
+  for `gemini-flash-latest` (currently aliased to `gemini-3.6-flash`), not the ~1,500/day
+  `BLUEPRINT.md` documented. Corrected there with a dated note (may be a new-project quota,
+  not universal — noted as such). Sharpens the case for the next task: 20/day means caching
+  matters even for a modest demo, not just for burst traffic.
+
+**Next**
+- Rate-limit hygiene: response cache keyed on (question, `data_version`) is now clearly not
+  optional — 20 req/day is tight. Backoff is already handled inside `google-genai`'s own
+  client (observed live: 1s/2s/4s/8s/16s retries before our code ever sees the error), so that
+  part of ADR-0002's plan may already be satisfied without extra code; Groq fallback still
+  needs `GROQ_API_KEY` set, which it currently isn't.
+
+---
+
 ## 2026-07-27 — Phase 4 — Orchestration: supervisor + `POST /agent/chat`
 
 **Done**

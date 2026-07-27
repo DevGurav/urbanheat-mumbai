@@ -60,7 +60,11 @@ class Supervisor:
 
     def route(self, message: str) -> AgentName:
         response = self._router_llm.invoke(ROUTING_PROMPT.format(message=message))
-        choice = str(response.content).strip().lower()
+        # `.content` is not reliably a plain string (`backend/agents/result.py`'s same fix,
+        # found live: Gemini can return a list of content blocks) — `.text` normalizes it.
+        # Getting this wrong here is worse than elsewhere: it would silently route everything
+        # to the `copilot` fallback below, never the "unparseable" case looking unparseable.
+        choice = str(response.text).strip().lower()
         if choice in self._agents:
             return choice  # type: ignore[return-value]
         return "copilot"  # an unparseable classification falls back to the general Q&A agent,

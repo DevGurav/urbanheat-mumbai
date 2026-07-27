@@ -91,6 +91,17 @@ Free-tier terms verified July 2026 — Gemini free tier is Flash-family only at 
 and ~1,500 req/day; Render free sleeps after 15 min idle with 5 GB/mo bandwidth; Earth
 Engine is free for students/noncommercial under a monthly compute-unit quota.
 
+**Correction, 2026-07-27** (`conventions.md`'s dated-correction pattern, applied to this
+non-ADR doc too — the decision to use Gemini free tier, ADR-0002, still stands; only the
+supporting figure was wrong): live-verified during the Phase 4 agents build, the actual daily
+cap hit was **20 requests/day**, not ~1,500 — Google's own `429` response named it explicitly:
+`generate_content_free_tier_requests`, `GenerateRequestsPerDayPerProjectPerModel-FreeTier`,
+`quotaValue: 20`, for the model `gemini-flash-latest` currently resolves to
+(`gemini-3.6-flash`). Measured on a newly created AI Studio project — Google may grant higher
+quotas to older or billing-verified projects, so this may not be universal, but it is real and
+current for this project. Sharpens the case for caching (Rate-limit hygiene, PROGRESS.md):
+20/day means a live demo cannot afford repeat identical calls, not just rapid-fire ones.
+
 ## 6. Phase roadmap
 
 Each phase ends in something that runs and can be shown. Nothing is "integrated at the
