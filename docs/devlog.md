@@ -21,6 +21,62 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — RAG knowledge base: real documents, Chroma index, 8th tool
+
+**Done**
+- Collected the 3 MVP documents (ADR-0009) with real fetches, not placeholders. MCAP's
+  "Summary for Policymakers" PDF and IMD's "FAQ on Heat Wave" PDF both had genuine text
+  layers — extracted directly with `pypdf` (12 and 16 pages). NDMA's own detailed guideline
+  PDF (`nidm.gov.in/PDF/pubs/NDMA/27.pdf`, 62 pages) turned out to be a scan with **zero**
+  extractable characters (verified, no OCR available here) — substituted NDMA's own official
+  heat-wave hazard page instead, same authority, real machine-readable content. Logged as a
+  limitation in `references.md` §4, not silently swapped.
+- The IMD FAQ gave primary-source precision on the exact criteria `agents.md` §7's Monitoring
+  agent will need: 40 °C (plains) / 30 °C (hilly) base threshold before a heat wave is even
+  considered; Heat Wave = 4.5–6.4 °C departure from normal, Severe = >6.4 °C; by absolute
+  temperature, ≥45 °C / ≥47 °C; coastal stations need departure ≥4.5 °C **and** actual max
+  ≥37 °C; declared at ≥2 stations in a met sub-division for 2 consecutive days. The MCAP PDF's
+  own Urban Heat Risk section independently corroborates this project's HVI ranking: M/E ward
+  is its named most heat-vulnerable ward, over 40% of its population exposed to surface
+  temperature >35 °C.
+- `data/knowledge_base/sources.json` — a small manifest (title, org, url, accessed date,
+  paginated flag, notes) so `ingest.py` attaches real per-chunk provenance instead of a bare
+  filename.
+- `backend/rag/ingest.py`: page-marker-aware chunking (`--- page N ---`, added when the source
+  PDF was extracted) at ~800 words / 100 overlap — a word-count proxy for tokens, not exact
+  BPE, one fewer moving part to defend. Embeds with `sentence-transformers/all-MiniLM-L6-v2`
+  (CPU) into a persisted Chroma collection at `CHROMA_DIR`. `uv run python -m backend.rag.ingest`
+  → 28 chunks from the 3 sources.
+- `backend/rag/retrieve.py`: `Retriever` loads the model + opens the collection once;
+  `.search(query, k)` is cheap after that. Raises `FileNotFoundError` if the index hasn't been
+  built — a missing index is a setup problem, not a silent empty-result answer.
+- `search_knowledge` wired into `backend/agents/tools.py` — the 8th and final toolbelt entry
+  from `agents.md` §3. `build_toolbelt(store, retriever=None)`: a fresh clone that hasn't run
+  `ingest.py` yet still gets the other 7 tools rather than failing outright.
+- `tests/test_rag.py` — 11 tests: pure-logic chunking (4, always run), real-fixture tests for
+  `load_chunks`/`Retriever`/`search_knowledge`/`build_toolbelt` (7, skip cleanly if the
+  knowledge base or index isn't built). Manually verified retrieval quality before writing
+  tests: querying "what temperature threshold declares a heat wave" surfaced the IMD FAQ
+  passage top-3. 78 tests total, green; `ruff` clean.
+- Added `pypdf` to `pyproject.toml` — needed for this collection pass and for any future
+  document the RAG corpus grows to include (WHO/IPCC/other cities' plans, ADR-0009's deferred
+  list).
+
+**Decided**
+- **Word-count chunking, not exact tokenization.** Loading a second tokenizer just to size
+  chunks precisely would be one more moving part for no retrieval-quality gain at this corpus
+  size (28 chunks) — `docs/conventions.md`'s "boring, explainable tech."
+- **A scanned-PDF substitution gets logged, not hidden.** The NDMA guideline PDF being
+  unreadable is exactly the kind of thing that would look like silent scope-narrowing if not
+  written down — `references.md` §4 states plainly what was swapped and why, with the
+  verification method (`pypdf`, 0 chars, no OCR available).
+
+**Next**
+- Agents: wire the toolbelt + retriever into the four LangGraph agents (`agents.md` §4–§7),
+  per the PROGRESS board.
+
+---
+
 ## 2026-07-27 — Phase 4 — Shared toolbelt: 7 in-process LangChain tools
 
 **Done**

@@ -1,13 +1,15 @@
 """The LangChain toolbelt the four Phase 4 agents share (`agents.md` §3).
 
 Every tool here is a thin wrapper over `backend/services.py`, called **in-process** — not the
-REST API over HTTP (ADR-0009). `build_toolbelt(store)` binds each tool to one `Store` instance
-(the same one FastAPI loads once at startup, `app.state.store`) so the LLM never supplies or
-chooses it; only the typed, Pydantic-validated arguments below come from the LLM.
+REST API over HTTP (ADR-0009). `build_toolbelt(store, retriever)` binds each tool to one
+`Store` instance (the same one FastAPI loads once at startup, `app.state.store`) and one
+`Retriever` (`backend/rag/retrieve.py`) so the LLM never supplies or chooses either; only the
+typed, Pydantic-validated arguments below come from the LLM.
 
-`search_knowledge` (`agents.md` §3) is not here yet — it needs the Chroma index the "RAG
-knowledge base" task group builds next. Wiring a tool to a retriever that doesn't exist would
-be exactly the kind of not-yet-real capability `agents.md` §1 warns against.
+`retriever` is optional: the RAG index (`backend/rag/ingest.py`) is a separate build step from
+the artifact store, so a fresh clone that hasn't run it yet still gets a working toolbelt of 7
+tools, minus `search_knowledge` — graceful degradation, not a hard failure (the same posture
+`backend/store.py`'s artifacts already take).
 
 Every tool returns a plain dict carrying `model_version` (and `measurement` where the number is
 a temperature) so the calling agent can cite, not assert — `agents.md` §3's provenance rule. A
@@ -26,6 +28,7 @@ from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from backend import services
+from backend.rag.retrieve import Retriever
 from backend.store import Store
 
 
@@ -226,6 +229,38 @@ def _make_get_trend(store: Store) -> StructuredTool:
     )
 
 
+# --- search_knowledge ----------------------------------------------------------------------
+
+
+class SearchKnowledgeArgs(BaseModel):
+    query: str = Field(description="Natural-language question to search the policy corpus")
+    k: int = Field(default=4, ge=1, le=10, description="How many passages to return")
+
+
+def _make_search_knowledge(retriever: Retriever) -> StructuredTool:
+    def search_knowledge(query: str, k: int = 4) -> dict:
+        passages = retriever.search(query, k=k)
+        return {
+            "passages": [
+                {"text": p.text, "source": p.title, "org": p.org, "url": p.url, "page": p.page}
+                for p in passages
+            ]
+        }
+
+    return StructuredTool.from_function(
+        func=search_knowledge,
+        name="search_knowledge",
+        description=(
+            "Search the policy knowledge base (Mumbai Climate Action Plan, NDMA and IMD "
+            "heat-wave guidance) for passages relevant to a question. Every passage carries "
+            "its source document, organisation and page — always cite these, never answer a "
+            "policy question from memory (agents.md §4). A retrieval miss should be reported "
+            "as one, not filled in from general knowledge."
+        ),
+        args_schema=SearchKnowledgeArgs,
+    )
+
+
 _BUILDERS = (
     _make_get_hotspots,
     _make_get_cell_stats,
@@ -237,9 +272,12 @@ _BUILDERS = (
 )
 
 
-def build_toolbelt(store: Store) -> list[StructuredTool]:
-    """The shared toolbelt, bound to one `Store`. Call once per app/agent-graph lifetime —
-    each tool closes over `store`, not a per-request lookup, since the store is loaded once at
-    startup and never mutated (ADR-0004).
+def build_toolbelt(store: Store, retriever: Retriever | None = None) -> list[StructuredTool]:
+    """The shared toolbelt, bound to one `Store` and (if built) one `Retriever`. Call once per
+    app/agent-graph lifetime — each tool closes over its dependency, not a per-request lookup,
+    since both the store and the RAG index are loaded once and never mutated (ADR-0004).
     """
-    return [make(store) for make in _BUILDERS]
+    tools = [make(store) for make in _BUILDERS]
+    if retriever is not None:
+        tools.append(_make_search_knowledge(retriever))
+    return tools

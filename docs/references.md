@@ -86,11 +86,31 @@ the API both claim these are literature-derived (`api-reference.md`, `ml-methodo
 RAG corpus for the Copilot (`agents.md` §4). All public. Files → `data/knowledge_base/`
 (gitignored — listed here instead).
 
-**Phase 4 kickoff MVP (ADR-0009)** — the 3 most Mumbai/India-specific and load-bearing:
-- [ ] **Mumbai Climate Action Plan (MCAP)** — BMC. Primary local policy source
-- [ ] **NDMA heat-wave guidelines / National Action Plan** — <https://ndma.gov.in>
-- [ ] **IMD heat-wave criteria** — the thresholds the monitoring agent implements in code
-      (`agents.md` §7). **Cite the exact definition used**
+**Phase 4 kickoff MVP (ADR-0009)** — the 3 most Mumbai/India-specific and load-bearing, all
+read and acquired 2026-07-27 (full citations + notes in `data/knowledge_base/sources.json`):
+
+- [x] **Mumbai Climate Action Plan — Summary for Policymakers** (2022). BMC, with WRI India
+  and C40 Cities. <https://www.mcgm.gov.in/irj/go/km/docs/documents/Environment/Climate/MCAP%20Summary%20for%20Policymakers.pdf>
+  — 12 pages, text extracted directly from the official PDF. Has a dedicated Urban Heat Risk
+  section: Mumbai has warmed 0.25 °C/decade since 1973; M/E ward is the most heat-vulnerable,
+  with over 40% of its population exposed to surface temperature > 35 °C — an independent
+  corroboration of this project's own HVI ranking (`data-dictionary.md`).
+- [x] **Heat Wave — Natural Hazards**. NDMA (National Disaster Management Authority),
+  Government of India. <https://ndma.gov.in/Natural-Hazards/Heat-Wave> — definitions, climate
+  context, health impacts (heat cramps/exhaustion/stroke), first-response guidance. **Not**
+  NDMA's detailed "Prevention and Management of Heat Wave" guideline PDF
+  (nidm.gov.in/PDF/pubs/NDMA/27.pdf): that document is a 62-page scan with no extractable text
+  layer (verified with `pypdf` — 0 characters across every page — and no OCR is available in
+  this environment). Substituted with NDMA's own hazard page — same authority, real,
+  machine-readable content — logged here as a limitation, not silently swapped.
+- [x] **FAQ on Heat Wave**. IMD (India Meteorological Department).
+  <https://internal.imd.gov.in/section/nhac/dynamic/FAQ_heat_wave.pdf> — 16 pages, text
+  extracted directly from the official PDF. **The exact definition used** (`agents.md` §7):
+  Heat Wave not considered until max temperature reaches ≥40 °C (plains) or ≥30 °C (hilly);
+  Heat Wave = departure from normal 4.5–6.4 °C, Severe Heat Wave = departure > 6.4 °C; by
+  absolute temperature, Heat Wave ≥45 °C, Severe Heat Wave ≥47 °C; coastal stations need
+  departure ≥4.5 °C **and** actual max ≥37 °C. Declared when met at ≥2 stations in a
+  meteorological sub-division for 2 consecutive days, on the second day.
 
 **Later candidates** — not built this phase; add if a demo or report need surfaces material
 only they contain (ADR-0009):

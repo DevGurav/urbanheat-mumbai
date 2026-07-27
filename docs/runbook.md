@@ -56,10 +56,13 @@ handles a ~12k-row table (ADR-0006, ADR-0007).
 Landsat, Sentinel-2, WorldCover, WorldPop and SRTM stream through the Earth Engine API.
 Open-Meteo and OSM/Overpass need no key. Manual collection is limited to:
 
-- **RAG knowledge base** *(needed by Phase 4, collect anytime)* → `data/knowledge_base/`:
-  Mumbai Climate Action Plan · NDMA heat-wave guidelines · WHO heat-health fact sheets ·
-  IPCC AR6 urban excerpts · 3–5 UHI papers. All public PDFs. Log each in
-  `references.md` as it is added.
+- **RAG knowledge base** → `data/knowledge_base/`: the Phase 4 kickoff MVP (3 docs — MCAP,
+  NDMA heat-wave hazard page, IMD FAQ on Heat Wave; citations + acquisition notes in
+  `references.md` §4 and `data/knowledge_base/sources.json`) is collected and gitignored —
+  a fresh clone needs to re-fetch it. After adding/changing a document, rebuild the Chroma
+  index: `uv run python -m backend.rag.ingest` (downloads the embedding model on first run,
+  ~80 MB, cached after). WHO/IPCC/other-cities' Heat Action Plans are later candidates
+  (ADR-0009), not yet collected.
 - **BMC ward boundaries** — scripted from Datameet/OSM in Phase 1; manual only if that fails.
 
 ---

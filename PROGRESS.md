@@ -255,11 +255,21 @@ WHO/IPCC/other-cities' plans deferred · Agent 2 ranks by **ΔLST × population 
 
 ### RAG knowledge base
 
-- [ ] Collect the 3 MVP documents → `data/knowledge_base/` (gitignored); log as read in
-  `references.md` §4
-- [ ] `backend/rag/ingest.py` — chunk (~800 tok / 100 overlap) + embed
-  (`sentence-transformers/all-MiniLM-L6-v2`, CPU) → persisted Chroma at `CHROMA_DIR`
-- [ ] `search_knowledge` tool — top-k 4, passage + source + page
+- [X] Collect the 3 MVP documents → `data/knowledge_base/` (gitignored); log as read in
+  `references.md` §4 — MCAP Summary for Policymakers and the IMD FAQ on Heat Wave both had
+  real text layers (extracted with `pypdf`, no OCR needed); NDMA's own detailed guideline PDF
+  turned out to be a 62-page scan with none, so its official heat-wave hazard page substitutes
+  for it — logged as a limitation in `references.md`, not a silent swap. Real IMD criteria
+  captured with primary-source precision: 40 °C (plains) / 30 °C (hilly) base threshold,
+  departure bands, coastal-station rule, 2-station/2-day declaration rule
+- [X] `backend/rag/ingest.py` — chunk (~800 words / 100 overlap, a word-count proxy for tokens)
+  and embed (`sentence-transformers/all-MiniLM-L6-v2`, CPU) into a persisted Chroma index at
+  `CHROMA_DIR`. 28 chunks indexed from the 3 sources; `backend/rag/retrieve.py`'s `Retriever`
+  does the query side. `pypdf` added to `pyproject.toml` for future document collection too,
+  not just this run
+- [X] `search_knowledge` tool — top-k 4, passage + source + page (`backend/agents/tools.py`);
+  `build_toolbelt` takes an optional `retriever` so a fresh clone without a built index still
+  gets the other 7 tools rather than failing
 
 ### Agents
 
