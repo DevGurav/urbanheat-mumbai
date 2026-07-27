@@ -15,10 +15,12 @@ from fastapi.responses import JSONResponse
 
 from backend.routers import (
     agent,
+    alerts,
     explain,
     grid,
     health,
     hotspots,
+    monitoring,
     predict,
     scenario,
     trends,
@@ -96,6 +98,8 @@ app.include_router(predict.router)
 app.include_router(scenario.router)
 app.include_router(trends.router)
 app.include_router(agent.router)
+app.include_router(monitoring.router)
+app.include_router(alerts.router)
 
 
 @app.exception_handler(HTTPException)

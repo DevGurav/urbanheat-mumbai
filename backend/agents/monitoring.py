@@ -16,13 +16,17 @@ official IMD warning — already covers exactly this gap.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_google_genai.chat_models import ChatGoogleGenerativeAIError
 
 from backend import services
 from backend.agents.llm import get_llm
 from backend.store import Store
+
+log = logging.getLogger("urbanheat.agents.monitoring")
 
 SEVERE_HEAT_WAVE_C = 47.0  # IMD FAQ: Severe Heat Wave when actual max >= 47 C
 HEAT_WAVE_C = 45.0  # IMD FAQ: Heat Wave when actual max >= 45 C
@@ -54,8 +58,23 @@ def _severity(forecast_max_c: float) -> str | None:
     return None
 
 
+def _fallback_summary(severity: str, forecast_max_c: float, wards: list[str]) -> str:
+    """A fixed-template summary, used when the LLM can't draft one. The *trigger* is
+    deterministic and real regardless of whether an LLM is available to phrase it — Monitoring
+    never lets a wording failure swallow a real alert (agents.md §7: the LLM only drafts
+    wording, it never decides whether an alert exists).
+    """
+    return (
+        f"A {severity.replace('_', ' ')} has been triggered: forecast maximum temperature "
+        f"{forecast_max_c:.1f} C. Wards most exposed by Heat Vulnerability Index: "
+        f"{', '.join(wards)}. Residents in these areas should take standard heat precautions "
+        "(seek shade, stay hydrated, avoid midday exposure). This is a model-derived advisory, "
+        "not an official IMD warning."
+    )
+
+
 def _draft_summary(
-    severity: str, forecast_max_c: float, wards: list[str], llm: BaseChatModel
+    severity: str, forecast_max_c: float, wards: list[str], llm: BaseChatModel | None
 ) -> str:
     prompt = (
         f"Draft a one-paragraph public advisory. A {severity.replace('_', ' ')} has been "
@@ -66,10 +85,18 @@ def _draft_summary(
         "duration, or any number not given above. This is a model-derived advisory, not an "
         "official IMD warning — say so."
     )
-    response = llm.invoke(prompt)
-    # `.content` is not reliably a plain string (`backend/agents/result.py`'s same fix,
-    # found live: Gemini can return a list of content blocks). `.text` normalizes it.
-    return str(response.text)
+    try:
+        model = llm or get_llm()
+        response = model.invoke(prompt)
+        # `.content` is not reliably a plain string (`backend/agents/result.py`'s same fix,
+        # found live: Gemini can return a list of content blocks). `.text` normalizes it.
+        return str(response.text)
+    except (RuntimeError, ChatGoogleGenerativeAIError) as exc:
+        # RuntimeError: get_llm() with no GEMINI_API_KEY set. ChatGoogleGenerativeAIError: a
+        # real call failed (quota, a broken key — this exact project's own recent history).
+        # Either way, the alert still exists; only its prose degrades.
+        log.warning("monitoring: LLM wording draft unavailable (%s) — using the template", exc)
+        return _fallback_summary(severity, forecast_max_c, wards)
 
 
 def check_heatwave(store: Store, llm: BaseChatModel | None = None) -> HeatwaveAlert | None:
@@ -88,7 +115,7 @@ def check_heatwave(store: Store, llm: BaseChatModel | None = None) -> HeatwaveAl
     hotspots = services.hotspots(store, n=5, by="hvi", unit="ward")
     wards = [entry.ward_code for entry in hotspots.results]
 
-    summary = _draft_summary(severity, forecast_max_c, wards, llm or get_llm())
+    summary = _draft_summary(severity, forecast_max_c, wards, llm)
     return HeatwaveAlert(
         severity=severity, forecast_max_c=forecast_max_c, wards_affected=wards, summary=summary
     )

@@ -1,0 +1,30 @@
+# Daily heat-wave monitoring trigger (architecture.md §6: GitHub Actions --trigger--> Render;
+# agents.md §7). This workflow does NOT rebuild the pipeline or run the check itself — it
+# just calls the deployed backend's POST /monitoring/check, which runs server-side where the
+# artifact store already lives in memory (backend/routers/monitoring.py).
+#
+# Inert until Phase 6 deploys a backend and sets the BACKEND_URL repo secret: the trigger step
+# below exits cleanly (not a failure) when that secret is unset, rather than red-crossing every
+# night for a URL that doesn't exist yet. See PROGRESS.md's Monitoring cron task and
+# docs/devlog.md (2026-07-27) for why this is the honest state of the workflow right now.
+name: Daily heat-wave monitoring
+
+on:
+  schedule:
+    # 00:30 UTC = 06:00 IST (agents.md §7)
+    - cron: "30 0 * * *"
+  workflow_dispatch: {} # manual run, for testing the workflow itself
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger POST /monitoring/check on the deployed backend
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "BACKEND_URL secret not set — no deployed backend yet (Phase 6). Nothing to trigger."
+            exit 0
+          fi
+          curl --fail --silent --show-error --request POST "$BACKEND_URL/monitoring/check"

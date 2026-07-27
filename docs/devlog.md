@@ -21,6 +21,56 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — Monitoring cron: dedupe, two endpoints, the GH Actions trigger
+
+**Done**
+- `backend/agents/alerts.py` — the dedupe + persistence layer `agents.md` §7 calls for
+  ("one alert per event, not per run"). File-based (ADR-0004): `alerts_state.json` tracks
+  yesterday's severity, `alerts.jsonl` is an append-only log of new/escalated alerts.
+  `check_and_log()` compares today's severity against the stored state — a fresh trigger
+  (state was "none") or an escalation (severity increased) gets logged; the same or a lower
+  severity continuing does not; a no-trigger day resets the state so the *next* trigger reads
+  as fresh, not a continuation.
+- `monitoring.py`'s `_draft_summary` now falls back to a fixed-template summary if the LLM is
+  unavailable (`RuntimeError` from `get_llm()` with no key, or `ChatGoogleGenerativeAIError`
+  from a real call failing) — the trigger is deterministic and real either way; only the prose
+  quality degrades. Worth doing given this exact project's LLM credential has broken twice
+  already this session.
+- Two endpoints: `POST /monitoring/check` (`backend/routers/monitoring.py`) — the HTTP trigger
+  point `architecture.md` §6 always specified (GitHub Actions → trigger → Render), runs
+  `check_and_log` against `app.state.store` directly, independent of `app.state.supervisor`
+  (Monitoring doesn't need the RAG index or chat agents). `GET /alerts`
+  (`backend/routers/alerts.py`) — reads the log back, the contract `api-reference.md` already
+  sketched.
+- `.github/workflows/monitoring.yml` — `30 0 * * *` (00:30 UTC = 06:00 IST). Calls
+  `$BACKEND_URL/monitoring/check`, nothing more — no pipeline rebuild in CI, which would need
+  Earth Engine credentials and quota in a scheduled job (exactly what
+  `architecture.md`'s "pipeline runs are deliberate, not on a loop" was written to prevent).
+  Exits 0 with a message when `BACKEND_URL` isn't set, which it won't be until Phase 6 deploys
+  — an honest no-op, not a nightly red cross for a URL that doesn't exist yet.
+- `tests/test_monitoring_cron.py` — 10 tests. The dedupe matrix run as a real sequence of
+  `check_and_log` calls (new event → continuing → escalation → de-escalation → gap → fresh
+  event again), each step's log state asserted, not just the final one. Both endpoints tested
+  through the real app via `TestClient`. Everything against `tmp_path` — confirmed the real
+  `data/processed/alerts_state.json` this session's manual smoke-testing created earlier is
+  untouched by the suite.
+
+**Decided**
+- The router-level trigger endpoint recomputes "today" from `datetime.now()` rather than
+  reading it back from the just-written log — an early draft read the log's last entry for
+  the date, which is wrong on a *continuing* (deduped) day: the log's most recent entry is
+  from the event's onset, not today. Caught before writing tests, not after.
+- Dedupe compares severity, not just "triggered or not" — an escalation from advisory to
+  severe heat wave mid-event is genuinely new information worth its own alert, even though the
+  underlying "event" (in the loose sense) never fully stopped.
+
+**Next**
+- Phase 4 exit: ✅ *Copilot answers a real planning question with real model numbers* — the
+  live verification two entries back already demonstrated this (Ward L, real SHAP drivers,
+  real citations). Author to confirm and tick, per convention — not done here.
+
+---
+
 ## 2026-07-27 — Phase 4 — Rate-limit hygiene: cache, explicit backoff, dropped Groq
 
 **Done**

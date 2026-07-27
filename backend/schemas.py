@@ -186,6 +186,31 @@ class AgentChatResponse(BaseModel):
     )
 
 
+class AlertPayload(BaseModel):
+    """One logged Monitoring alert (`agents.md` §7) — the shape both `POST /monitoring/check`
+    and `GET /alerts` return, mirroring `backend/agents/monitoring.py`'s `HeatwaveAlert` plus
+    the `date` it was logged (`backend/agents/alerts.py`).
+    """
+
+    date: str
+    severity: Literal["advisory", "heat_wave", "severe_heat_wave"]
+    forecast_max_c: float
+    wards_affected: list[str]
+    summary: str
+    caveat: str
+
+
+class MonitoringCheckResponse(BaseModel):
+    triggered: bool
+    alert: AlertPayload | None = Field(
+        default=None, description="Present only if triggered is true"
+    )
+
+
+class AlertsResponse(BaseModel):
+    alerts: list[AlertPayload] = Field(description="Newest first")
+
+
 class WardExplainResponse(BaseModel):
     """Aggregated SHAP + summary stats for a ward — the agent toolbelt's `explain_ward`
     (`agents.md` §3), used by the Planning Decision agent to find *why* a ward is hot.

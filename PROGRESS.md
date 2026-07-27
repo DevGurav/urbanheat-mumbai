@@ -366,9 +366,26 @@ originally assumed — measured live from a real `429` during the Phase 4 agents
 
 ### Monitoring cron
 
-- [ ] `.github/workflows/` — daily trigger (~06:00 IST)
-- [ ] Alert dedupe (one per event, not per run); written to file (Phase 4; Supabase from
-  Phase 6)
+- [X] `.github/workflows/monitoring.yml` — daily trigger, `30 0 * * *` UTC (06:00 IST).
+  Doesn't rebuild the pipeline or run the check itself — calls the deployed backend's
+  `POST /monitoring/check` (matches `architecture.md` §6's original design: GA → trigger →
+  Render). **Inert until Phase 6** sets a `BACKEND_URL` secret — exits cleanly (not a failure)
+  when it's unset, since there's no deployed backend yet for it to call
+- [X] `POST /monitoring/check` + `GET /alerts` (`backend/routers/monitoring.py`,
+  `backend/routers/alerts.py`) — the server-side trigger point and the read-back feed
+  `api-reference.md` already sketched. Independent of `app.state.supervisor`: Monitoring's
+  deterministic trigger doesn't need the RAG index or the chat agents to be configured
+- [X] Alert dedupe (one per event, not per run) + file persistence (Phase 4; Supabase from
+  Phase 6) — `backend/agents/alerts.py`. State (`alerts_state.json`) tracks yesterday's
+  severity; a fresh trigger or a severity *escalation* gets logged (`alerts.jsonl`), continuing
+  at the same or a lower severity doesn't. `monitoring.py`'s wording draft now also falls back
+  to a fixed template if the LLM is unavailable — the trigger is real and deterministic
+  regardless of whether an LLM is around to phrase it (a gap the live-verification session
+  exposed was worth closing, given how much this project's LLM credential has already broken)
+- [X] Tests: `tests/test_monitoring_cron.py` — 10 tests, the full dedupe matrix (new event,
+  continuing, escalation, de-escalation, a fresh event after a gap) plus both endpoints via
+  `TestClient`, all against `tmp_path` so the real `data/processed/alerts*` files are never
+  touched by the suite
 
 ### Exit
 

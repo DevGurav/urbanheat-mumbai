@@ -161,9 +161,27 @@ as of 2026-07-27).
 > thinking state and surfaces 429s honestly rather than retrying silently. **Response caching
 > and 429 backoff/Groq-fallback are not built yet** — Rate-limit hygiene, the next task group.
 
-## `GET /alerts`
-Polled, not pushed (ADR-0003). Daily-refreshed feed: severity, wards, summary, timestamp.
-Advisory only — not an official IMD warning.
+## `POST /monitoring/check` ✅ *(landed)*
+The HTTP trigger point for the daily GitHub Actions cron (`architecture.md` §6: GA → trigger
+→ Render; `agents.md` §7) — not reachable from `/agent/chat`, Monitoring is never chat-routed.
+Runs the deterministic threshold check (`backend/agents/monitoring.py`, ADR-0010) and, only if
+triggered, logs it with dedupe (`backend/agents/alerts.py` — one entry per event or escalation,
+not per run) and drafts the wording.
+```json
+{"triggered": true, "alert": {"date": "2026-07-27", "severity": "heat_wave",
+ "forecast_max_c": 46.0, "wards_affected": ["B", "L", "C", "H/E", "F/S"],
+ "summary": "...", "caveat": "Based on forecast air temperature against IMD's absolute..."}}
+```
+`{"triggered": false, "alert": null}` most days — Mumbai rarely reaches the 45 °C threshold
+(ADR-0010's own stated consequence). The GitHub Actions workflow itself
+(`.github/workflows/monitoring.yml`) is a no-op until Phase 6 sets a `BACKEND_URL` secret —
+there is no deployed backend yet for it to call.
+
+## `GET /alerts` ✅ *(landed)*
+Polled, not pushed (ADR-0003). `limit` (default 50, max 200). Newest first; each entry is the
+same shape `POST /monitoring/check` returns, read back from `backend/agents/alerts.py`'s
+append-only log. Advisory only — not an official IMD warning (every entry's own `caveat`
+field says so).
 
 ## `POST /reports/generate` *(Phase 7)*
 WeasyPrint PDF for a ward or scenario. Returns a download URL.
