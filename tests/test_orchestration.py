@@ -85,6 +85,82 @@ def test_handle_surfaces_tool_calls_from_the_dispatched_agent(store, retriever):
     assert result.tool_calls[0].name == "simulate_scenario"
 
 
+# --- response cache: (question, data_version) -> ChatResult (agents.md §8, ADR-0011) ----------
+
+
+def test_handle_is_cached_for_an_identical_question(store, retriever):
+    from backend.agents.supervisor import Supervisor
+
+    # Exactly one round trip's worth of scripted responses. If the second `handle()` call
+    # were *not* served from cache, FakeToolCallingModel would raise IndexError trying to pop
+    # a third response — the test fails loudly rather than silently passing on a real miss.
+    fake = FakeToolCallingModel(
+        responses=[
+            AIMessage(content="copilot"),
+            AIMessage(content="Ward B is hottest."),
+        ]
+    )
+    supervisor = Supervisor(store, retriever, llm=fake)
+
+    first = supervisor.handle("where is it hottest?")
+    second = supervisor.handle("where is it hottest?")
+
+    assert first == second
+    assert first.text == "Ward B is hottest."
+
+
+def test_handle_cache_is_exact_match_not_fuzzy(store, retriever):
+    from backend.agents.supervisor import Supervisor
+
+    fake = FakeToolCallingModel(
+        responses=[
+            AIMessage(content="copilot"),
+            AIMessage(content="First answer."),
+            AIMessage(content="planning"),
+            AIMessage(content="Second answer."),
+        ]
+    )
+    supervisor = Supervisor(store, retriever, llm=fake)
+
+    first = supervisor.handle("where is it hottest?")
+    # A differently-worded question is a genuine cache miss — runbook.md §5 warns about
+    # exactly this: the cache does not fuzzy-match a rephrased question at demo time.
+    second = supervisor.handle("where is it hottest right now?")
+
+    assert first.text == "First answer."
+    assert second.text == "Second answer."
+
+
+def test_handle_cache_does_not_store_a_failed_call(store, retriever):
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult as LCChatResult
+
+    from backend.agents.supervisor import Supervisor
+
+    class _FailsOnceThenRoutes(FakeToolCallingModel):
+        """`bind_tools` must still return `self` (called at `create_agent` construction time,
+        not lazily) — only `_generate`, the actual per-call path, fails then recovers.
+        """
+
+        _calls: int = 0
+
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> LCChatResult:
+            self._calls += 1
+            if self._calls == 1:
+                raise RuntimeError("simulated upstream failure")
+            return LCChatResult(generations=[ChatGeneration(message=AIMessage(content="planning"))])
+
+    fake = _FailsOnceThenRoutes(responses=[])
+    supervisor = Supervisor(store, retriever, llm=fake)
+
+    with pytest.raises(RuntimeError, match="simulated upstream failure"):
+        supervisor.handle("where is it hottest?")
+
+    # The failed attempt must not have been cached — a second attempt gets a fresh compute(),
+    # which here succeeds. If the failure had been cached, this would re-raise instead.
+    assert supervisor.route("where is it hottest?") == "planning"
+
+
 # --- build_agent_layer --------------------------------------------------------------------
 
 
@@ -206,3 +282,16 @@ def test_agent_chat_returns_the_full_contract_with_a_fake_supervisor(client):
     assert body["text"] == "Ward B is the hottest."
     assert body["tool_calls"][0]["name"] == "get_hotspots"
     assert body["layer"] is None  # get_hotspots isn't mappable, unlike simulate_scenario
+
+
+# --- backoff: explicit, not left at the library default (ADR-0002, backend/agents/llm.py) -----
+
+
+def test_get_llm_sets_max_retries_explicitly(settings):
+    if not settings.gemini_api_key:
+        pytest.skip("GEMINI_API_KEY not set — get_llm() cannot construct a model")
+
+    from backend.agents.llm import MAX_RETRIES, get_llm
+
+    llm = get_llm()
+    assert llm.max_retries == MAX_RETRIES

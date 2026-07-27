@@ -21,6 +21,54 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — Rate-limit hygiene: cache, explicit backoff, dropped Groq
+
+**Done**
+- **ADR-0011: dropped the Groq fallback**, author's call, asked directly. One credential to
+  manage instead of two; the response cache below covers the practical scenario (repeat demo
+  questions) the fallback mainly protected against. `GROQ_API_KEY` stays scaffolded and unused
+  in `.env.example` — cheap to pick back up later if a future phase needs the uptime.
+- **Response cache**: `Supervisor` now owns a `TTLCache` keyed on `(question.strip(),
+  data_version)`, 24h TTL. Lives inside `Supervisor.handle()`, not the router — any future
+  caller of the supervisor gets the caching for free, and `data_version` (already on `Store`)
+  means the cache doesn't need its own invalidation logic; it just naturally misses once the
+  pipeline re-runs. A failed call is never cached — confirmed by test, not just by reading
+  `TTLCache.get_or_set`'s source (the store-write happens after `compute()` returns, so an
+  exception propagates before it).
+- **Backoff made explicit**: `ChatGoogleGenerativeAI` already retries with exponential backoff
+  internally — no code needed there, confirmed live in the last entry (1s/2s/4s/8s observed).
+  Set `max_retries=3` explicitly in `get_llm()` instead of leaving it at the library's default
+  of 6: on a real quota exhaustion (not a transient blip), 6 retries means 30+ seconds before
+  `/agent/chat` responds, which is worse than a fast, honest 503.
+- `docs/agents.md` §8's rate-limit table rewritten with a Status column — cache ✅, backoff ✅,
+  fallback ❌ dropped (ADR-0011) — so the table describes what's built, not the original plan.
+- `runbook.md` §5's pre-demo checklist rewritten with the real 20/day number (not ~1,500) and
+  a caveat the old wording didn't have: the cache is an **exact string match**, so a rephrased
+  question at demo time is a genuine miss, not a hit. Also flagged that there is no fallback
+  provider to lean on if the quota exhausts mid-demo.
+- `tests/test_orchestration.py` — 5 new tests: identical-question cache hit (via scripted-
+  response exhaustion — a real miss would raise `IndexError` popping a third response that
+  isn't there, so the test fails loudly rather than silently passing on a miss), a reworded
+  question missing the cache, a failed call not poisoning it, and `get_llm()`'s explicit
+  `max_retries`. All tests still green (mock suite unaffected by the live key working now);
+  full suite confirmed passing.
+
+**Decided**
+- Cache lives in `Supervisor`, not `backend/routers/agent.py` — same reasoning as
+  `build_agent_layer` staying out of `services.py` (ADR-0009's "two interfaces" rule is about
+  the toolbelt/HTTP duality specifically), but the opposite conclusion: the cache genuinely
+  belongs with the thing being cached (a chat interaction), not the one caller that happens to
+  exist today.
+- Cache key is a strict string match, deliberately not fuzzy/semantic. `agents.md` §8's
+  original design just says "hash (question + data version)" — matching that literally is
+  simpler to explain and test than adding a similarity threshold, and the runbook already
+  routes around the limitation (warm with the *exact* scripted wording).
+
+**Next**
+- Monitoring cron: `.github/workflows/` daily trigger, alert dedupe, file output.
+
+---
+
 ## 2026-07-27 — Phase 4 — Live LLM verification: the key, and two real bugs it found
 
 **Done — the key**

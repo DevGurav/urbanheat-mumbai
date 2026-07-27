@@ -133,12 +133,20 @@ Env vars set in each dashboard, never committed. Steps filled in when this is re
 
 1. **Wake the backend** — hit `/health` ~2 min before. Render free sleeps after 15 min idle
    with a ~1 min cold start (ADR-0003). A sleeping service looks like a broken one.
-2. **Warm the LLM cache** — run the scripted demo questions once. Cached answers cannot hit
-   a rate limit (ADR-0002).
-3. **Check the Gemini quota** — ~1,500 req/day resets midnight Pacific. A heavy dev session
-   before an evening demo is the realistic way to exhaust it.
+2. **Warm the LLM cache** — send every scripted demo question through `POST /agent/chat`
+   *exactly as worded* once, well before the demo. `Supervisor`'s cache keys on the literal
+   `(question, data_version)` string (`backend/agents/supervisor.py`) — no fuzzy matching, so
+   a rephrased question at demo time is a cache miss, not a hit. Cached answers cannot hit a
+   rate limit (ADR-0002).
+3. **Check the Gemini quota** — the real, measured limit is **20 req/day** for this project
+   (not the ~1,500 originally assumed — corrected in `BLUEPRINT.md`, 2026-07-27), resetting at
+   a fixed time daily. A handful of dev-session questions before an evening demo can exhaust
+   it. **There is no fallback provider (ADR-0011)** — an exhausted quota means `/agent/chat`
+   503s until reset, full stop. Warming the cache *is* the mitigation, not one of several.
 4. **Have the local fallback ready** — backend + frontend running locally, in case the
-   network or a free tier misbehaves.
+   network or a free tier misbehaves. (This is a *deployment* fallback, unrelated to the
+   LLM-provider fallback dropped in ADR-0011 — the local backend still only has one LLM
+   provider.)
 5. **Confirm the alerts feed has content** — an empty feed reads as a bug.
 
 ---

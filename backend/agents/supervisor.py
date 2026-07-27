@@ -19,8 +19,17 @@ from backend.agents.digital_twin import build_digital_twin
 from backend.agents.llm import get_llm
 from backend.agents.planning import build_planning_agent
 from backend.agents.result import AgentResult, ToolCallRecord, run_agent
+from backend.cache import TTLCache
 from backend.rag.retrieve import Retriever
 from backend.store import Store
+
+# Keyed on (question, data_version) — agents.md §8's cache design: identical demo questions
+# cost nothing. The 20 req/day quota measured live (devlog.md, 2026-07-27) makes this the
+# highest-value item in the whole rate-limit strategy, not an optimization. A long TTL is
+# deliberate: data_version already invalidates the cache when the pipeline re-runs (rare,
+# manual), so the TTL only guards against a cache entry outliving the process, not against
+# the data going stale underneath it.
+CHAT_CACHE_TTL_S = 24 * 60 * 60
 
 AgentName = Literal["copilot", "planning", "digital_twin"]
 
@@ -57,6 +66,8 @@ class Supervisor:
             "planning": build_planning_agent(store, llm=base_llm),
             "digital_twin": build_digital_twin(store, llm=base_llm),
         }
+        self._data_version = store.data_version
+        self._cache = TTLCache(ttl_s=CHAT_CACHE_TTL_S)
 
     def route(self, message: str) -> AgentName:
         response = self._router_llm.invoke(ROUTING_PROMPT.format(message=message))
@@ -71,6 +82,13 @@ class Supervisor:
         # not a guess at the user's intent — copilot's own guardrails still apply from there
 
     def handle(self, message: str) -> ChatResult:
+        # A cache miss's `compute()` call is what may raise (a real 429/upstream error) — that
+        # exception propagates out of `get_or_set` *before* the store write, so a failure is
+        # never cached (backend/cache.py). Only genuine answers get cached.
+        cache_key = (message.strip(), self._data_version)
+        return self._cache.get_or_set(cache_key, lambda: self._handle_uncached(message))
+
+    def _handle_uncached(self, message: str) -> ChatResult:
         agent_name = self.route(message)
         result: AgentResult = run_agent(self._agents[agent_name], message)
         return ChatResult(agent=agent_name, text=result.text, tool_calls=result.tool_calls)

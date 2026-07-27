@@ -159,16 +159,21 @@ an authority and must never imply it is.
 
 ## 8. Rate-limit strategy
 
-| Layer | Approach |
-|---|---|
-| Cap hops | Supervisor routes once; agents get a bounded tool-call loop (max ~4) |
-| Cache | Hash (question + data version) → response; identical demo questions cost nothing |
-| Backoff | Exponential retry on 429 (2s, 4s, 8s) |
-| Fallback | `GROQ_API_KEY` set → retry there on repeated 429 |
-| Warm demos | Pre-run the scripted demo questions so answers are cached |
+The real number, measured live (devlog.md, 2026-07-27): **20 requests/day** for this project's
+Gemini free tier, not the ~1,500/day originally assumed. That makes the cache the load-bearing
+row in this table, not an optimisation.
 
-**Not a defence — a warning.** A live viva demo hitting a rate limit looks like a crash. The
-cache-warming step before any demo is a runbook item, not an optimisation.
+| Layer | Approach | Status |
+|---|---|---|
+| Cap hops | Supervisor routes once; agents get a bounded tool-call loop (`MAX_TOOL_CALLS=4`) | ✅ built |
+| Cache | `(question, data_version)` → response; identical demo questions cost nothing, TTL 24h | ✅ built (`Supervisor`) |
+| Backoff | Exponential retry on 429 | ✅ built — `ChatGoogleGenerativeAI`'s own retry, `max_retries=3` set explicitly (`backend/agents/llm.py`), not left at the library default |
+| Fallback | ~~`GROQ_API_KEY` set → retry there on repeated 429~~ | ❌ **dropped (ADR-0011)** — one credential to manage, not two; the cache covers the practical case (repeat demo questions) a fallback mainly protected against |
+| Warm demos | Pre-run the scripted demo questions so answers are cached | runbook.md |
+
+**Not a defence — a warning.** A live viva demo hitting a rate limit looks like a crash, and
+without a fallback (ADR-0011) a fully exhausted daily quota has no recovery until it resets.
+The cache-warming step before any demo is a runbook item, not an optimisation.
 
 ---
 

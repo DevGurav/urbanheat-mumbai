@@ -27,6 +27,7 @@ decision → consequences.
 | [0008](0008-spatial-cv-and-leakage-policy.md) | Spatial CV, training set, and feature policy | Accepted |
 | [0009](0009-agent-layer-wiring-and-phase4-scope.md) | Agent layer wiring and Phase 4 scope | Accepted |
 | [0010](0010-monitoring-agent-heatwave-rule.md) | Monitoring agent's heat-wave trigger rule | Accepted |
+| [0011](0011-drop-groq-fallback.md) | Drop the Groq fallback for the Phase 4 MVP | Accepted |
 
 ## Template
 

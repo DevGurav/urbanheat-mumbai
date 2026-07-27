@@ -342,9 +342,27 @@ WHO/IPCC/other-cities' plans deferred · Agent 2 ranks by **ΔLST × population 
 
 ### Rate-limit hygiene
 
-- [ ] Response cache keyed on (question + `data_version`)
-- [ ] Exponential backoff on 429 (2s/4s/8s); Groq fallback on repeated 429
-- [ ] Runbook step: warm the cache with the scripted demo questions before a live demo
+**Settled 2026-07-27 (ADR-0011):** dropped the Groq fallback — one credential to manage, not
+two; the cache below covers the practical case (repeat demo questions) it mainly protected
+against. Real number behind all of this: **20 req/day**, not the ~1,500 `BLUEPRINT.md`
+originally assumed — measured live from a real `429` during the Phase 4 agents build.
+
+- [X] Response cache keyed on (question + `data_version`) — `Supervisor`'s own `TTLCache`
+  (`backend/agents/supervisor.py`), 24h TTL, exact-string-match key (no fuzzy matching — a
+  rephrased question at demo time is a genuine miss, `runbook.md` §5). A failed call is never
+  cached (`TTLCache.get_or_set` only stores after `compute()` returns, so an exception
+  propagates before the write)
+- [X] Exponential backoff on 429 — already built into `ChatGoogleGenerativeAI`'s own client
+  (live-observed: 1s/2s/4s/8s retries before raising); made the retry count explicit
+  (`max_retries=3` in `backend/agents/llm.py`) rather than the library's default of 6, so a
+  doomed request (daily quota actually exhausted) doesn't make `/agent/chat` wait 30+ seconds
+  before the honest 503. ~~Groq fallback~~ dropped (ADR-0011)
+- [X] Runbook step: warm the cache with the scripted demo questions before a live demo —
+  `runbook.md` §5, rewritten with the real 20/day number and the exact-match caveat
+- [X] Tests: `tests/test_orchestration.py` — cache hit on an identical question (no second LLM
+  call — a scripted-response-exhaustion `IndexError` would fail the test if it weren't
+  cached), cache miss on a reworded question, a failed call not poisoning the cache,
+  `get_llm()`'s explicit `max_retries`
 
 ### Monitoring cron
 
