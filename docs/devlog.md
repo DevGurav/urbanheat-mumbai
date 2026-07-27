@@ -21,6 +21,28 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-27 — Phase 4 — Dependencies & environment
+
+**Done**
+- `uv add langchain langgraph langchain-google-genai langchain-groq chromadb
+  sentence-transformers` — resolved and installed (283 packages; `torch` is the heavy one at
+  ~116 MiB). `langchain-google-genai` wasn't in the kickoff board's list but is needed for the
+  primary Gemini provider (ADR-0002), not just the Groq fallback `langchain-groq` was already
+  scoped for — added alongside it.
+- `data_pipeline/config.py`'s `Settings` gained `gemini_api_key`, `gemini_model`,
+  `groq_api_key`, `groq_model`, `chroma_dir` — all with defaults, so pipeline/backend tests
+  keep passing on a fresh clone with no LLM key configured. `chroma_dir` resolved against the
+  repo root through the same validator as `data_dir`/`model_dir`.
+- Verified: all six new packages import cleanly (`uv run python -c "import langchain, ..."`);
+  `ruff` clean; full suite still 55 green — the config change touches nothing route/store code
+  already depends on.
+
+**Next**
+- Shared toolbelt: the in-process LangChain tool wrappers over `backend.store` /
+  `data_pipeline.ml.*` (ADR-0009), per the PROGRESS board.
+
+---
+
 ## 2026-07-27 — Phase 4 — Kickoff: agentic core planning pass
 
 **Done**

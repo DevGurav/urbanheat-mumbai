@@ -231,10 +231,13 @@ WHO/IPCC/other-cities' plans deferred · Agent 2 ranks by **ΔLST × population 
 
 ### Dependencies & environment
 
-- [ ] Add `langchain`, `langgraph`, `chromadb`, `sentence-transformers`, `langchain-groq` to
-  `pyproject.toml`
-- [ ] Confirm `GEMINI_API_KEY` / `GROQ_API_KEY` / `CHROMA_DIR` flow through `pydantic-settings`
-  (already scaffolded in `.env.example`)
+- [X] Add `langchain`, `langgraph`, `chromadb`, `sentence-transformers`, `langchain-groq` to
+  `pyproject.toml` *(plus `langchain-google-genai` — needed for the primary Gemini provider,
+  not just the Groq fallback; not enumerated at kickoff but implied by ADR-0002)*
+- [X] Confirm `GEMINI_API_KEY` / `GROQ_API_KEY` / `CHROMA_DIR` flow through `pydantic-settings`
+  — added to `data_pipeline/config.py`'s `Settings` with empty-string/default fallbacks so a
+  fresh clone with no LLM key still runs (`docs/conventions.md`); `chroma_dir` resolved
+  against the repo root like `data_dir`/`model_dir`
 
 ### Shared toolbelt
 

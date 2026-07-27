@@ -38,11 +38,21 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
     cors_origins: str = Field(default="http://localhost:5173")  # comma-separated
 
+    # --- LLM / agents (Phase 4+) ---
+    # Empty default, not required: pipeline and backend tests must still run on a fresh
+    # clone with no LLM key configured (docs/conventions.md — every service degrades, never
+    # hard-fails, when a free-tier credential is missing).
+    gemini_api_key: str = Field(default="")
+    gemini_model: str = Field(default="gemini-flash-latest")
+    groq_api_key: str = Field(default="")
+    groq_model: str = Field(default="llama-3.3-70b-versatile")
+    chroma_dir: Path = Field(default=Path("backend/rag/chroma_db"))
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
-    @field_validator("data_dir", "model_dir")
+    @field_validator("data_dir", "model_dir", "chroma_dir")
     @classmethod
     def _resolve_against_repo_root(cls, value: Path) -> Path:
         """`.env` ships relative paths like `./data`, only correct from the repo root."""
