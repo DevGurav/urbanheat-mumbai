@@ -3,8 +3,8 @@
 Live task board. Newest phases get expanded into detailed tasks at their kickoff.
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
-**Current phase:** 6 — Persistence, auth, deployment *(Phase 5 complete)*
-**Last updated:** 2026-07-28
+**Current phase:** 7 — Polish & academics *(Phase 6 complete — public URLs live)*
+**Last updated:** 2026-07-29
 
 ---
 
@@ -646,25 +646,38 @@ decided)
   tooling) — the Docker image installs the base set only, Render's free tier caps memory at
   512MB
 - [X] `render.yaml` blueprint (existing-image `runtime: image`) + `.dockerignore`
-- [ ] Frontend → Vercel; env vars (`VITE_API_BASE_URL` → the Render URL,
-  `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`) set in the Vercel dashboard, never committed —
-  author's own account action, `runbook.md` §4.3 has the steps
-- [ ] Re-push the fixed image to GHCR and redeploy on Render — author's own action
-  (`docker build` + `docker push` + Render Blueprint, `runbook.md` §4.1–4.2). A first push +
-  deploy attempt happened during this task and hit the OOM above; the fixed image needs
-  pushing before the next deploy attempt
-- [ ] `CORS_ORIGINS` updated for the deployed Vercel origin — depends on 4.3 existing first,
-  `runbook.md` §4.4
-- [ ] Set the `BACKEND_URL` GitHub Actions secret — activates the monitoring cron workflow
+- [X] Frontend → Vercel — **[urbanheat-mumbai.vercel.app](https://urbanheat-mumbai.vercel.app)**.
+  Two real snags on the way, both fixed live: `VITE_API_BASE_URL` had a trailing slash,
+  producing double-slash request URLs (`.../\/city/grid`) that silently broke CORS
+  preflighting; Vercel also assigns a separate git-branch alias
+  (`urbanheat-mumbai-git-main-*.vercel.app`) distinct from the production domain — a
+  different `Origin` than whatever's in `CORS_ORIGINS`, easy to land on by accident via a
+  deployment-list link
+- [X] Re-push the fixed image to GHCR and redeploy on Render —
+  **[urbanheat-api.onrender.com](https://urbanheat-api.onrender.com)**. Two more real snags,
+  both fixed live: GHCR packages are private by default (Render's pull 404'd until the
+  package visibility was flipped to public), and the first Render service was created as
+  "New → Web Service" rather than "New → Blueprint," which builds `Dockerfile` from GitHub
+  source directly and fails on the gitignored `COPY`s by design — recreating via Blueprint
+  fixed it. Deploy log confirmed a clean boot this time: no OOM, `agent supervisor ready`,
+  service live — the ADR-0013 fix held in production, not just in the local 512MB
+  reproduction
+- [X] `CORS_ORIGINS` updated for the deployed Vercel origin — one more real snag: the value
+  had a trailing slash (`.../vercel.app/`), which doesn't literally match the `Origin` header
+  browsers actually send (never a trailing slash), so Starlette's CORS middleware 400'd every
+  preflight. Diagnosed from the live `OPTIONS` response headers, not guessed
+- [X] Set the `BACKEND_URL` GitHub Actions secret — activates the monitoring cron workflow
   that's been correctly built and inert since Phase 4 (`.github/workflows/monitoring.yml`),
-  author's own action, `runbook.md` §4.4
+  author-confirmed
 - [X] CI: `.github/workflows/ci.yml` — `pytest`/`ruff` and `tsc`/`oxlint` on push/PR, distinct
   from the monitoring cron workflow. Runs the pure-logic + mocked-external-service suite only
   (conftest.py's existing skip pattern) — no Earth Engine credentials in CI, by design
 
 ### Exit
 
-- [ ] ✅ **Public URLs work end-to-end**
+- [X] ✅ **Public URLs work end-to-end** — author-confirmed 2026-07-29.
+  Frontend: <https://urbanheat-mumbai.vercel.app> · Backend:
+  <https://urbanheat-api.onrender.com>
 
 ---
 

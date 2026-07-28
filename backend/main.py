@@ -80,7 +80,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="UrbanHeat AI API",
-    version="0.4.0",
+    version="1.0.0",
     summary="Surface urban heat, its drivers, and mitigation scenarios for Mumbai.",
     lifespan=lifespan,
 )

@@ -4,16 +4,15 @@ Text-based, editable re-creation of the system design. Diagrams are Mermaid so t
 diffable and render on GitHub.
 
 **Status:** target design. Components are marked ⬜ planned / 🟨 in progress / ✅ built,
-and updated as phases land. As of **Phase 5**, the whole local stack runs end to end: the
+and updated as phases land. As of **Phase 6**, every box in §2 and §6 is built and live: the
 **offline pipeline (§3)** — sources → `features.parquet` → trained **XGBoost** model → SHAP
-→ the HVI and the scenario engine (`data_pipeline/ml/`) — the **REST API layer (§2)** over it
-(all ten data/model/scenario/agent endpoints), the **LangGraph orchestration (§2)** on top of
-that (a supervisor routing to three tool-calling agents, plus a cron-only Monitoring agent),
-and now the **React dashboard (§2)** consuming all of it from the browser, with real Auth and
-Postgres-RLS-backed saved scenarios (§2) against a provisioned Supabase project. Only the
-**actual deploy** (§6 — a built, smoke-tested Docker image not yet pushed or pointed at by a
-running Render service) remains — Phase 6 is entirely about the gap between "runs locally"
-and public URLs, not new product surface.
+→ the HVI and the scenario engine (`data_pipeline/ml/`) — the **REST API layer (§2)** over it,
+the **LangGraph orchestration (§2)** on top of that (a supervisor routing to three tool-calling
+agents, plus a cron-only Monitoring agent), the **React dashboard (§2)** with real Auth and
+Postgres-RLS-backed saved scenarios against a provisioned Supabase project, and now deployed
+publicly (§6): **[urbanheat-mumbai.vercel.app](https://urbanheat-mumbai.vercel.app)** (frontend)
+talking to **[urbanheat-api.onrender.com](https://urbanheat-api.onrender.com)** (backend).
+Phase 7 is report/polish, not new product surface.
 
 ---
 
@@ -44,7 +43,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph FE["Frontend 🟨 — built locally, Vercel deploy is Phase 6"]
+    subgraph FE["Frontend ✅ — deployed, Vercel"]
         direction LR
         MAP[Heat map ✅<br/>react-leaflet]
         AN[Analytics ✅<br/>Recharts]
@@ -53,7 +52,7 @@ flowchart TB
         ALR[Alerts feed ✅]
     end
 
-    subgraph BE["Backend 🟨 — FastAPI local, Render deploy is Phase 6"]
+    subgraph BE["Backend ✅ — deployed, Render"]
         API[REST API layer ✅<br/>Pydantic · CORS · gzip · TTL cache]
 
         subgraph AG["LangGraph orchestration ✅"]
@@ -166,13 +165,13 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    U[Browser] -->|HTTPS| V[Vercel<br/>static React 🟨 — built locally, not deployed]
-    V -->|HTTPS/JSON| R[Render free<br/>Dockerised FastAPI 🟨 — image built + smoke-tested, not deployed]
-    R --> S[(Supabase free<br/>Postgres + Auth ✅ — provisioned, RLS live-verified)]
+    U[Browser] -->|HTTPS| V["Vercel ✅<br/>urbanheat-mumbai.vercel.app"]
+    V -->|HTTPS/JSON| R["Render free ✅<br/>urbanheat-api.onrender.com"]
+    R --> S[(Supabase free ✅<br/>Postgres + Auth, RLS live-verified)]
     R -->|keyed| G[Gemini Flash<br/>free tier]
     R --> OM[Open-Meteo]
-    GHCR[(GHCR<br/>pre-built image 🟨 — built locally, not pushed)] -->|pulled by| R
-    GA[GitHub Actions<br/>daily cron 🟨 — built, inert until BACKEND_URL exists] -->|trigger| R
+    GHCR[(GHCR ✅<br/>pre-built image)] -->|pulled by| R
+    GA[GitHub Actions<br/>daily cron ✅ — BACKEND_URL set] -->|trigger| R
     CI[GitHub Actions<br/>CI ✅ — pytest/ruff, tsc/oxlint] -.on push/PR.-> V
     CI -.-> R
 ```

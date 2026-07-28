@@ -21,6 +21,62 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-29 — Phase 6 — Closed: public URLs live
+
+**Done**
+- Frontend live at [urbanheat-mumbai.vercel.app](https://urbanheat-mumbai.vercel.app), backend
+  at [urbanheat-api.onrender.com](https://urbanheat-api.onrender.com). Author pushed the fixed
+  (post-ADR-0013) image, redeployed, and confirmed the dashboard loads real data end to end.
+  Phase 6 exit criterion — public URLs work — author-confirmed.
+- Four more real bugs, found and fixed live during the actual deploy, none of which the
+  local `docker run --memory=512m` reproduction (previous entry) could have caught, since
+  they're all about the boundary *between* deployed services, not any one container's own
+  behavior:
+  - Magic-link sign-in redirected to `localhost:3000` — Supabase only redirects to an
+    allow-listed URL (**Authentication → URL Configuration**) and silently falls back to its
+    factory-default Site URL otherwise; `emailRedirectTo: window.location.origin` in the
+    frontend code was never consulted. Fixed by setting the real Site URL and adding both the
+    production and local-dev origins to the Redirect URLs allow-list.
+  - `VITE_API_BASE_URL` had a trailing slash → every request URL came out
+    `.../\/city/grid` (double slash) → silently broke CORS preflighting, since `//city/grid`
+    isn't the same path as `/city/grid` to FastAPI's router.
+  - GHCR packages are private by default — Render's pull 404'd
+    (`image "..." not found`) until the package visibility was flipped to public. The image
+    has no secrets baked in (those arrive as env vars at runtime), so public is the right
+    choice here, not a compromise.
+  - The first Render service was created via "New → Web Service," which builds `Dockerfile`
+    from the GitHub source directly and fails on the gitignored `COPY`s by design
+    (`Dockerfile`'s own comment already explains why) — recreating via "New → Blueprint" (the
+    path that actually reads `render.yaml`'s `runtime: image`) fixed it.
+  - `CORS_ORIGINS` itself also had a trailing slash — `https://urbanheat-mumbai.vercel.app/`
+    doesn't literally match the `Origin` header a browser sends (never a trailing slash by
+    spec), so Starlette's CORS middleware 400'd every preflight with no
+    `Access-Control-Allow-Origin` header. Diagnosed conclusively from the live OPTIONS
+    response headers in DevTools, not guessed — the same request that failed against the
+    trailing-slash value succeeded immediately after removing it.
+- Closed out the phase across docs: `PROGRESS.md` (all Deployment checkboxes + exit
+  criterion ticked, current phase bumped to 7), `CHANGELOG.md` (Phase 6 entry),
+  `architecture.md` (Deployment diagram and the Frontend/Backend subgraphs marked ✅ with the
+  live URLs), `BLUEPRINT.md` (stale Groq mention in the risk register), `README.md` (was
+  still describing Phase 0 and "not yet runnable" — never updated across five phases;
+  rewritten to match current reality), version bumped to 1.0.0
+  (`pyproject.toml`/`backend/main.py`) per `CHANGELOG.md`'s own stated phase→version mapping.
+
+**Broke / learned**
+- Every one of this session's five real deploy-time bugs (the OOM, the two trailing slashes,
+  the private GHCR package, the wrong Render service type) was invisible to every form of
+  testing this project did *before* deploying — local dev, the full pytest suite, even the
+  hard `--memory=512m` Docker reproduction. They only exist at the seam between two actually-
+  separate deployed services talking over a real network, which nothing short of an actual
+  deploy exercises. Worth remembering for the report: "tested locally" and "works when
+  deployed" are different claims, and the gap between them is exactly where this session's
+  bugs lived.
+
+**Next**
+- Phase 7 — polish and academics: PDF report endpoint, final report/paper draft, viva prep.
+
+---
+
 ## 2026-07-28 — Phase 6 — First deploy attempt OOM-killed; fixed via ADR-0013
 
 **Done**

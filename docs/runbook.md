@@ -2,8 +2,12 @@
 
 Setup from zero, day-to-day operation, deployment, and what to do when things break.
 
-**Status:** Phase 0. Sections for phases not yet built are marked *[Phase N]* and filled in
-as they land. Everything below marked ✅ has been verified to work.
+**Status:** Phase 6 complete — deployed and live.
+
+**Live:** frontend [urbanheat-mumbai.vercel.app](https://urbanheat-mumbai.vercel.app) ·
+backend [urbanheat-api.onrender.com](https://urbanheat-api.onrender.com). Free tier: the
+backend sleeps after 15 min idle (~1 min cold start) and Supabase pauses after ~1 week of
+inactivity — both expected, not bugs (§5, ADR-0004).
 
 ---
 

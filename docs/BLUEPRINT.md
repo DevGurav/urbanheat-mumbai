@@ -128,7 +128,7 @@ over-specified now — the shape of later phases depends on what phase 1's data 
 | Earth Engine approval delayed | Low | Registered day 1; Phase 0 is the only blocked work |
 | Cloud cover ruins composites | Medium | Dry-season only + multi-year median compositing |
 | Model R² disappointing | Medium | Baseline comparison framing — a weak-but-honest model with good SHAP still carries the project |
-| Gemini rate limits during demo | Medium | Cache answers, backoff, Groq fallback, canned demo script |
+| Gemini rate limits during demo | Medium | Cache answers, backoff, canned demo script — no fallback provider (ADR-0011); warm the cache before a demo |
 | Render cold start during viva | High | Wake the URL before presenting; local fallback ready |
 | Scope creep (2nd city, mobile) | High | Parked-ideas list; nothing leaves it until Phase 7 |
 

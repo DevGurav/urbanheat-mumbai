@@ -1,6 +1,6 @@
 [project]
 name = "urbanheat"
-version = "0.1.0"
+version = "1.0.0"
 description = "Surface urban heat island analysis and mitigation planning for Mumbai"
 readme = "README.md"
 # 3.14 is deliberately excluded: geopandas/pyproj/shapely wheels lag the newest CPython,
