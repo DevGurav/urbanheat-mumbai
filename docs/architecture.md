@@ -4,13 +4,14 @@ Text-based, editable re-creation of the system design. Diagrams are Mermaid so t
 diffable and render on GitHub.
 
 **Status:** target design. Components are marked ⬜ planned / 🟨 in progress / ✅ built,
-and updated as phases land. As of **Phase 4**, the **offline pipeline (§3)** still runs end to
-end — sources → `features.parquet` → trained **XGBoost** model → SHAP → the HVI and the
-scenario engine (`data_pipeline/ml/`) — the **REST API layer (§2)** sits over it (all ten
-data/model/scenario/agent endpoints), and the **LangGraph orchestration (§2)** now runs on
-top of that: a supervisor routing to three tool-calling agents, plus a fourth, deterministic
-Monitoring agent reachable only from a cron trigger, never from chat. Frontend and Supabase
-(§2, §6) remain ⬜ — Phase 5 puts a React dashboard over what Phases 3–4 already serve.
+and updated as phases land. As of **Phase 5**, the whole local stack runs end to end: the
+**offline pipeline (§3)** — sources → `features.parquet` → trained **XGBoost** model → SHAP
+→ the HVI and the scenario engine (`data_pipeline/ml/`) — the **REST API layer (§2)** over it
+(all ten data/model/scenario/agent endpoints), the **LangGraph orchestration (§2)** on top of
+that (a supervisor routing to three tool-calling agents, plus a cron-only Monitoring agent),
+and now the **React dashboard (§2)** consuming all of it from the browser. Only **Supabase**
+(§2, §6) and actual deployment remain ⬜ — Phase 6 is entirely about the gap between "runs
+locally" and public URLs, not new product surface.
 
 ---
 
@@ -41,13 +42,13 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph FE["Frontend ⬜ — Vercel"]
+    subgraph FE["Frontend 🟨 — built locally, Vercel deploy is Phase 6"]
         direction LR
-        MAP[Heat map<br/>react-leaflet]
-        AN[Analytics<br/>Recharts]
-        SIM[Scenario simulator]
-        CHAT[Copilot chat]
-        ALR[Alerts feed]
+        MAP[Heat map ✅<br/>react-leaflet]
+        AN[Analytics ✅<br/>Recharts]
+        SIM[Scenario simulator ✅]
+        CHAT[Copilot chat ✅]
+        ALR[Alerts feed ✅]
     end
 
     subgraph BE["Backend 🟨 — FastAPI local, Render deploy is Phase 6"]
@@ -162,7 +163,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    U[Browser] -->|HTTPS| V[Vercel<br/>static React ⬜]
+    U[Browser] -->|HTTPS| V[Vercel<br/>static React 🟨 — built locally, not deployed]
     V -->|HTTPS/JSON| R[Render free<br/>Dockerised FastAPI ⬜]
     R --> S[(Supabase free<br/>Postgres + Auth ⬜)]
     R -->|keyed| G[Gemini Flash<br/>free tier]

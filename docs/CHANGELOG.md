@@ -6,6 +6,55 @@ detail belongs in [devlog.md](devlog.md).
 
 ---
 
+## Phase 5 — React dashboard · completed 2026-07-28
+
+### Added
+- `frontend/` — Vite + strict TypeScript + MUI + `react-leaflet` + Recharts + TanStack Query,
+  scaffolded via `npm create vite@latest`; `react-markdown` added mid-phase (below)
+- `src/api/` — hand-written types mirroring `backend/schemas.py` (kickoff decision, no
+  OpenAPI codegen), a typed `fetch` client, one TanStack Query hook per client-facing
+  endpoint (`POST /monitoring/check` excluded — cron-only, never called from the browser)
+- `src/viz/color.ts` — the dataviz skill's validated palette (sequential blue, the blue↔red
+  diverging pair, categorical, status), applied consistently: sequential for every magnitude
+  layer and the scenario ΔLST overlay, diverging for SHAP driver direction, categorical for
+  the weather chart's two series, status for alert severity
+- Five dashboard sections, one page, tab-switched, no router (kickoff decision): **Heat map**
+  (canvas-rendered `/city/grid` choropleth, layer toggle, click-to-explain via
+  `/explain/{cell_id}`); **Analytics** (`/hotspots` ranking as chart + table, `/weather`
+  forecast, `/trends`'s honest stub); **Scenario simulator** (`/scenario` form, a client-side
+  join against `/city/grid` for the map overlay since `/scenario` returns no geometry, a
+  prominent `clamped` disclosure); **Copilot chat** (`POST /agent/chat`, tool-call
+  transparency, a persistent quota-awareness banner, markdown rendering); **Alerts feed**
+  (`GET /alerts`, polled every 5 minutes, severity-coded, a calm empty state)
+
+### Verified
+- ✅ **Exit criterion met** — full end-to-end local demo, author-verified live in the browser
+- Every section was screenshot-verified against the real running backend before being
+  called done, not just type-checked. Several independent code paths landed on identical
+  real numbers: Analytics' HVI ward ranking matched Phase 2's own recorded ranking exactly;
+  the Scenario simulator's Ward L results matched the live-verified Planning agent's numbers
+  from Phase 4's agents work; the Copilot chat's "hottest ward" answer matched both. The
+  response cache was confirmed working as a side effect — an identical chat question
+  returned near-instantly with zero new tool calls
+- Real bugs caught by actually looking at screenshots, not by `tsc`/lint, which stayed clean
+  throughout: a Y-axis silently truncating 11-digit cell IDs; a layer-toggle control
+  overlapping Leaflet's default zoom control; every LLM response rendering literal `**`/`###`
+  markdown syntax instead of formatted text (fixed by adding `react-markdown`, the one
+  dependency added outside the original task list)
+
+### Known limitations carried into Phase 6
+- **No automated frontend test suite** — a kickoff decision (manual/visual verification is
+  the Definition of Done for this phase), not an oversight
+- **The `clamped` warning's render path is verified by code review only** — queried
+  `/scenario` directly across all 24 real wards; none clamp for greening, and cool-roof never
+  clamps by construction, so the dataset never exercises it live
+- **No persisted chat memory** — `session_id` is accepted but unused; relevant again once
+  Phase 6 adds real user accounts
+- Nothing is deployed yet — the dashboard, backend, and monitoring cron all run locally;
+  Phase 6 is exactly the gap between "works on my machine" and public URLs
+
+---
+
 ## Phase 4 — Agentic core · completed 2026-07-27
 
 ### Added

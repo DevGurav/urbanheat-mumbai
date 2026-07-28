@@ -3,8 +3,8 @@
 Live task board. Newest phases get expanded into detailed tasks at their kickoff.
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
-**Current phase:** 5 — React dashboard *(Phase 4 complete)*
-**Last updated:** 2026-07-27
+**Current phase:** 6 — Persistence, auth, deployment *(Phase 5 complete)*
+**Last updated:** 2026-07-28
 
 ---
 
@@ -552,7 +552,7 @@ Vitest/RTL suite for a solo dashboard).
 
 ### Exit
 
-- [ ] ✅ **Full end-to-end local demo** — author-verified live in the browser, not assumed
+- [X] ✅ **Full end-to-end local demo** — author-verified live in the browser, not assumed
 
 ---
 

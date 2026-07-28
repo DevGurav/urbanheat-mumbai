@@ -21,6 +21,34 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 5 — Close-out
+
+**Done**
+- Author clicked through the full app in one sitting and confirmed the exit criterion: ✅
+  *Full end-to-end local demo*. Everything the five per-section live checks this phase
+  already showed individually now stands confirmed as one coherent thing, not five
+  disconnected pieces.
+- `docs/CHANGELOG.md` gets the Phase 5 entry — the frontend stack, the five sections, the
+  cross-checks between independent code paths landing on identical real numbers, the three
+  real bugs caught by screenshots rather than by `tsc`/lint, and the limitations carried
+  forward (no frontend test suite by design, the unreachable `clamped` warning path, no chat
+  memory, nothing deployed yet).
+- `docs/architecture.md` updated to reality: the Frontend subgraph and all five of its nodes
+  are ✅ in the Components diagram; the deployment diagram's Vercel node is 🟨 (built
+  locally, not deployed) — the same "built but not live yet" language already used for the
+  backend and the monitoring cron. The top status paragraph now says the whole local stack
+  runs end to end, and that Phase 6 is entirely about the gap to public URLs, not new surface.
+- `PROGRESS.md` rolled to Phase 6.
+
+**Next**
+- Phase 6 kickoff: Supabase (users, alerts, saved scenarios) + Auth, then Dockerize the
+  backend for Render and the frontend for Vercel. A planning pass before code, per
+  `BLUEPRINT.md` §8, same as every prior phase kickoff — real decisions here too (RLS policy
+  shape, what "saved scenario" actually persists, whether alerts move to Supabase now or stay
+  file-based a while longer).
+
+---
+
 ## 2026-07-28 — Phase 5 — Alerts feed (all five sections done)
 
 **Done**
