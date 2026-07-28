@@ -558,8 +558,57 @@ Vitest/RTL suite for a solo dashboard).
 
 ## Phase 6 — Persistence, auth, deployment · Weeks 20–22
 
-- [ ] Supabase schema (users, alerts, saved scenarios) + Auth
-- [ ] Dockerize backend → Render · frontend → Vercel · secrets · CI
+**Goal:** the gap between "runs on my machine" and public URLs — Supabase for the two
+genuinely transactional tables, Auth on the one write endpoint that needs it, and the
+backend/frontend/cron actually deployed and talking to each other.
+
+**Settled at kickoff, 2026-07-28**
+**Saved scenarios store config only** (`ward_code`, `intervention`, `coverage`,
+`user_id`, `saved_at`) — loading one re-calls the real `/scenario` endpoint, so the result is
+always freshly computed, never a stale snapshot · **Auth is magic-link / email OTP**
+(Supabase's built-in passwordless flow — no OAuth app to register, fits the non-technical
+personas `architecture.md` §1 actually names) · **Alerts stay file-based, not Supabase**
+(ADR-0012, a partial revision of ADR-0004 — alerts turned out to be public/regenerable, not
+transactional; users and saved scenarios move to Supabase exactly as ADR-0004 already
+decided)
+
+### Supabase schema & RLS
+
+- [ ] Supabase project (free tier) — `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_KEY`
+  → `.env` (already scaffolded in `.env.example`)
+- [ ] `saved_scenarios` table: `id`, `user_id` (FK → `auth.users`), `ward_code`,
+  `intervention`, `coverage`, `saved_at`. No custom `profiles` table — Supabase Auth's own
+  `auth.users` is enough, nothing in this app needs extra profile fields yet
+- [ ] RLS: a user can only select/insert/delete their own `saved_scenarios` rows
+  (`user_id = auth.uid()`) — the one place this project holds per-user data
+
+### Auth
+
+- [ ] Magic-link sign-in flow in the frontend (email → Supabase sends the link → session)
+- [ ] Backend JWT verification on the one write endpoint that needs it (`api-reference.md`:
+  "Supabase JWT on write endpoints from Phase 6") — every read endpoint (map, analytics,
+  chat, alerts) stays open, unauthenticated, exactly as it is today
+
+### Saved scenarios (backend + frontend)
+
+- [ ] `POST /scenarios` (save the current form config), `GET /scenarios` (list mine),
+  `DELETE /scenarios/{id}` — all JWT-gated
+- [ ] Frontend: a sign-in affordance, a "Save this scenario" action in
+  `src/sections/Scenario.tsx`, a list of saved scenarios that re-runs `/scenario` on load
+
+### Deployment
+
+- [ ] `Dockerfile` for the backend (multi-stage, `uv`-based) → Render (free, Docker)
+- [ ] Frontend → Vercel; env vars (`VITE_API_BASE_URL` → the Render URL,
+  `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`) set in the Vercel dashboard, never committed
+- [ ] `CORS_ORIGINS` updated for the deployed Vercel origin
+- [ ] Set the `BACKEND_URL` GitHub Actions secret — activates the monitoring cron workflow
+  that's been correctly built and inert since Phase 4 (`.github/workflows/monitoring.yml`)
+- [ ] CI: a GitHub Actions workflow running `pytest`/`ruff` and `tsc`/`oxlint` on push/PR —
+  not yet built; distinct from the monitoring cron workflow
+
+### Exit
+
 - [ ] ✅ **Public URLs work end-to-end**
 
 ---

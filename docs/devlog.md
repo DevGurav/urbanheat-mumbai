@@ -21,6 +21,39 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 6 — Kickoff: persistence, auth, deployment planning pass
+
+**Done**
+- Planning pass before code, per `BLUEPRINT.md` §8. Re-read ADR-0004 (which already scoped
+  Supabase for users/saved-scenarios/alerts back in Phase 0), `.env.example`'s existing
+  Supabase/SMTP scaffolding, and `api-reference.md`'s "Supabase JWT on write endpoints"
+  line. Expanded the Phase 6 board into schema/RLS, Auth, saved-scenarios, and deployment
+  groups.
+- Wrote ADR-0012, a **partial** revision of ADR-0004 — not a reversal. Users and saved
+  scenarios still move to Supabase exactly as ADR-0004 scoped; only alert history's
+  disposition changes. Appended a dated pointer note to ADR-0004 itself (the one permitted
+  edit — annotates, doesn't alter the original argument) rather than editing its body.
+
+**Decided (author-confirmed, all three recommended)**
+- **Saved scenarios store config only** (ward, intervention, coverage, user, timestamp), not
+  a full result snapshot. Loading one re-runs the real `/scenario` call — always fresh,
+  never silently stale against a retrained model.
+- **Auth is Supabase's magic-link/email-OTP flow**, not GitHub OAuth. No OAuth app to
+  register, and it fits the actual named user base (`architecture.md` §1: municipal
+  authorities, planners, NGOs) better than requiring a GitHub account.
+- **Alerts stay file-based** (ADR-0012). Built in Phase 4, they turned out to fit ADR-0004's
+  own "analytical, read-only, regenerable" category — public, city-wide, cron-written, never
+  user-owned — not its "transactional" one. Moving them to Postgres now would be real
+  migration work (and a second free-tier idle-pause risk) for no new capability;
+  `GET /alerts` already works correctly against the file.
+
+**Next**
+- Supabase project + schema: `saved_scenarios` table, RLS scoped to `auth.uid()`. Then Auth
+  wiring (backend JWT check, frontend magic-link flow) before the save/list/delete endpoints
+  that depend on it.
+
+---
+
 ## 2026-07-28 — Phase 5 — Close-out
 
 **Done**

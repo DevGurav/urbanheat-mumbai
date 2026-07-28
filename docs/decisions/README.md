@@ -28,6 +28,7 @@ decision → consequences.
 | [0009](0009-agent-layer-wiring-and-phase4-scope.md) | Agent layer wiring and Phase 4 scope | Accepted |
 | [0010](0010-monitoring-agent-heatwave-rule.md) | Monitoring agent's heat-wave trigger rule | Accepted |
 | [0011](0011-drop-groq-fallback.md) | Drop the Groq fallback for the Phase 4 MVP | Accepted |
+| [0012](0012-alerts-stay-file-based.md) | Alerts stay file-based, not Supabase | Accepted |
 
 ## Template
 

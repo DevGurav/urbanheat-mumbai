@@ -81,3 +81,11 @@ and storage bundled — a better fit than raw Postgres would have been anyway.
 
 **Revisit if** the feature table outgrows memory (multi-city at finer resolution), or
 spatial queries become a hot path — then load features into PostGIS and query them there.
+
+---
+
+**Note, 2026-07-28 (Phase 6 kickoff):** alert history's disposition is revised by
+[ADR-0012](0012-alerts-stay-file-based.md) — alerts stay file-based, not Supabase. Built in
+Phase 4, alerts turned out to fit this ADR's own "analytical, read-only, regenerable"
+category, not "transactional." Users and saved scenarios are unaffected and move to Supabase
+exactly as decided above.
