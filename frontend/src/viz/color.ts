@@ -29,6 +29,12 @@ export const DIVERGING = {
   warming: "#e34948", // categorical slot 8 (red)
 } as const;
 
+/** Categorical, fixed order (palette.md) — for charts where the series ARE the subject
+ * (weather's max/min temp lines), never for ranking or magnitude. Series count ladder: 1-3
+ * is comfortable for everyone; all-pairs forms (scatter/bubble/choropleth) cap at 3 — this
+ * project's charts never need more than 2 at once, so only the safe prefix is exported. */
+export const CATEGORICAL = ["#2a78d6", "#eb6834", "#1baf7a"] as const; // blue, orange, aqua
+
 export const MUTED_INK = "#898781";
 
 /** A value → hex function over [min, max], sequential blue, light = low. Degenerates to the

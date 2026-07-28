@@ -21,6 +21,49 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 5 — Analytics
+
+**Done**
+- `src/sections/Analytics.tsx` — three panels. Hotspots: `/hotspots` with `hvi`/`lst` and
+  `ward`/`cell` toggles, a horizontal Recharts bar chart plus an MUI table (the dataviz
+  skill's "table view exists" accessibility pass, and a real second reading of the same
+  numbers). Weather: a 7-day max/min line chart. Trends: the backend's own honest stub
+  message, not hidden or faked.
+- `src/viz/color.ts` gained `CATEGORICAL` — the palette's first 3 slots (blue, orange, aqua),
+  enough for this project's 2-series weather chart without touching the all-pairs cap the
+  skill documents for choropleths/scatter (3 slots max there too, coincidentally the same
+  number for a different reason).
+- Verified live: backend + frontend both actually running. HVI ward ranking (B, L, C, H/E,
+  F/S, K/E, G/N, E, M/W, G/S) matched Phase 2's own recorded ranking
+  (`data-dictionary.md`) exactly — a real cross-check against prior work, not just "did a
+  bar render." LST/cell toggle re-fetched and re-rendered correctly (top cell 50.63 °C, in
+  range with Phase 0's known max ~51.6 °C). Weather chart showed real forecast dates and
+  a sensible max>min ordering throughout. Trends stub text matched the backend's note
+  verbatim. Zero console errors.
+
+**Decided**
+- One color for the hotspots bar chart, not one per bar. It's a single series (rank by
+  HVI or LST value) — the dataviz skill's color-formula is explicit that a single series
+  needs no legend and no per-item hue; coloring bars individually would spend the identity
+  channel on data the axis labels already carry.
+- Weather's max/min color assignment (orange/blue) is fixed by convention, not re-derived
+  per render — "which series is orange" never changes based on what the data looks like
+  that day, which is what keeps a fixed categorical assignment legitimate rather than
+  arbitrary.
+
+**Broke / learned**
+- The ranking chart's Y-axis `width` was hardcoded to fit ward codes ("B", "H/E" — short).
+  Cell IDs are 11-digit numbers; toggling to cell view silently truncated them
+  ("549001410" instead of "10549001410") — caught by actually reading the toggled
+  screenshot, not by `tsc` or lint, since a hardcoded pixel width that's merely "too small"
+  is not a type error. Fixed by keying the width off `unit`.
+
+**Next**
+- Scenario simulator: ward + intervention + coverage form → `POST /scenario`, ΔLST summary,
+  per-cell map overlay, the `clamped` disclosure surfaced prominently.
+
+---
+
 ## 2026-07-27 — Phase 5 — Heat map
 
 **Done**

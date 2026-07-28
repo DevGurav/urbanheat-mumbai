@@ -1,6 +1,7 @@
 import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material";
 import { useState } from "react";
 
+import { Analytics } from "./sections/Analytics";
 import { HeatMap } from "./sections/HeatMap";
 import { Placeholder } from "./sections/Placeholder";
 
@@ -39,7 +40,7 @@ function App() {
 
       <Box sx={{ flex: 1, overflow: "auto" }}>
         {section === "map" && <HeatMap />}
-        {section === "analytics" && <Placeholder title="Analytics" />}
+        {section === "analytics" && <Analytics />}
         {section === "scenario" && <Placeholder title="Scenario simulator" />}
         {section === "chat" && <Placeholder title="Copilot" />}
         {section === "alerts" && <Placeholder title="Alerts" />}

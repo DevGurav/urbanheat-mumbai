@@ -464,10 +464,22 @@ Vitest/RTL suite for a solo dashboard).
 
 ### Analytics
 
-- [ ] `/hotspots` ranking (ward/cell, `hvi`/`lst`) — table + Recharts bar chart
-- [ ] `/weather` forecast widget
-- [ ] `/trends` — an honest "not yet available" state, matching the backend's own stub
+- [X] `/hotspots` ranking (ward/cell, `hvi`/`lst` toggles) — horizontal Recharts bar chart +
+  MUI table (`src/sections/Analytics.tsx`). One series (rank by value), so one sequential-blue
+  color per the dataviz skill's color-formula — no legend needed, the axis labels are the
+  identity. Added `CATEGORICAL` to `src/viz/color.ts` (the palette's first 3 slots — this
+  project never needs more than 2 series at once) for the weather chart below
+- [X] `/weather` forecast widget — a 7-day max/min line chart, 2 series, categorical colors
+  (orange=max, blue=min — a fixed, intuitive assignment, not re-ranked per render)
+- [X] `/trends` — an honest "not yet available" state, matching the backend's own stub
   (`{available: false}`) rather than hiding or faking the section
+- [X] Verified live with the real backend: HVI ward ranking (B, L, C, H/E, F/S...) matched
+  Phase 2's own recorded ranking exactly (`data-dictionary.md`) — a real cross-check, not
+  just "a chart rendered." Toggling to LST/cell re-fetched and re-rendered correctly. Zero
+  console errors. **Caught and fixed live:** the ranking chart's Y-axis had a fixed
+  `width={60}` sized for ward codes ("B", "H/E") — cell IDs are 11-digit numbers and were
+  silently truncated ("549001410" instead of "10549001410") until the toggle-to-cell
+  screenshot caught it; width is now conditional on `unit`
 
 ### Scenario simulator
 
