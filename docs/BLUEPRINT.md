@@ -78,8 +78,8 @@ Original architecture component → what is actually used, and what it costs.
 | OSM features | OSMnx + Overpass | ₹0 |
 | ML + explainability | scikit-learn, XGBoost, LightGBM, SHAP — trained locally | ₹0 |
 | Backend | FastAPI + Uvicorn + Pydantic | ₹0 |
-| Orchestration + LLM | LangGraph + Gemini Flash free tier (Groq fallback) | ₹0 |
-| Embeddings | sentence-transformers, local CPU | ₹0 |
+| Orchestration + LLM | LangGraph + Gemini Flash free tier (no fallback provider — ADR-0011) | ₹0 |
+| Embeddings | Gemini `gemini-embedding-001` API (ADR-0013 — local `sentence-transformers` cost too much RAM for Render's free tier) | ₹0 |
 | Vector DB | ChromaDB embedded, persisted to disk | ₹0 |
 | Relational + spatial DB | Files/SQLite → Supabase free (Postgres + PostGIS + Auth) from Phase 6 | ₹0 |
 | Cache / queue | In-process cache + GitHub Actions cron *(Redis cut — ADR-0003)* | ₹0 |

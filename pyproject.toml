@@ -10,9 +10,8 @@ requires-python = ">=3.11,<3.14"
 # Everything `backend/main.py` actually imports, directly or through `data_pipeline.config`/
 # `data_pipeline.ml.*` (the two modules the backend touches — checked by grepping backend/'s
 # import graph, Phase 6 kickoff, PROGRESS.md's Deployment task). This is the set the Docker
-# image installs: Render's free tier caps memory at 512MB, and `sentence-transformers` alone
-# (real RAG, not optional) already spends real margin against that, so nothing unused rides
-# along. Data-acquisition and training-only tooling lives in the `pipeline` extra below.
+# image installs: Render's free tier caps memory at 512MB. Data-acquisition and training-only
+# tooling lives in the `pipeline` extra below.
 dependencies = [
     # --- Geospatial (Phase 1+) — features.parquet is geopandas-read at every request ---
     "geopandas>=1.0",
@@ -39,12 +38,14 @@ dependencies = [
     # --- Agents (Phase 4+) ---
     "langchain>=1.3.14",
     "langgraph>=1.2.9",
+    # Also embeds the RAG knowledge base and every retrieval query (backend/rag/ingest.py,
+    # retrieve.py) via Gemini's API (ADR-0013) — not `sentence-transformers`+`torch` anymore.
+    # That local-model path cost ~500MB resident for torch's runtime alone, more than
+    # Render free tier's entire 512MB budget — discovered via a live OOM kill deploying this
+    # phase, not assumed. The trade: a live network call per embedding, against a rate limit
+    # of unconfirmed size, for a backend that actually boots.
     "langchain-google-genai>=4.3.1",
     "chromadb>=1.5.9",
-    "sentence-transformers>=5.6.1",
-    # Explicit, not just transitive via sentence-transformers: needed so the CPU-only source
-    # pin below (tool.uv.sources) actually applies during resolution.
-    "torch>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -85,21 +86,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["data_pipeline", "backend"]
-
-[tool.uv.sources]
-# torch is needed for `sentence-transformers` (real RAG, Phase 4), and is listed as a direct
-# dependency above specifically so this source pin actually applies — uv does not honor a
-# `tool.uv.sources` entry for a name that's only ever pulled in transitively. Left unpinned,
-# uv resolves the CUDA/GPU wheel by default on Linux — gigabytes of nvidia-* packages that
-# are both useless and unusable on Render's CPU-only free tier (caught building the Phase 6
-# Docker image: the GPU wheel alone was pulling >3GB of nvidia-cu* downloads). Local dev has
-# no GPU need either — embedding a handful of RAG chunks doesn't call for one.
-torch = [{ index = "pytorch-cpu" }]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
 
 [tool.ruff]
 line-length = 100

@@ -21,6 +21,58 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 6 — First deploy attempt OOM-killed; fixed via ADR-0013
+
+**Done**
+- Author pushed the image to GHCR and deployed via Render successfully — both real firsts.
+  Hit two configuration snags immediately, both fixed live: GHCR packages are private by
+  default (Render's pull 404'd until the package visibility was flipped to public), and the
+  first Render service was created as "New → Web Service" rather than "New → Blueprint,"
+  which builds `Dockerfile` from GitHub source directly and fails on the gitignored `COPY`s
+  by design (`Dockerfile`'s own comment already explains why that path can't work) —
+  recreating via Blueprint fixed it.
+- With both fixed, the container actually started pulling and running — then died with
+  `Exited with status 137` a few seconds after logging `loading artifact store…`. 137 is
+  SIGKILL. Diagnosed from the code before touching anything: `backend/routers/agent.py`
+  imports `backend.agents.supervisor` at module level, so importing `backend.main` — before
+  uvicorn even binds a port — pulls in `langchain → chromadb → sentence-transformers →
+  torch` unconditionally. `torch`'s runtime alone typically costs 300–500MB resident, against
+  Render free tier's 512MB ceiling. This is exactly the RAM risk flagged (and left open) when
+  the `pyproject.toml` dependency split was decided a few tasks ago — now confirmed real, not
+  hypothetical.
+- Presented the real options (pay for a bigger Render tier vs. swap the local embedding model
+  for an API-based one) and asked; author chose the API swap. Wrote ADR-0013:
+  `backend/rag/ingest.py`/`retrieve.py` now embed via `GoogleGenerativeAIEmbeddings`
+  (`gemini-embedding-001`), same `GEMINI_API_KEY` already in use, no new credential.
+  `torch`/`sentence-transformers` dropped from `pyproject.toml` entirely (`uv lock` also
+  dropped `transformers`, `sympy`, `safetensors`, `regex`, `mpmath` — none needed elsewhere).
+  `chroma_db` rebuilt from scratch (dimensions changed 384 → 3072, not additive) — 28 chunks
+  re-embedded in 2 batched `batchEmbedContents` calls, not 28 separate ones.
+- `docs/agents.md`'s RAG line explicitly said "never a paid embedding API" — that was a real
+  Phase 4 design principle, and this reverses it. Said so directly in both the doc and
+  ADR-0013 rather than quietly editing the line away.
+
+**Broke / learned**
+- Confirmed the fix with a hard local reproduction, not just a rebuild-and-hope:
+  `docker run --memory=512m --memory-swap=512m ...` against the new image, watched
+  `docker stats` through `/health`, `/hotspots`, `/weather`, `/auth/me` (401 with no token),
+  `/scenarios` (401), and the agent supervisor initializing — settled at 339MB against the
+  512MB limit. Image size 1.75GB, down from 3.22GB.
+- One real, disclosed open question, written into ADR-0013 rather than glossed over: whether
+  `gemini-embedding-001` shares the same scarce 20 req/day quota as `gemini-flash` chat
+  calls (ADR-0011), or has its own separate limit, is **not confirmed** — Google doesn't
+  publish free-tier per-model numbers, only "check AI Studio's dashboard." Same
+  honest-uncertainty position the original ~1,500/day chat estimate was in before a real 429
+  corrected it in production.
+
+**Next**
+- Re-push the fixed image to GHCR and redeploy on Render (`runbook.md` §4.1–4.2, author's own
+  action) — the previous push had the OOM bug baked in. Then Vercel (§4.3), close the
+  `CORS_ORIGINS`/`BACKEND_URL` loop (§4.4), and the Phase 6 exit criterion is the author's to
+  confirm.
+
+---
+
 ## 2026-07-28 — Phase 6 — Deployment: Dockerfile, CI, render.yaml (image built, not yet pushed)
 
 **Done**

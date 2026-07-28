@@ -13,6 +13,12 @@ whitespace-split words with 100 overlap. Close enough for English prose, and one
 part than loading a second tokenizer just to size chunks — the accuracy that matters here is
 retrieval quality, not chunk-boundary precision (`docs/conventions.md`'s "boring, explainable
 tech").
+
+Embeddings come from Gemini's API, not a local `sentence-transformers` model (ADR-0013) — the
+local model's `torch` runtime alone cost ~500MB resident, more than Render free tier's entire
+512MB budget, discovered via a live OOM kill deploying Phase 6. The trade is a live network
+call per embedding (ingest here, and one per retrieval in `retrieve.py`) against a rate limit
+of unconfirmed size, in exchange for a backend that actually boots.
 """
 
 from __future__ import annotations
@@ -23,13 +29,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import chromadb
-from sentence_transformers import SentenceTransformer
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from data_pipeline.config import get_settings
 
 log = logging.getLogger("urbanheat.rag.ingest")
 
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_MODEL = "models/gemini-embedding-001"
 COLLECTION_NAME = "policy_docs"
 CHUNK_WORDS = 800
 CHUNK_OVERLAP_WORDS = 100
@@ -109,6 +115,11 @@ def build_index(
 ) -> int:
     """Rebuild the Chroma collection from scratch. Returns the number of chunks indexed."""
     settings = get_settings()
+    if not settings.gemini_api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not set — ingest embeds via Gemini's API now, not a local "
+            "model (ADR-0013); see .env.example and runbook.md §1.2"
+        )
     kb_dir = knowledge_base_dir or (settings.data_dir / "knowledge_base")
     persist_dir = chroma_dir or settings.chroma_dir
     persist_dir.mkdir(parents=True, exist_ok=True)
@@ -117,8 +128,13 @@ def build_index(
     if not chunks:
         raise ValueError(f"{kb_dir} listed no documents with any extractable text")
 
-    model = SentenceTransformer(model_name, device="cpu")
-    embeddings = model.encode([c.text for c in chunks], show_progress_bar=False).tolist()
+    # google_api_key explicit, not left to the library's GOOGLE_API_KEY env-var default —
+    # this project's key lives in GEMINI_API_KEY (backend/agents/llm.py's get_llm() makes the
+    # same choice, for the same reason: one named place every Gemini client reads its key).
+    embedder = GoogleGenerativeAIEmbeddings(
+        model=model_name, google_api_key=settings.gemini_api_key
+    )
+    embeddings = embedder.embed_documents([c.text for c in chunks])
 
     client = chromadb.PersistentClient(path=str(persist_dir))
     if COLLECTION_NAME in {c.name for c in client.list_collections()}:

@@ -184,11 +184,20 @@ yourself, from a checkout with those artifacts already present:
 4. Re-run these two commands whenever the pipeline is re-run and the artifacts genuinely
    change — not on every code change. A backend-only code edit with no new data/model run can
    redeploy through Render's normal "Manual Deploy" (re-pulls the same tag) once GHCR has it.
+5. **GHCR packages are private by default.** Render pulling anonymously gets a 404
+   (`services[0].image: image "..." not found`) that reads like a typo, not a permissions
+   issue — hit live, 2026-07-28. Fix: [github.com/\<username\>?tab=packages](https://github.com)
+   → the package → **Package settings** → **Danger Zone** → **Change visibility** → **Public**.
+   Fine for this project — the image has no secrets baked in, those arrive as env vars at
+   runtime (4.2 below).
 
 ### 4.2 Deploy on Render
 
-1. [render.com](https://render.com) → sign in with GitHub → **New → Blueprint** → this repo.
-   Render reads `render.yaml` automatically.
+1. [render.com](https://render.com) → sign in with GitHub → **New → Blueprint** (not
+   **New → Web Service** — that one builds `Dockerfile` from the GitHub source directly,
+   which fails on the gitignored `COPY`s in 4.1's build; hit live, 2026-07-28, "Blueprint"
+   is what actually deploys the pushed image) → this repo. Render reads `render.yaml`
+   automatically.
 2. Edit `render.yaml`'s `image.url` first if the placeholder `OWNER` wasn't already replaced
    with the real GHCR path from 4.1.
 3. Render prompts for every `sync: false` env var in the blueprint at creation time —
@@ -196,6 +205,11 @@ yourself, from a checkout with those artifacts already present:
    values), and `CORS_ORIGINS` (leave as `http://localhost:5173` for now — fixed in 4.4).
 4. First deploy takes a minute or two to pull the image. `GET /health` on the assigned
    `onrender.com` URL once it's up.
+5. **If the deploy log shows `Exited with status 137`**, that's SIGKILL — almost always
+   Render free tier's 512MB memory ceiling. Hit live, 2026-07-28, traced to a local RAG
+   embedding model; fixed by ADR-0013 (Gemini's embedding API instead) — already applied if
+   deploying from this repo as-is. A hard local reproduction before trusting any future fix:
+   `docker run --memory=512m --memory-swap=512m ...` and watch `docker stats`.
 
 ### 4.3 Deploy the frontend on Vercel
 
@@ -261,6 +275,8 @@ yourself, from a checkout with those artifacts already present:
 | Gemini 403 `PERMISSION_DENIED` — "Your project has been denied access" | **Confirmed project-level, not key-level** (2026-07-27): a freshly generated key from the *same* AI Studio project hit the identical error. A new key alone will not fix this | Create a key under a **new** AI Studio project — [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → "Create API key" → new project, not the denied one — or contact Google support per the error's own text. Confirm the new key starts `AIzaSy...`. **Hit at the Phase 4 agents build (2026-07-27)** — see `devlog.md` — both `GEMINI_API_KEY` and `GROQ_API_KEY` were unusable at that point, so the four agents shipped with mock-tested wiring only; run one live call per agent once a key works, per that devlog entry |
 | Agent states a number no tool returned | Prompt/guardrail failure | Serious — fix before demo (`agents.md` §1) |
 | Render first request ~60 s | Free-tier cold start | Expected; wake beforehand |
+| Render deploy log: `Exited with status 137` | SIGKILL — free tier's 512MB memory ceiling. **Hit live, 2026-07-28**: `backend/routers/agent.py` imports the full agent stack at module level, so a local RAG embedding model (`torch`) was resident before the app even finished booting | Fixed by ADR-0013 (Gemini's embedding API, not a local model) — already applied in this repo. Reproduce locally before trusting any future fix: `docker run --memory=512m --memory-swap=512m ...`, watch `docker stats` |
+| Render Blueprint: `image "..." not found` | GHCR packages are private by default; an anonymous pull 404s | Make the package public — `runbook.md` §4.1 step 5 |
 | Render 5 GB bandwidth warning | `/city/grid` payload | Simplify geometry, gzip, raise cache TTL |
 | Supabase project paused | Free tier pauses when idle | Unpause in dashboard; expected over breaks (ADR-0004) |
 | Map blank, no errors | CRS mismatch | Storage/API is EPSG:4326; UTM 43N only for area maths |

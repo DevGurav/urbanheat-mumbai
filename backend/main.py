@@ -54,14 +54,17 @@ async def lifespan(app: FastAPI):
     # `backend.rag.ingest` yet, and a broken/missing GEMINI_API_KEY is a real, currently-open
     # issue (devlog.md 2026-07-27). Neither should stop the seven Phase 3 endpoints from
     # serving — /agent/chat degrades to a 503 instead (backend/routers/agent.py).
+    # RuntimeError, not just FileNotFoundError: Retriever now embeds via Gemini's API
+    # (ADR-0013), so a missing GEMINI_API_KEY fails construction the same way a missing
+    # index does — both are "no RAG today," not a reason to refuse to boot.
     app.state.retriever = None
     app.state.supervisor = None
     try:
         from backend.rag.retrieve import Retriever
 
         app.state.retriever = Retriever()
-    except FileNotFoundError as exc:
-        log.warning("RAG index not built, /agent/chat will 503: %s", exc)
+    except (FileNotFoundError, RuntimeError) as exc:
+        log.warning("RAG index unavailable, /agent/chat will 503: %s", exc)
 
     if app.state.retriever is not None:
         try:

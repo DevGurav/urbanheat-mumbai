@@ -86,8 +86,10 @@ sheets, IPCC AR6 urban excerpts, other cities' Heat Action Plans — added if a 
 need surfaces material only they contain. All public documents; sources listed in
 `references.md` §4.
 
-**Retrieval** ChromaDB embedded · `sentence-transformers/all-MiniLM-L6-v2` on CPU
-(never a paid embedding API) · ~800-token chunks, 100 overlap · top-k 4.
+**Retrieval** ChromaDB embedded · Gemini's `gemini-embedding-001` API (ADR-0013 — reverses
+the original "never a paid embedding API" call: the local `sentence-transformers`/`torch`
+alternative cost ~500MB resident, more than Render free tier's entire memory budget,
+discovered via a live OOM kill deploying Phase 6) · ~800-token chunks, 100 overlap · top-k 4.
 
 **Guardrails**
 - Answers about *the city* come from tools. Answers about *policy* come from retrieval with

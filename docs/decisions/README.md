@@ -29,6 +29,7 @@ decision → consequences.
 | [0010](0010-monitoring-agent-heatwave-rule.md) | Monitoring agent's heat-wave trigger rule | Accepted |
 | [0011](0011-drop-groq-fallback.md) | Drop the Groq fallback for the Phase 4 MVP | Accepted |
 | [0012](0012-alerts-stay-file-based.md) | Alerts stay file-based, not Supabase | Accepted |
+| [0013](0013-gemini-embeddings-not-local-model.md) | RAG embeddings via Gemini's API, not a local model | Accepted |
 
 ## Template
 

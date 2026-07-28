@@ -623,19 +623,24 @@ decided)
 ### Deployment
 
 - [X] `Dockerfile` for the backend (multi-stage, `uv`-based, existing-image deploy — Render
-  never builds from source, `Dockerfile`'s own comment has the why) — built and smoke-tested
-  locally against the real Supabase project (`/health`, `/hotspots`, `/weather`, `/explain`
-  all served real data; `/auth/me` and `/scenarios` correctly 401'd with no token; the RAG
-  agent supervisor initialized). Two real bloat bugs caught and fixed by actually building
-  the image, not assumed: `sentence-transformers`' transitive `torch` resolved the CUDA/GPU
-  wheel by default on Linux (~3GB of unusable nvidia-\* packages — pinned to the CPU-only
-  build via `tool.uv.sources`), and `xgboost`'s standard wheel bundles `nvidia-nccl-cu12`
-  (289MB) unconditionally for distributed GPU training never used here (swapped to the
-  official `xgboost-cpu` minimal build). Also fixed: `uv`'s download cache silently doubling
-  the image layer (BuildKit cache mounts), the container's `CMD` re-syncing dev dependencies
-  over the network at every boot (`uv run --no-sync`), and the RAG embedding model
-  re-downloading from HuggingFace at every cold start (pre-warmed into the image,
-  `HF_HUB_OFFLINE=1` at runtime) — final image 3.22GB, cold start now sub-second once pulled
+  never builds from source, `Dockerfile`'s own comment has the why). Several real bloat bugs
+  caught and fixed by actually building the image, not assumed: `sentence-transformers`'
+  transitive `torch` resolving the CUDA/GPU wheel by default on Linux, `xgboost`'s standard
+  wheel bundling `nvidia-nccl-cu12` unconditionally (swapped to `xgboost-cpu`), `uv`'s
+  download cache doubling the image layer (BuildKit cache mounts), the container's `CMD`
+  re-syncing dev dependencies over the network at every boot (`uv run --no-sync`)
+- [X] **First real deploy attempt OOM-killed (exit 137)** — confirmed the RAM risk flagged
+  at the dependency-split decision was real, not hypothetical. Traced to
+  `backend/routers/agent.py` importing `backend.agents.supervisor` at module level, which
+  pulls the full `langchain → chromadb → sentence-transformers → torch` chain in before
+  uvicorn even binds a port; `torch`'s runtime alone costs 300–500MB against Render free
+  tier's 512MB ceiling. **Fixed via ADR-0013** (asked, author confirmed): RAG embeddings now
+  go through Gemini's `gemini-embedding-001` API instead of a local model — `torch` and
+  `sentence-transformers` dropped entirely. `chroma_db` rebuilt (incompatible embedding
+  dimensions, 384 → 3072). Image now 1.75GB (from 3.22GB); smoke-tested with a hard
+  `docker run --memory=512m` limit matching Render exactly — real container, real Supabase
+  project, real endpoints (`/health`, `/hotspots`, `/weather`, `/auth/me` and `/scenarios`
+  correctly 401, agent supervisor initialized) — settled at 339MB, comfortable margin
 - [X] `pyproject.toml` split into base (backend runtime) `dependencies` and a `pipeline`
   optional-dependencies group (`earthengine-api`/`geemap`/`osmnx`/training-and-notebook-only
   tooling) — the Docker image installs the base set only, Render's free tier caps memory at
@@ -644,8 +649,10 @@ decided)
 - [ ] Frontend → Vercel; env vars (`VITE_API_BASE_URL` → the Render URL,
   `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`) set in the Vercel dashboard, never committed —
   author's own account action, `runbook.md` §4.3 has the steps
-- [ ] Push the image to GHCR and deploy on Render — author's own action (`docker build` +
-  `docker push` + Render Blueprint creation), `runbook.md` §4.1–4.2
+- [ ] Re-push the fixed image to GHCR and redeploy on Render — author's own action
+  (`docker build` + `docker push` + Render Blueprint, `runbook.md` §4.1–4.2). A first push +
+  deploy attempt happened during this task and hit the OOM above; the fixed image needs
+  pushing before the next deploy attempt
 - [ ] `CORS_ORIGINS` updated for the deployed Vercel origin — depends on 4.3 existing first,
   `runbook.md` §4.4
 - [ ] Set the `BACKEND_URL` GitHub Actions secret — activates the monitoring cron workflow

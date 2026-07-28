@@ -11,7 +11,9 @@
 # Installs pyproject.toml's base `dependencies` only, not the `pipeline` extra —
 # earthengine-api/geemap/osmnx/lightgbm/shap etc. are confirmed unused by backend/main.py's
 # import graph (pyproject.toml's own comment has the detail), and Render's free tier caps
-# memory at 512MB.
+# memory at 512MB — the reason RAG embeddings go through Gemini's API now, not a local
+# `sentence-transformers`/`torch` model (ADR-0013): that local path's `torch` runtime alone
+# cost ~500MB resident, discovered via a live OOM kill on the first real deploy attempt.
 
 FROM python:3.12-slim-bookworm
 COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
@@ -48,18 +50,6 @@ COPY models/model.joblib models/model_meta.json models/shap_values.parquet model
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
-
-# Pre-warm the RAG embedding model into the image at build time, on a reliable network, once
-# — rather than every container boot re-downloading it from HuggingFace at request time.
-# Caught via the smoke-test container's own startup log: ~34s spent on HF Hub HTTP calls
-# before "agent supervisor ready", stacking on top of Render's own free-tier cold start.
-# HF_HUB_OFFLINE=1 at runtime then trusts this baked-in cache and skips the network
-# entirely — deterministic startup, not dependent on HuggingFace being reachable on boot.
-ENV HF_HOME=/app/.cache/huggingface
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv run --no-sync python -c \
-    "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
-ENV HF_HUB_OFFLINE=1
 
 EXPOSE 8000
 # --no-sync: the venv above is already exactly what --frozen --no-dev built; a plain
