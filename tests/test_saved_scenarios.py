@@ -174,10 +174,21 @@ def test_post_scenarios_creates_and_returns_the_row(client, monkeypatch):
 
 
 def test_get_scenarios_lists_rows(client, monkeypatch):
+    # backend.auth and backend.saved_scenarios both call `requests.get` on the *same* shared
+    # `requests` module object — the login check (GET /auth/v1/user) and this listing call
+    # (GET /rest/v1/saved_scenarios) can't be mocked with two separate monkeypatch.setattr
+    # calls on `.get`, the second would silently clobber the first. One dispatcher, keyed on
+    # URL, stands in for both.
     _authenticate(monkeypatch)
+    fake_user_response = MagicMock(status_code=200)
+    fake_user_response.json.return_value = {"id": "user-42", "email": "planner@example.com"}
     fake_list_response = MagicMock(status_code=200)
     fake_list_response.json.return_value = [_row(), _row(id="row-2")]
-    monkeypatch.setattr(store_module.requests, "get", lambda *a, **kw: fake_list_response)
+
+    def fake_get(url, *a, **kw):
+        return fake_user_response if "auth/v1/user" in url else fake_list_response
+
+    monkeypatch.setattr(store_module.requests, "get", fake_get)
 
     resp = client.get("/scenarios", headers={"Authorization": "Bearer sometoken"})
 

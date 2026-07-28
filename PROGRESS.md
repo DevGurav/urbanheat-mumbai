@@ -622,14 +622,38 @@ decided)
 
 ### Deployment
 
-- [ ] `Dockerfile` for the backend (multi-stage, `uv`-based) → Render (free, Docker)
+- [X] `Dockerfile` for the backend (multi-stage, `uv`-based, existing-image deploy — Render
+  never builds from source, `Dockerfile`'s own comment has the why) — built and smoke-tested
+  locally against the real Supabase project (`/health`, `/hotspots`, `/weather`, `/explain`
+  all served real data; `/auth/me` and `/scenarios` correctly 401'd with no token; the RAG
+  agent supervisor initialized). Two real bloat bugs caught and fixed by actually building
+  the image, not assumed: `sentence-transformers`' transitive `torch` resolved the CUDA/GPU
+  wheel by default on Linux (~3GB of unusable nvidia-\* packages — pinned to the CPU-only
+  build via `tool.uv.sources`), and `xgboost`'s standard wheel bundles `nvidia-nccl-cu12`
+  (289MB) unconditionally for distributed GPU training never used here (swapped to the
+  official `xgboost-cpu` minimal build). Also fixed: `uv`'s download cache silently doubling
+  the image layer (BuildKit cache mounts), the container's `CMD` re-syncing dev dependencies
+  over the network at every boot (`uv run --no-sync`), and the RAG embedding model
+  re-downloading from HuggingFace at every cold start (pre-warmed into the image,
+  `HF_HUB_OFFLINE=1` at runtime) — final image 3.22GB, cold start now sub-second once pulled
+- [X] `pyproject.toml` split into base (backend runtime) `dependencies` and a `pipeline`
+  optional-dependencies group (`earthengine-api`/`geemap`/`osmnx`/training-and-notebook-only
+  tooling) — the Docker image installs the base set only, Render's free tier caps memory at
+  512MB
+- [X] `render.yaml` blueprint (existing-image `runtime: image`) + `.dockerignore`
 - [ ] Frontend → Vercel; env vars (`VITE_API_BASE_URL` → the Render URL,
-  `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`) set in the Vercel dashboard, never committed
-- [ ] `CORS_ORIGINS` updated for the deployed Vercel origin
+  `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`) set in the Vercel dashboard, never committed —
+  author's own account action, `runbook.md` §4.3 has the steps
+- [ ] Push the image to GHCR and deploy on Render — author's own action (`docker build` +
+  `docker push` + Render Blueprint creation), `runbook.md` §4.1–4.2
+- [ ] `CORS_ORIGINS` updated for the deployed Vercel origin — depends on 4.3 existing first,
+  `runbook.md` §4.4
 - [ ] Set the `BACKEND_URL` GitHub Actions secret — activates the monitoring cron workflow
-  that's been correctly built and inert since Phase 4 (`.github/workflows/monitoring.yml`)
-- [ ] CI: a GitHub Actions workflow running `pytest`/`ruff` and `tsc`/`oxlint` on push/PR —
-  not yet built; distinct from the monitoring cron workflow
+  that's been correctly built and inert since Phase 4 (`.github/workflows/monitoring.yml`),
+  author's own action, `runbook.md` §4.4
+- [X] CI: `.github/workflows/ci.yml` — `pytest`/`ruff` and `tsc`/`oxlint` on push/PR, distinct
+  from the monitoring cron workflow. Runs the pure-logic + mocked-external-service suite only
+  (conftest.py's existing skip pattern) — no Earth Engine credentials in CI, by design
 
 ### Exit
 

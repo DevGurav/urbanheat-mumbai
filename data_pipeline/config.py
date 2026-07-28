@@ -29,7 +29,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    gee_project_id: str = Field(description="Cloud project registered for Earth Engine")
+    # Empty default, not required — the same reasoning as gemini_api_key below: the deployed
+    # backend (Phase 6) shares this same Settings class but never touches Earth Engine, so it
+    # must still boot without this set. A pipeline stage that actually calls ee.Initialize()
+    # with an empty project id fails loudly at that call, not silently — the right place for
+    # this to surface is point-of-use, same as every other Phase 4+ credential here.
+    gee_project_id: str = Field(default="", description="Cloud project registered for Earth Engine")
     data_dir: Path = Field(default=Path("data"))
     model_dir: Path = Field(default=Path("models"))
 

@@ -21,6 +21,78 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 6 — Deployment: Dockerfile, CI, render.yaml (image built, not yet pushed)
+
+**Done**
+- Split `pyproject.toml`'s single dependency list into base `dependencies` (what
+  `backend/main.py`'s import graph actually needs) and a `pipeline` optional-dependencies
+  group (`earthengine-api`, `geemap`, `osmnx`, `lightgbm`, `shap`, notebook tooling, the
+  unused-since-ADR-0011 `langchain-groq`, the never-imported `pypdf`) — asked first, author
+  picked the split over shipping everything, since Render's free tier caps memory at 512MB
+  and `sentence-transformers` alone already spends real margin against that.
+- `Dockerfile` — multi-stage, `uv`-based, installs the base set only. Bakes in the gitignored
+  `data/processed/*`, `models/*`, and `backend/rag/chroma_db/` this project has never
+  committed (ADR-0004) — asked first, author picked "build and push a pre-built image
+  locally" over "regenerate artifacts in Render's build," since neither Render nor GitHub
+  Actions has Earth Engine credentials or the compute quota to do that, and ADR-0004 already
+  frames "regenerate" as the author's own deliberate action, not CI's.
+- `render.yaml` (existing-image blueprint), `.dockerignore`, `.github/workflows/ci.yml`
+  (pytest/ruff + tsc/oxlint on push/PR — distinct from `monitoring.yml`'s cron trigger).
+- Rewrote `runbook.md` §4 with the real deploy sequence (backend → frontend → close the
+  CORS/BACKEND_URL loop) and fixed two stale entries found while touching the file: §1.3
+  still called the (already-dropped, ADR-0011) Groq key "recommended," and the troubleshooting
+  table still said "fallback to Groq" / "Daily 1,500 exhausted" for Gemini 429s — both
+  superseded earlier this same phase (§1.3, §5.3) but never propagated here.
+
+**Broke / learned — all caught by actually building and running the image, not assumed**
+- `sentence-transformers`' transitive `torch` resolved the CUDA/GPU wheel by default on
+  Linux — `docker history` showed a single layer at 3.94GB, dominated by ~20 `nvidia-*`
+  packages (cudnn, cusparselt, nccl, cufft, cusolver, ...) totally unusable on Render's
+  CPU-only free tier. Fixed via `tool.uv.sources` pinning `torch` to
+  `download.pytorch.org/whl/cpu` — but this only took effect once `torch` was listed as a
+  *direct* dependency; uv does not honor a source override for a name that only ever
+  appears transitively.
+- `xgboost`'s standard wheel bundles `nvidia-nccl-cu12` (289MB) unconditionally on Linux, for
+  distributed multi-GPU training this solo-laptop project has never used (ADR-0006 chose
+  gradient-boosted trees partly to avoid exactly this kind of infra). Swapped to
+  `xgboost-cpu` — an official minimal build from the same maintainers, same `import xgboost`
+  namespace, confirmed via PyPI's own package description before trusting the swap.
+- `uv`'s own download cache was sitting in the same image layer as the installed packages —
+  a 3.94GB layer against a 2.1GB actual `.venv`, nearly 2GB of pure waste. Fixed with
+  BuildKit `--mount=type=cache` on both `uv sync` steps, so the cache lives outside the
+  image entirely.
+- The container's `CMD` used plain `uv run uvicorn ...`, which re-syncs the environment
+  against `pyproject.toml` at *every* container start — with none of the build's
+  `--frozen --no-dev` flags, so it happily installed `ruff` (a dev-only tool) over the
+  network on every boot. Caught by reading the smoke-test container's own startup log, which
+  showed `Downloading ruff` where nothing should have downloaded at all. Fixed with
+  `uv run --no-sync`.
+- The RAG embedding model (`sentence-transformers/all-MiniLM-L6-v2`) was re-downloading from
+  HuggingFace at every cold start — ~34s of the container's startup spent on HTTP calls to
+  `huggingface.co`, stacking on top of Render's own free-tier cold start. Pre-warmed the
+  model into the image at build time and set `HF_HUB_OFFLINE=1` at runtime; the same
+  container went from "agent supervisor ready" at +34s to +0s (no HF log lines at all on the
+  rebuild).
+- End state: image builds cleanly at 3.22GB (down from an initial 5.29GB, most of the
+  remainder legitimate weight — torch-cpu, chromadb+onnxruntime, the geopandas stack, not
+  waste), smoke-tested with the real `.env` against the live Supabase project:
+  `/health`/`/hotspots`/`/weather`/`/explain` served real data, `/auth/me` and `/scenarios`
+  correctly 401'd with no token, and the agent supervisor initialized (without spending a
+  real Gemini call — confirmed via the startup log's "agent supervisor ready" line, not by
+  actually hitting `/agent/chat`).
+- Also caught, unrelated to Docker: `data_pipeline/config.py`'s `gee_project_id` had no
+  default, meaning `Settings()` — which the backend also depends on — would refuse to
+  instantiate without it, crashing the deployed backend on startup over a field it never
+  reads. Given an empty default like every other Phase 4+ credential.
+
+**Next**
+- Actually pushing the image to GHCR and creating the Render/Vercel services is the author's
+  own action (`runbook.md` §4.1–4.3) — same pattern as every other external account this
+  project has needed. Once both exist: close the `CORS_ORIGINS`/`BACKEND_URL` loop (§4.4) and
+  the Phase 6 exit criterion — public URLs working end to end — is the author's to confirm.
+
+---
+
 ## 2026-07-28 — Phase 6 — Saved scenarios (RLS-backed CRUD, live-verified)
 
 **Done**

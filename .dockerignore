@@ -1,0 +1,39 @@
+# Deliberately NOT a copy of .gitignore. The Dockerfile bakes in gitignored artifacts
+# (data/processed/*.parquet, models/*, backend/rag/chroma_db/ — Dockerfile's own comment has
+# the why), so none of those are excluded here. This only trims things the image genuinely
+# never needs: local tooling, the frontend (deployed separately, to Vercel — runbook.md), and
+# pipeline inputs/intermediates the backend never reads (data/raw, data/interim, the OSMnx
+# Overpass cache).
+
+.git/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+frontend/
+notebooks/
+tests/
+
+data/raw/
+data/interim/
+data/knowledge_base/
+cache/
+
+# Local dedupe/log state — a fresh deployment starts clean (backend/agents/alerts.py), not
+# seeded from whatever the author's own machine happened to check last.
+data/processed/alerts_state.json
+data/processed/alerts.jsonl
+
+# Training-time-only artifact (data_pipeline/ml/explain.py); never read by backend/store.py.
+models/shap_global.json
+
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

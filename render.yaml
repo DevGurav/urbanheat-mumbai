@@ -1,0 +1,37 @@
+# Render Blueprint — Phase 6 Deployment (PROGRESS.md).
+#
+# `runtime: image`, not `runtime: docker` with a build context: Render never builds this
+# image from source (Dockerfile's own comment has the why — the gitignored data/model/RAG
+# artifacts it bakes in only exist on the author's own machine). The author builds and pushes
+# to GHCR locally; this blueprint just points Render at whatever tag is currently there.
+#
+# Dashboard → New → Blueprint → this repo picks this file up automatically. Env vars marked
+# `sync: false` are secrets Render prompts for at blueprint creation and never stores in this
+# committed file (runbook.md's Deployment section has the values to paste in).
+
+services:
+  - type: web
+    name: urbanheat-api
+    runtime: image
+    image:
+      url: ghcr.io/OWNER/urbanheat-api:latest # replace OWNER — runbook.md
+    plan: free
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      # The deployed Vercel origin — set once that URL exists (runbook.md's deploy order:
+      # backend first, so this stays the placeholder until the frontend has a real domain).
+      - key: CORS_ORIGINS
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO

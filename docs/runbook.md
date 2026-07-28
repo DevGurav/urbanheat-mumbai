@@ -154,10 +154,66 @@ cd frontend && npm run dev               # → http://localhost:5173
 
 ---
 
-## 4. Deployment *[Phase 6]*
+## 4. Deployment
 
-Backend → Render (Docker, free) · Frontend → Vercel · DB → Supabase · Cron → GitHub Actions.
-Env vars set in each dashboard, never committed. Steps filled in when this is real.
+Backend → Render (existing Docker image, free) · Frontend → Vercel · DB → Supabase (§1.4,
+already done) · Cron → GitHub Actions (already built, `.github/workflows/monitoring.yml`).
+Env vars set in each dashboard, never committed.
+
+**Order matters** — the backend needs to exist before the frontend has a real
+`VITE_API_BASE_URL` to point at, and `CORS_ORIGINS` needs the frontend's real Vercel origin,
+so do backend → frontend → go back and fix `CORS_ORIGINS` once the Vercel URL exists.
+
+### 4.1 Push the backend image
+
+Render never builds this image from source (`Dockerfile`'s own comment has the why — the
+gitignored `data/processed/*`, `models/*`, and `backend/rag/chroma_db/` this image bakes in
+only exist locally, on whichever machine actually ran the pipeline). Build and push it
+yourself, from a checkout with those artifacts already present:
+
+1. [github.com/settings/tokens](https://github.com/settings/tokens) → generate a **classic**
+   token with `write:packages` scope (GHCR — GitHub's own registry, no new account needed,
+   the same GitHub sign-in every other Phase 6 piece already uses).
+2. `docker login ghcr.io -u <github-username>` → paste the token as the password.
+3. From the repo root:
+
+   ```sh
+   docker build -t ghcr.io/<github-username>/urbanheat-api:latest .
+   docker push ghcr.io/<github-username>/urbanheat-api:latest
+   ```
+4. Re-run these two commands whenever the pipeline is re-run and the artifacts genuinely
+   change — not on every code change. A backend-only code edit with no new data/model run can
+   redeploy through Render's normal "Manual Deploy" (re-pulls the same tag) once GHCR has it.
+
+### 4.2 Deploy on Render
+
+1. [render.com](https://render.com) → sign in with GitHub → **New → Blueprint** → this repo.
+   Render reads `render.yaml` automatically.
+2. Edit `render.yaml`'s `image.url` first if the placeholder `OWNER` wasn't already replaced
+   with the real GHCR path from 4.1.
+3. Render prompts for every `sync: false` env var in the blueprint at creation time —
+   `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY` (§1.2, §1.4's
+   values), and `CORS_ORIGINS` (leave as `http://localhost:5173` for now — fixed in 4.4).
+4. First deploy takes a minute or two to pull the image. `GET /health` on the assigned
+   `onrender.com` URL once it's up.
+
+### 4.3 Deploy the frontend on Vercel
+
+1. [vercel.com](https://vercel.com) → sign in with GitHub → **New Project** → this repo.
+2. **Root Directory** → `frontend` (the only non-default setting Vercel needs; it
+   auto-detects the Vite framework preset from there).
+3. **Environment Variables** → `VITE_API_BASE_URL` (the Render URL from 4.2),
+   `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (same values as §1.4 — the anon key is meant
+   to be public, `docs/architecture.md` §7's trust boundary).
+4. Deploy. Vercel assigns a `.vercel.app` URL.
+
+### 4.4 Close the loop
+
+1. Render dashboard → this service → **Environment** → set `CORS_ORIGINS` to the real Vercel
+   URL from 4.3 → save (redeploys automatically).
+2. GitHub repo → **Settings → Secrets and variables → Actions** → new secret `BACKEND_URL` =
+   the Render URL from 4.2. Activates `.github/workflows/monitoring.yml`, inert since Phase 4.
+3. Open the Vercel URL. Every section should load real data against the real backend.
 
 ---
 
@@ -200,8 +256,8 @@ Env vars set in each dashboard, never committed. Steps filled in when this is re
 | Cells missing from composite | Cloud-masked to nothing | Widen year range; flag low-observation cells (`data-dictionary.md` §5) |
 | R² suspiciously high (>0.95) | Random split leaking spatial autocorrelation | Use blocked CV (`ml-methodology.md` §2) — this is expected, not a win |
 | SHAP says vegetation warms | Model or feature bug | Stop. Investigate before proceeding — physics gate (`ml-methodology.md` §4) |
-| Gemini 429 | Free tier ~10 req/min | Backoff; fallback to Groq; cache |
-| Gemini 429 all day | Daily 1,500 exhausted | Resets midnight Pacific; use Groq meanwhile |
+| Gemini 429 | Free tier ~10 req/min | `ChatGoogleGenerativeAI`'s own retry/backoff absorbs it; `Supervisor`'s response cache avoids repeat calls |
+| Gemini 429 all day | Real measured daily limit is **20 req/day** for this project (`BLUEPRINT.md`, not the ~1,500 first assumed) | Resets daily; no fallback provider (ADR-0011) — warm the cache before a demo (§5.2), wait for reset otherwise |
 | Gemini 403 `PERMISSION_DENIED` — "Your project has been denied access" | **Confirmed project-level, not key-level** (2026-07-27): a freshly generated key from the *same* AI Studio project hit the identical error. A new key alone will not fix this | Create a key under a **new** AI Studio project — [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → "Create API key" → new project, not the denied one — or contact Google support per the error's own text. Confirm the new key starts `AIzaSy...`. **Hit at the Phase 4 agents build (2026-07-27)** — see `devlog.md` — both `GEMINI_API_KEY` and `GROQ_API_KEY` were unusable at that point, so the four agents shipped with mock-tested wiring only; run one live call per agent once a key works, per that devlog entry |
 | Agent states a number no tool returned | Prompt/guardrail failure | Serious — fix before demo (`agents.md` §1) |
 | Render first request ~60 s | Free-tier cold start | Expected; wake beforehand |

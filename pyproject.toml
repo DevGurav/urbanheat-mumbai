@@ -7,40 +7,69 @@ readme = "README.md"
 # and a source build needs a GEOS/PROJ toolchain that is painful on Windows.
 requires-python = ">=3.11,<3.14"
 
+# Everything `backend/main.py` actually imports, directly or through `data_pipeline.config`/
+# `data_pipeline.ml.*` (the two modules the backend touches — checked by grepping backend/'s
+# import graph, Phase 6 kickoff, PROGRESS.md's Deployment task). This is the set the Docker
+# image installs: Render's free tier caps memory at 512MB, and `sentence-transformers` alone
+# (real RAG, not optional) already spends real margin against that, so nothing unused rides
+# along. Data-acquisition and training-only tooling lives in the `pipeline` extra below.
 dependencies = [
-    # --- Earth Engine (Phase 0+) ---
-    "earthengine-api>=1.4",
-    "geemap>=0.35",
-    # --- Geospatial (Phase 1+) ---
+    # --- Geospatial (Phase 1+) — features.parquet is geopandas-read at every request ---
     "geopandas>=1.0",
-    # GeoParquet writer for the feature table and grid intermediates.
     "pyarrow>=17",
-    # OpenStreetMap buildings/roads/parks via Overpass (Phase 1 OSM stage).
-    "osmnx>=2.0",
-    # Open-Meteo historical weather archive (keyless HTTP).
     "requests>=2.32",
-    # --- ML (Phase 2+) ---
+    # --- ML (Phase 2+) — model.joblib unpickles to an XGBRegressor (xgboost's sklearn
+    # wrapper, data_pipeline/ml/train.py), so both packages are needed to load it, not just
+    # xgboost. SHAP values are precomputed at train time and stored as shap_values.parquet —
+    # the `shap` package itself is never imported here, only pandas reads its output.
     "scikit-learn>=1.5",
-    "xgboost>=2.0",
-    "lightgbm>=4.3",
+    # The official minimal build (same maintainers, same `import xgboost` namespace) — the
+    # regular `xgboost` wheel bundles nvidia-nccl-cu12 (289MB) unconditionally on Linux for
+    # distributed multi-GPU training, a capability this solo-laptop project has never used
+    # (ADR-0006 chose gradient-boosted trees partly to avoid exactly this kind of GPU/cluster
+    # infra). Caught the same way as the torch CUDA issue above: watching the Docker build.
+    "xgboost-cpu>=2.0",
     "joblib>=1.4",
-    "shap>=0.46",
     # --- Backend (Phase 3+) ---
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     # --- Config ---
     "python-dotenv>=1.0",
     "pydantic-settings>=2.4",
-    # --- Notebook runtime ---
-    "ipykernel>=6.29",
-    "ipywidgets>=8.1",
-    "jupyterlab>=4.2",
+    # --- Agents (Phase 4+) ---
     "langchain>=1.3.14",
     "langgraph>=1.2.9",
     "langchain-google-genai>=4.3.1",
-    "langchain-groq>=1.1.3",
     "chromadb>=1.5.9",
     "sentence-transformers>=5.6.1",
+    # Explicit, not just transitive via sentence-transformers: needed so the CPU-only source
+    # pin below (tool.uv.sources) actually applies during resolution.
+    "torch>=2.0",
+]
+
+[project.optional-dependencies]
+# Data acquisition, training, and notebook tooling — run once, deliberately, on the author's
+# own machine (ADR-0004), never at request time. `uv sync --extra pipeline` for pipeline work
+# or the full test suite; the Docker image never installs this extra.
+pipeline = [
+    "earthengine-api>=1.4",
+    "geemap>=0.35",
+    # OpenStreetMap buildings/roads/parks via Overpass (Phase 1 OSM stage).
+    "osmnx>=2.0",
+    # Training-time only: data_pipeline/ml/train.py compares it against XGBoost, but the
+    # shipped model.joblib is XGBoost (store.py), so backend never needs lightgbm installed.
+    "lightgbm>=4.3",
+    # Explanation values are computed once at train time and shipped as shap_values.parquet
+    # (data_pipeline/ml/explain.py) — the library itself is a training-time tool.
+    "shap>=0.46",
+    "ipykernel>=6.29",
+    "ipywidgets>=8.1",
+    "jupyterlab>=4.2",
+    # Unused as of ADR-0011 (Groq fallback dropped) — kept for the "Revisit if" case there,
+    # not imported anywhere today.
+    "langchain-groq>=1.1.3",
+    # Ad-hoc source-document conversion for the RAG knowledge base (docs/references.md) —
+    # not called by any committed module; used interactively when a new PDF source is added.
     "pypdf>=6.14.2",
 ]
 
@@ -56,6 +85,21 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["data_pipeline", "backend"]
+
+[tool.uv.sources]
+# torch is needed for `sentence-transformers` (real RAG, Phase 4), and is listed as a direct
+# dependency above specifically so this source pin actually applies — uv does not honor a
+# `tool.uv.sources` entry for a name that's only ever pulled in transitively. Left unpinned,
+# uv resolves the CUDA/GPU wheel by default on Linux — gigabytes of nvidia-* packages that
+# are both useless and unusable on Render's CPU-only free tier (caught building the Phase 6
+# Docker image: the GPU wheel alone was pulling >3GB of nvidia-cu* downloads). Local dev has
+# no GPU need either — embedding a handful of RAG chunks doesn't call for one.
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.ruff]
 line-length = 100

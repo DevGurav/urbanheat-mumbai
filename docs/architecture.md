@@ -9,9 +9,11 @@ and updated as phases land. As of **Phase 5**, the whole local stack runs end to
 → the HVI and the scenario engine (`data_pipeline/ml/`) — the **REST API layer (§2)** over it
 (all ten data/model/scenario/agent endpoints), the **LangGraph orchestration (§2)** on top of
 that (a supervisor routing to three tool-calling agents, plus a cron-only Monitoring agent),
-and now the **React dashboard (§2)** consuming all of it from the browser. Only **Supabase**
-(§2, §6) and actual deployment remain ⬜ — Phase 6 is entirely about the gap between "runs
-locally" and public URLs, not new product surface.
+and now the **React dashboard (§2)** consuming all of it from the browser, with real Auth and
+Postgres-RLS-backed saved scenarios (§2) against a provisioned Supabase project. Only the
+**actual deploy** (§6 — a built, smoke-tested Docker image not yet pushed or pointed at by a
+running Render service) remains — Phase 6 is entirely about the gap between "runs locally"
+and public URLs, not new product surface.
 
 ---
 
@@ -76,7 +78,7 @@ flowchart TB
         MDL[(model.pkl<br/>+ SHAP)]
         VEC[(ChromaDB<br/>policy docs)]
         ALOG[(alerts.jsonl<br/>file — ADR-0012)]
-        SUPA[(Supabase 🟨 — schema written<br/>users · saved scenarios)]
+        SUPA[(Supabase ✅ — provisioned, RLS live-verified<br/>users · saved scenarios)]
     end
 
     FE <-->|HTTPS / JSON| API
@@ -165,12 +167,14 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     U[Browser] -->|HTTPS| V[Vercel<br/>static React 🟨 — built locally, not deployed]
-    V -->|HTTPS/JSON| R[Render free<br/>Dockerised FastAPI ⬜]
-    R --> S[(Supabase free<br/>Postgres + Auth 🟨 — schema written, not provisioned)]
+    V -->|HTTPS/JSON| R[Render free<br/>Dockerised FastAPI 🟨 — image built + smoke-tested, not deployed]
+    R --> S[(Supabase free<br/>Postgres + Auth ✅ — provisioned, RLS live-verified)]
     R -->|keyed| G[Gemini Flash<br/>free tier]
     R --> OM[Open-Meteo]
+    GHCR[(GHCR<br/>pre-built image 🟨 — built locally, not pushed)] -->|pulled by| R
     GA[GitHub Actions<br/>daily cron 🟨 — built, inert until BACKEND_URL exists] -->|trigger| R
-    GA -.CI.-> V
+    CI[GitHub Actions<br/>CI ✅ — pytest/ruff, tsc/oxlint] -.on push/PR.-> V
+    CI -.-> R
 ```
 
 **Free-tier realities baked into the design**
