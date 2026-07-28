@@ -508,12 +508,29 @@ Vitest/RTL suite for a solo dashboard).
 
 ### Copilot chat
 
-- [ ] Chat UI → `POST /agent/chat`; multi-second "thinking" state (LLM-bound, not a bug)
-- [ ] Tool-call transparency — show what was called, `api-reference.md`'s "the panel will ask"
-- [ ] Honest handling of both 503s (`agent_layer_unavailable`, `agent_upstream_unavailable`)
-  and a visible quota-awareness cue, given the real measured 20 req/day cap (`BLUEPRINT.md`,
-  ADR-0011) — this is the one section most likely to hit a real rate limit during a live demo
-- [ ] Render the optional GeoJSON `layer` on the map when a response includes one
+- [X] Chat UI → `POST /agent/chat`; multi-second "thinking" state (LLM-bound, not a bug) —
+  `src/sections/Chat.tsx`. Local turn history only (user/assistant/error bubbles) — the
+  backend has no conversation memory (`session_id` is accepted but unused), so there is
+  nothing further to keep in sync
+- [X] Tool-call transparency — a collapsed-by-default "Show N tool calls" disclosure per
+  reply, expanding to real tool name + args + a truncated JSON result per call
+  (`api-reference.md`'s "the panel will ask")
+- [X] Honest handling of both 503s (`agent_layer_unavailable`, `agent_upstream_unavailable`)
+  with distinct messages, and a persistent info banner naming the real measured 20 req/day
+  cap (`BLUEPRINT.md`, ADR-0011) — this is the one section most likely to hit a real rate
+  limit during a live demo
+- [X] Render the optional GeoJSON `layer` on the map when a response includes one — reuses
+  the sequential-cooling color scale from `Scenario.tsx`
+- [X] **Added `react-markdown`, not in the original task list** — found live: every real
+  Copilot/Planning response uses markdown heavily (headers, bold, lists), and rendering it as
+  literal `**`/`###` text was a real, visible readability bug affecting every reply, not a
+  cosmetic nice-to-have. Small, standard dependency, scoped to this one rendering concern
+- [X] Verified live with **one real LLM call, deliberately** ("Which ward in Mumbai is
+  hottest?" → Copilot → `get_hotspots` + `explain_ward` → Ward L, 43.18 °C, matching every
+  earlier verification of this same fact this phase). Re-sending the identical question
+  after adding `react-markdown` was a cache hit (near-instant, no new tool calls) —
+  confirms `Supervisor`'s `(question, data_version)` cache works correctly, as a bonus,
+  not just the rendering fix. Zero console errors
 
 ### Alerts feed
 

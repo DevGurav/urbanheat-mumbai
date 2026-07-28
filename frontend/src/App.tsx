@@ -2,6 +2,7 @@ import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material";
 import { useState } from "react";
 
 import { Analytics } from "./sections/Analytics";
+import { Chat } from "./sections/Chat";
 import { HeatMap } from "./sections/HeatMap";
 import { Placeholder } from "./sections/Placeholder";
 import { Scenario } from "./sections/Scenario";
@@ -43,7 +44,7 @@ function App() {
         {section === "map" && <HeatMap />}
         {section === "analytics" && <Analytics />}
         {section === "scenario" && <Scenario />}
-        {section === "chat" && <Placeholder title="Copilot" />}
+        {section === "chat" && <Chat />}
         {section === "alerts" && <Placeholder title="Alerts" />}
       </Box>
     </Box>

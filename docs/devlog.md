@@ -21,6 +21,50 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 5 — Copilot chat
+
+**Done**
+- `src/sections/Chat.tsx` — a local turn history (user/assistant/error bubbles), `POST
+  /agent/chat`, a collapsed-by-default tool-call disclosure per reply, an optional map for a
+  returned `layer`, and a persistent info banner naming the real 20 req/day quota
+  (`BLUEPRINT.md`) up front rather than only surfacing it after a request fails.
+- Distinct handling for the two 503s `api-reference.md` documents:
+  `agent_layer_unavailable` ("not configured at all") vs. `agent_upstream_unavailable`
+  ("configured but the call failed — likely quota") get different messages, since they mean
+  different things and imply different next steps for whoever's looking at the screen.
+- Deliberately spent exactly **one** real LLM call to verify this: "Which ward in Mumbai is
+  hottest?" → Copilot → `get_hotspots` + `explain_ward` → Ward L, 43.18 °C — the same fact
+  independently confirmed four separate times now this phase (the live agent smoke test, the
+  Analytics HVI ranking, the Scenario simulator, and now the chat UI), each through a
+  different code path. Re-sent the identical question after the markdown fix below and got a
+  cache hit (near-instant, zero new tool calls) — confirmed `Supervisor`'s response cache
+  works, essentially for free, as a side effect of re-verifying the UI fix.
+
+**Decided**
+- Added `react-markdown` — not in the original task list, but found live: the real Copilot
+  reply came back full of `**bold**` and `### headers` rendered as literal asterisks and
+  hashes, since `Typography` was just printing the raw string. Every real Copilot/Planning
+  response uses markdown heavily (seen consistently since the first live agent test), so this
+  wasn't cosmetic — it affected every single reply's readability. Small, standard, scoped
+  to exactly this rendering concern.
+
+**Broke / learned**
+- Nothing broke in the application code this entry — the two real bugs this session (the
+  markdown rendering, confirmed above) were caught and fixed in the same pass. Worth noting
+  instead: local dev tooling friction, not app bugs — `uv run uvicorn ... &` backgrounded via
+  plain shell `&`/`disown` silently failed to redirect output on this Windows/Git-Bash setup
+  more than once (empty log files, but the process was sometimes still actually running and
+  bound to the port underneath the failed-looking check). Switching to the Bash tool's own
+  `run_in_background` for both the backend and the dev server fixed the flakiness for the
+  rest of this session — worth remembering for Alerts, next.
+
+**Next**
+- Alerts feed: `GET /alerts` polling list, severity-coded, an honest "no active alerts" empty
+  state — the last of the five sections. Then the Phase 5 exit criterion: a full end-to-end
+  local demo, author-verified.
+
+---
+
 ## 2026-07-28 — Phase 5 — Scenario simulator
 
 **Done**
