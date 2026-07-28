@@ -51,7 +51,7 @@ not a silent hang or a fabricated answer.
 ## Consequences
 
 **Positive**
-- One credential to manage, one provider's response shape to defend at a viva, one fewer
+- One credential to manage, one provider's response shape to defend, one fewer
   moving part in the demo-day failure surface.
 - The cache is the change that actually matters for the scenario a fallback would have
   covered in practice (repeat questions during a demo) — building both would have been

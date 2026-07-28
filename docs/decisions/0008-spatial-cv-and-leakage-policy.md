@@ -14,7 +14,7 @@ performance is honest or an artefact — they are settled together because they 
 
 The failure mode they guard against is the one in the risk register: a model that looks
 sophisticated, scores a high R², and is really memorising spatial position — worthless but
-impressive, and the kind of thing that collapses under one viva question.
+impressive, and the kind of thing that collapses under one pointed question.
 
 ## Options considered & decisions
 

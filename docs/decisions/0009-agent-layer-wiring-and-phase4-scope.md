@@ -57,7 +57,7 @@ an open-ended search with no fixed time box.
 ## Consequences
 
 **Positive**
-- The agent layer has one code path to defend at a viva, not two (HTTP vs. in-process) —
+- The agent layer has one code path to defend, not two (HTTP vs. in-process) —
   simpler to reason about and nothing to keep synchronized.
 - The RAG and cost scope cuts are both explicit and reversible: candidates are recorded, not
   discarded, in `references.md` and `agents.md`.

@@ -26,7 +26,7 @@ improvement; quotas can change with no notice.
 
 ### B — Local model via Ollama (Llama 3.1 8B / Qwen 2.5 7B)
 
-**Pros** Genuinely free forever, no quota, no network, fully private; impressive in a viva.
+**Pros** Genuinely free forever, no quota, no network, fully private; impressive to a reviewer.
 **Cons** No GPU on the dev machine — CPU inference on a 7–8B model is seconds-to-minutes
 per response, which makes a multi-step agent graph unusable; small-model function calling
 is unreliable, and unreliable tool calls are indistinguishable from a broken product during
@@ -73,7 +73,7 @@ factory function.
 - Free-tier prompts may be used for product improvement — acceptable here since all inputs
   are public geospatial data and public policy documents, no personal data. **No user PII
   may ever be sent to the LLM**; this becomes a standing rule in `agents.md`.
-- Demo fragility: a rate limit during a viva looks like a crash. Mitigated by response
+- Demo fragility: a rate limit during a live demo looks like a crash. Mitigated by response
   caching plus a scripted demo path warmed beforehand.
 
 **Revisit if** the free tier is withdrawn or quotas drop below demo needs — fall back to

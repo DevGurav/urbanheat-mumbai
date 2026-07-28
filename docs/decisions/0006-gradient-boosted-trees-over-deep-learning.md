@@ -15,7 +15,7 @@ Two properties of this project constrain the model choice more than accuracy doe
 1. **Explainability is the product, not a nicety.** The system's purpose is to tell a
    planner *why* a ward is hot and *what would change if they intervened*. A model that
    predicts well but cannot attribute is useless here.
-2. **No GPU**, and the author defends every choice at a viva.
+2. **No GPU**, and the author must be able to defend every choice under review.
 
 ## Options considered
 

@@ -75,7 +75,7 @@ recorded starting hypothesis, not a mystery.
 - Retrieval now has a live network dependency it didn't have before: a Gemini outage or
   latency spike affects `/agent/chat`'s RAG path even if the chat model call itself would
   have succeeded.
-- Reverses `agents.md`'s original "never a paid embedding API" line — worth a viva panel
+- Reverses `agents.md`'s original "never a paid embedding API" line — worth a reviewer
   asking "why," and the honest answer is exactly this ADR: it was the right call until a
   512MB deploy target proved it wasn't free, in the sense that mattered.
 

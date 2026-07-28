@@ -5,7 +5,7 @@ author: what moved, what broke, what was decided, what to pick up next.
 
 **Why keep this.** By Phase 7 the report needs a narrative — what was tried, what failed,
 why the design is what it is. That narrative is impossible to reconstruct from a git log
-six months later. Dead ends recorded here are worth as much as successes; a viva panel asks
+six months later. Dead ends recorded here are worth as much as successes; a good reviewer asks
 "what didn't work?" and a real answer is a strong one.
 
 **Entry template**
@@ -73,7 +73,7 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
   bugs lived.
 
 **Next**
-- Phase 7 — polish and academics: PDF report endpoint, final report/paper draft, viva prep.
+- Phase 7 — polish and report: PDF report endpoint, final report/paper draft, presentation prep.
 
 ---
 
@@ -322,7 +322,7 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
   re-pointed the arrow there instead; relabelled `SUPA` to drop "alerts" from what it holds.
   Same issue in `agents.md` §7's Agent 4 write-up, which still said alerts go
   "file (Phase 4) → Supabase (Phase 6)" — fixed to cite ADR-0012 instead. Neither was code,
-  so nothing was broken at runtime, but both would have misled a viva-panel reading of the
+  so nothing was broken at runtime, but both would have misled a reviewer reading the
   diagrams against the actual decision.
 - Also updated the Deployment diagram (§6) to mark Supabase 🟨 "schema written, not
   provisioned" instead of ⬜, matching how the rest of the diagram already distinguishes
@@ -947,7 +947,7 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
   and the agent toolbelt both call (ADR-0009) — `build_agent_layer` has exactly one caller
   (`/agent/chat`), so putting it in `services.py` would misrepresent it as more reusable than
   it is.
-- Plain-text routing over `with_structured_output`: fewer moving parts to explain at a viva,
+- Plain-text routing over `with_structured_output`: fewer moving parts to explain,
   and this project's own fake-model test harness (`FakeToolCallingModel`) already proved that
   `with_structured_output`'s default tool-calling path needs more scripting to fake correctly
   — a sign it's more machinery than a one-of-three classification needs.
@@ -1867,7 +1867,7 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
   processing-baseline offset. A normalised difference is invariant to a common *scale* but
   not to an *offset*, so the offset would bias NDVI across the 2019–2026 span if unremoved.
 - **SCL-band cloud masking**, water class kept — same principle as the LST QA mask. Simpler
-  and more directly explainable at a viva than Cloud Score+, and dry season is low-cloud.
+  and more directly explainable than Cloud Score+, and dry season is low-cloud.
 
 **Broke / learned**
 - **Dropped `.filterBounds()` again** in the first draft — the collection came back as

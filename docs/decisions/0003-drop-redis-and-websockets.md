@@ -59,7 +59,7 @@ broken at worst. The honest engineering position is that a daily-refreshed alert
 polled on page load matches the data's actual update frequency.
 
 Both stay in the report as **production considerations** with the scaling thresholds that
-would trigger them — that is a stronger viva answer than a Redis instance caching a
+would trigger them — that is a stronger answer to a reviewer than a Redis instance caching a
 single-user application, because it demonstrates knowing *when* infrastructure earns its
 place.
 

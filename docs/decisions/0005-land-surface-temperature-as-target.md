@@ -38,7 +38,7 @@ Collection-2 Level-2 (100 m thermal, resampled to 30 m, atmospherically correcte
 the target varies at exactly the spatial scale the drivers do, which is what makes SHAP
 attribution meaningful; multi-year composites give a real trend; this is the standard
 target in the UHI remote-sensing literature, so results are comparable to published work
-and the method is defensible at a viva.
+and the method is defensible under scrutiny.
 **Cons** LST ≠ what people feel — every claim must be labelled *surface* temperature;
 satellite overpass is ~10:30 local time, so this is mid-morning surface heat, not the 3 pm
 peak or the night-time UHI that drives mortality; thermal band is 100 m native, so 200 m
@@ -59,7 +59,8 @@ median composites.**
 The deciding factor is label availability. A supervised model needs labels at the
 resolution of its claims; only LST provides them. Option A would produce a model that looks
 sophisticated and is really an interpolation of nine points, which is the kind of thing that
-collapses under a single viva question. Option C's downscaling step is an entire dissertation.
+collapses under one pointed question. Option C's downscaling step is an entire separate
+research project.
 
 The LST→T_air gap is handled by **stating it**, not hiding it: every UI label, API field and
 report figure says *surface temperature*, and the limitation is documented explicitly in
