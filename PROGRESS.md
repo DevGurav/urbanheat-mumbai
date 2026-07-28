@@ -483,10 +483,28 @@ Vitest/RTL suite for a solo dashboard).
 
 ### Scenario simulator
 
-- [ ] Ward + intervention (`greening`/`cool_roof`) + coverage form → `POST /scenario`
-- [ ] ΔLST summary + per-cell map overlay of the affected cells
-- [ ] `clamped`/`clamped_cells` surfaced prominently, not buried — the disclosure exists
-  precisely so a capped number never reads as a normal one (ADR-0006)
+- [X] Ward + intervention (`greening`/`cool_roof`) + coverage form → `POST /scenario`
+  (`src/sections/Scenario.tsx`). Ward list reuses `useHotspots(24, "hvi", "ward")` rather than
+  a new endpoint — all 24 wards, not a ranking, just enumerated off an existing hook. Coverage
+  slider disabled with an explanatory line when `greening` is selected, since the backend
+  ignores it there
+- [X] ΔLST summary + per-cell map overlay of the affected cells. `/scenario` returns
+  `cell_id`/`dlst` only, no geometry — joined client-side against `/city/grid`'s already-typed
+  features by `cell_id` (the same join `backend/agents/supervisor.py`'s `build_agent_layer`
+  does server-side for `/agent/chat`, done here in the browser instead). Colored sequential
+  (dlst is always ≤ 0 — a magnitude of cooling, not a polarity), scale bounds `[0, best_dlst]`
+- [X] `clamped`/`clamped_cells` surfaced prominently, not buried — a warning-severity `Alert`
+  directly under the summary line, not a footnote (ADR-0006)
+- [X] Verified live with the real backend: Ward L greening → 391 cells, mean −1.03 °C, best
+  −3.59 °C; cool-roof at 100% → mean −2.38 °C, best −3.40 °C — **both numbers match exactly**
+  what the live-verified Planning agent produced for the same ward earlier this phase
+  (devlog.md), a real cross-check between two independent call paths (UI → `/scenario` HTTP
+  vs. agent → `simulate_scenario` tool) hitting the same backend logic. Coverage slider
+  correctly disabled/enabled per intervention. Zero console errors. **Honest gap, not
+  silently skipped:** queried `/scenario` directly for all 24 real wards — none produce
+  `clamped_cells > 0` for greening, and cool-roof never clamps by construction (a cited
+  formula, not a model call) — so the clamped `Alert`'s render path is verified by code
+  review only, not by an actual live trigger; the dataset may simply never exercise it
 
 ### Copilot chat
 

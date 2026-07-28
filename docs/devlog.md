@@ -21,6 +21,49 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 5 — Scenario simulator
+
+**Done**
+- `src/sections/Scenario.tsx` — ward + intervention + coverage form, `POST /scenario`, a
+  ΔLST summary, a prominent `clamped` warning `Alert`, the returned `caveat`, and a small
+  embedded map coloring just the affected cells by cooling magnitude.
+- The ward dropdown reuses `useHotspots(24, "hvi", "ward")` instead of a new "list wards"
+  endpoint — the backend has no such endpoint, and 24 is every ward, so a ranking call with
+  a high `n` is an honest way to enumerate them without adding backend surface for a dropdown.
+- The map overlay solves a real gap: `/scenario` returns `cell_id` + `dlst` only, no geometry.
+  Joined client-side against `/city/grid`'s features by `cell_id` — the same join
+  `backend/agents/supervisor.py`'s `build_agent_layer` already does server-side for
+  `/agent/chat`, just done in the browser here since the plain REST endpoint doesn't do it.
+- Verified live: Ward L greening (391 cells, mean −1.03 °C, best −3.59 °C) and cool-roof at
+  100% (mean −2.38 °C, best −3.40 °C) **matched exactly** the numbers the live-verified
+  Planning agent produced for the same ward earlier this phase — two independent paths (this
+  UI's `/scenario` HTTP call vs. the agent's `simulate_scenario` tool call) landing on
+  identical numbers is a real cross-check, not a coincidence worth ignoring. Coverage slider
+  correctly disables for greening, enables for cool-roof. Zero console errors.
+
+**Decided**
+- Sequential, not diverging, color for the ΔLST overlay. `dlst` is always ≤ 0 — greening is
+  floored at 0 (`ml/scenario.py`, "greening cannot warm a cell all-else-equal") and cool-roof
+  is a cited coefficient that only cools — so this is a one-directional magnitude (how much
+  cooling), not a polarity question. Reused `sequentialScale` from the heat map rather than
+  reaching for the diverging pair just because temperature is involved.
+
+**Broke / learned**
+- Tried to verify the `clamped` `Alert` actually renders, not just that its JSX is correct.
+  Queried `/scenario` directly for greening across all 24 real wards — every one came back
+  `clamped_cells: 0`. Cool-roof never clamps by construction (a formula, not a model call).
+  So the warning path is real code, verified by review, but genuinely unreachable with the
+  current dataset — recorded as an honest gap in PROGRESS.md rather than claiming a live
+  trigger that didn't happen. If a future data refresh or a wider coverage range ever does
+  clamp a real ward, that's the moment to screenshot it for real.
+
+**Next**
+- Copilot chat: `POST /agent/chat`, tool-call transparency, the multi-second thinking state,
+  and honest handling of both 503s plus the real 20 req/day quota — the section most likely
+  to actually hit that limit live.
+
+---
+
 ## 2026-07-28 — Phase 5 — Analytics
 
 **Done**
