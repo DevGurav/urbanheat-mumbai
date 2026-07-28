@@ -75,7 +75,8 @@ flowchart TB
         FEAT[(features.parquet<br/>+ GeoJSON)]
         MDL[(model.pkl<br/>+ SHAP)]
         VEC[(ChromaDB<br/>policy docs)]
-        SUPA[(Supabase ⬜<br/>users · alerts · scenarios)]
+        ALOG[(alerts.jsonl<br/>file — ADR-0012)]
+        SUPA[(Supabase 🟨 — schema written<br/>users · saved scenarios)]
     end
 
     FE <-->|HTTPS / JSON| API
@@ -85,7 +86,7 @@ flowchart TB
     A1 -.retrieval.-> VEC
     MLS --> MDL
     MLS & GIS & SCN --> FEAT
-    A4 --> NTF --> SUPA
+    A4 --> NTF --> ALOG
     API --> SUPA
 ```
 
@@ -165,7 +166,7 @@ sequenceDiagram
 flowchart LR
     U[Browser] -->|HTTPS| V[Vercel<br/>static React 🟨 — built locally, not deployed]
     V -->|HTTPS/JSON| R[Render free<br/>Dockerised FastAPI ⬜]
-    R --> S[(Supabase free<br/>Postgres + Auth ⬜)]
+    R --> S[(Supabase free<br/>Postgres + Auth 🟨 — schema written, not provisioned)]
     R -->|keyed| G[Gemini Flash<br/>free tier]
     R --> OM[Open-Meteo]
     GA[GitHub Actions<br/>daily cron 🟨 — built, inert until BACKEND_URL exists] -->|trigger| R

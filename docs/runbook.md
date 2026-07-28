@@ -28,14 +28,34 @@ Free under the noncommercial tier with a monthly compute-unit quota (ADR-0001).
 [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → create key → `.env` as
 `GEMINI_API_KEY`. Instant, no card. Free tier is Flash-family only (ADR-0002).
 
-### 1.3 Optional — Groq fallback
+### 1.3 Optional — Groq key (unused, scaffolded only)
 
-[console.groq.com](https://console.groq.com) → key → `GROQ_API_KEY`. Instant, free.
-Recommended before any demo: one free tier is one point of failure.
+The Groq fallback named in `agents.md`'s original rate-limit plan was dropped for the Phase 4
+MVP (ADR-0011) — `get_llm()` only ever returns Gemini. `GROQ_API_KEY` stays in `.env.example`
+as a documented-but-unused field; skip this unless a future phase actually revisits the
+fallback (ADR-0011's "Revisit if").
 
-### 1.4 Deferred to Phase 6
+### 1.4 Supabase — Phase 6
 
-Supabase · Vercel · Render — all sign in with GitHub, no card.
+**Author's own account setup — sign in with GitHub, no card.**
+
+1. [supabase.com](https://supabase.com) → sign in with GitHub → **New project** → free tier,
+   any region (closer to Mumbai if offered, e.g. Singapore — latency isn't a real concern at
+   this project's scale, so this is a nice-to-have, not a requirement).
+2. Dashboard → **SQL Editor** → paste the whole contents of
+   [`supabase/schema.sql`](../supabase/schema.sql) → run. Idempotent — safe to re-run if
+   unsure whether it already applied. Creates `saved_scenarios` + its RLS policies; nothing
+   else — every other table this project could have (features, model artifacts, alerts)
+   stays a file on purpose (ADR-0004, ADR-0012).
+3. Dashboard → **Project Settings → API** → copy the **Project URL** and the **anon /
+   public** key → `.env` as `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Copy the **service_role**
+   key too → `.env` as `SUPABASE_SERVICE_KEY` — **backend only, never sent to the browser**
+   (`architecture.md` §7's trust boundary).
+4. Free tier **pauses after ~1 week of inactivity** (ADR-0004) — expected, not a bug; unpause
+   from the dashboard before a demo session, same as Render's cold start.
+
+Auth (magic-link sign-in, JWT verification) and the frontend's Supabase client are a
+separate, later Phase 6 task — this section is just the project + schema.
 
 ### 1.5 Installs
 

@@ -21,6 +21,43 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 6 — Supabase schema and RLS
+
+**Done**
+- Wrote `supabase/schema.sql` — the `saved_scenarios` table (config-only columns matching
+  `ScenarioRequest` exactly, `intervention`/`coverage` check constraints so a row can never
+  describe a scenario the backend would reject), an index on `user_id`, RLS enabled, and
+  three policies (select/insert/delete, all `auth.uid() = user_id`). No update policy —
+  save/list/delete is the whole task, per the kickoff's own scoping.
+- Rewrote `runbook.md` §1.4 from a placeholder into real steps: create the Supabase project,
+  run `schema.sql` in the dashboard's SQL editor, copy the three keys into `.env`.
+
+**Broke / learned**
+- Re-reading `architecture.md`'s Components diagram against ADR-0012 (alerts stay
+  file-based, decided at the Phase 6 kickoff) turned up a real inconsistency it introduced:
+  the diagram still routed `A4 → NTF → SUPA`, i.e. Monitoring's alert output flowing to
+  Supabase, which ADR-0012 had already overturned. Added an `alerts.jsonl` storage node and
+  re-pointed the arrow there instead; relabelled `SUPA` to drop "alerts" from what it holds.
+  Same issue in `agents.md` §7's Agent 4 write-up, which still said alerts go
+  "file (Phase 4) → Supabase (Phase 6)" — fixed to cite ADR-0012 instead. Neither was code,
+  so nothing was broken at runtime, but both would have misled a viva-panel reading of the
+  diagrams against the actual decision.
+- Also updated the Deployment diagram (§6) to mark Supabase 🟨 "schema written, not
+  provisioned" instead of ⬜, matching how the rest of the diagram already distinguishes
+  "built locally" from "actually deployed."
+- While rewriting `runbook.md` §1.4, noticed §1.3 still called Groq "recommended before any
+  demo" — stale since ADR-0011 dropped the Groq fallback in Phase 4. Corrected it to say
+  what's actually true: `GROQ_API_KEY` is scaffolded but unused.
+
+**Next**
+- Actually creating the Supabase project and running `schema.sql` against it is the author's
+  own action (same pattern as Earth Engine/Gemini in Phase 0) — can't be verified from here
+  until that's done and the three keys are in `.env`.
+- Then: Auth (magic-link sign-in, backend JWT verification), Saved scenarios endpoints +
+  frontend UI, Deployment.
+
+---
+
 ## 2026-07-28 — Phase 6 — Kickoff: persistence, auth, deployment planning pass
 
 **Done**

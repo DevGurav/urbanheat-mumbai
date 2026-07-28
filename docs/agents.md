@@ -149,7 +149,8 @@ an alert whose trigger has already fired deterministically. An LLM deciding whet
 heatwave exists would be both unreliable and indefensible.
 
 **Output** Alert row: severity, wards affected (forecast ∩ high HVI), drafted summary,
-timestamp. Written to file (Phase 4) → Supabase (Phase 6). Optional email via Gmail SMTP.
+timestamp. Written to file, staying file-based rather than moving to Supabase (ADR-0012).
+Optional email via Gmail SMTP.
 
 **Guardrails** Dedupe — one alert per event, not per run. Cap emails per day. Alerts state
 that they are model-derived and advisory, not an official IMD warning. This system is not
