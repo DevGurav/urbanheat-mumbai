@@ -230,3 +230,26 @@ class WardExplainResponse(BaseModel):
 class AuthUserResponse(BaseModel):
     id: str
     email: str | None = None
+
+
+class SavedScenarioRequest(BaseModel):
+    """Mirrors `ScenarioRequest` exactly (`supabase/schema.sql`'s own comment makes the same
+    promise at the database level) — a saved row can never describe a scenario `/scenario`
+    would reject.
+    """
+
+    ward_code: str
+    intervention: Literal["greening", "cool_roof"]
+    coverage: float = Field(default=1.0, ge=0.0, le=1.0)
+
+
+class SavedScenario(BaseModel):
+    id: str
+    ward_code: str
+    intervention: Literal["greening", "cool_roof"]
+    coverage: float
+    saved_at: str
+
+
+class SavedScenariosResponse(BaseModel):
+    scenarios: list[SavedScenario] = Field(description="Newest first")

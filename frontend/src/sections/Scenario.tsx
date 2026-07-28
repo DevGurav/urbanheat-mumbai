@@ -2,22 +2,33 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
   Select,
   Slider,
+  Stack,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useMemo, useState } from "react";
 import type { Feature, Geometry } from "geojson";
 import { GeoJSON, MapContainer, TileLayer } from "react-leaflet";
 
-import { useCityGrid, useHotspots, useScenario } from "../api/hooks";
-import type { Intervention } from "../api/types";
+import {
+  useCityGrid,
+  useDeleteScenario,
+  useHotspots,
+  useSaveScenario,
+  useSavedScenarios,
+  useScenario,
+} from "../api/hooks";
+import type { Intervention, SavedScenario } from "../api/types";
+import { useAuth } from "../auth/AuthProvider";
 import { MUTED_INK, sequentialScale } from "../viz/color";
 
 const MUMBAI_CENTER: [number, number] = [19.076, 72.8777];
@@ -37,6 +48,23 @@ export function Scenario() {
   const [intervention, setIntervention] = useState<Intervention>("greening");
   const [coverage, setCoverage] = useState(1.0);
   const scenario = useScenario();
+
+  const { session } = useAuth();
+  const accessToken = session?.access_token ?? null;
+  const savedScenarios = useSavedScenarios(accessToken);
+  const saveScenario = useSaveScenario(accessToken);
+  const deleteScenario = useDeleteScenario(accessToken);
+
+  function handleLoad(saved: SavedScenario) {
+    setWardCode(saved.ward_code);
+    setIntervention(saved.intervention);
+    setCoverage(saved.coverage);
+    scenario.mutate({
+      ward_code: saved.ward_code,
+      intervention: saved.intervention,
+      coverage: saved.coverage,
+    });
+  }
 
   const dlstByCell = useMemo(() => {
     if (!scenario.data) return null;
@@ -119,7 +147,42 @@ export function Scenario() {
         <Button variant="contained" onClick={handleSubmit} disabled={!wardCode || scenario.isPending}>
           {scenario.isPending ? "Simulating…" : "Simulate"}
         </Button>
+
+        {accessToken && (
+          <Button
+            variant="outlined"
+            onClick={() => saveScenario.mutate({ ward_code: wardCode, intervention, coverage })}
+            disabled={!wardCode || saveScenario.isPending}
+          >
+            {saveScenario.isPending ? "Saving…" : "Save scenario"}
+          </Button>
+        )}
       </Box>
+
+      {/* Config only, never a computed result — loading one re-runs /scenario for real
+          (supabase/schema.sql's own comment, PROGRESS.md's kickoff decision), so a saved
+          scenario can never show a number that quietly drifted from a retrained model. */}
+      {accessToken && (savedScenarios.data?.scenarios.length ?? 0) > 0 && (
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Saved scenarios
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
+            {savedScenarios.data?.scenarios.map((s) => (
+              <Chip
+                key={s.id}
+                label={`${s.ward_code} · ${s.intervention === "cool_roof" ? "Cool roof" : "Greening"}${
+                  s.intervention === "cool_roof" ? ` (${Math.round(s.coverage * 100)}%)` : ""
+                }`}
+                onClick={() => handleLoad(s)}
+                onDelete={() => deleteScenario.mutate(s.id)}
+                deleteIcon={<DeleteIcon fontSize="small" aria-label="Delete" />}
+                variant="outlined"
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
 
       {scenario.isError && (
         <Alert severity="error">Couldn't run the scenario — is the backend running?</Alert>

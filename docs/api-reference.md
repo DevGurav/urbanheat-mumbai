@@ -197,6 +197,24 @@ session) · `503 auth_not_configured` (no Supabase project wired up — the hone
 on a fresh clone before `runbook.md` §1.4 is done) · `503 auth_upstream_unavailable` (Supabase
 itself unreachable).
 
+## `GET /scenarios` · `POST /scenarios` · `DELETE /scenarios/{id}` ✅ *(landed)*
+Saved scenario **configs**, not computed results (Phase 6) — all three require the same
+`Authorization: Bearer <token>` as `GET /auth/me`, and all three restrict a caller to their
+own rows via Postgres RLS (`supabase/schema.sql`), not a backend-side `user_id` filter: every
+call forwards the caller's own token to PostgREST rather than using the service-role key.
+```json
+{"ward_code": "L", "intervention": "greening", "coverage": 1.0}
+```
+`POST` mirrors `ScenarioRequest`'s exact fields and constraints, so a saved row can never
+describe a scenario `/scenario` would reject. Returns the created row (`id`, `saved_at` added
+server-side). `GET` returns `{"scenarios": [...]}`, newest first. `DELETE` returns `204` on
+success; `404 scenario_not_found` for an id that doesn't exist **or belongs to someone
+else** — RLS makes those look identical on purpose, so the response can't leak which is true.
+
+**Why config, not a result:** loading a saved scenario means the frontend calls the real
+`POST /scenario` with these fields — the number a user sees is always freshly computed
+against the current model, never a snapshot that silently drifted from a retrained one.
+
 ## `POST /reports/generate` *(Phase 7)*
 WeasyPrint PDF for a ward or scenario. Returns a download URL.
 

@@ -2,10 +2,10 @@
  * One TanStack Query hook per endpoint the UI actually calls. `POST /monitoring/check` has no
  * hook here — it's cron-only (agents.md §7), never called from the client.
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "./client";
-import type { HotspotsBy, HotspotsUnit, ScenarioRequest } from "./types";
+import type { HotspotsBy, HotspotsUnit, SavedScenarioRequest, ScenarioRequest } from "./types";
 
 export function useHealth() {
   return useQuery({ queryKey: ["health"], queryFn: api.health });
@@ -78,5 +78,32 @@ export function useScenario() {
 export function useAgentChat() {
   return useMutation({
     mutationFn: (message: string) => api.agentChat({ message }),
+  });
+}
+
+// --- Saved scenarios (Phase 6) — every hook here needs the signed-in user's Supabase access
+// token; `null` means "not signed in", which the query/mutation simply refuses to run.
+
+export function useSavedScenarios(accessToken: string | null) {
+  return useQuery({
+    queryKey: ["saved-scenarios"],
+    queryFn: () => api.listSavedScenarios(accessToken as string),
+    enabled: accessToken !== null,
+  });
+}
+
+export function useSaveScenario(accessToken: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SavedScenarioRequest) => api.saveScenario(body, accessToken as string),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-scenarios"] }),
+  });
+}
+
+export function useDeleteScenario(accessToken: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteScenario(id, accessToken as string),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-scenarios"] }),
   });
 }

@@ -19,6 +19,9 @@ import type {
   HotspotsUnit,
   MonitoringCheckResponse,
   PredictResponse,
+  SavedScenario,
+  SavedScenarioRequest,
+  SavedScenariosResponse,
   ScenarioRequest,
   ScenarioResponse,
   TrendsResponse,
@@ -51,7 +54,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }))) as ApiErrorBody;
     throw new ApiError(response.status, body);
   }
+  // DELETE /scenarios/{id} returns 204 with no body — nothing to parse.
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+function authHeader(accessToken: string): HeadersInit {
+  return { Authorization: `Bearer ${accessToken}` };
 }
 
 function query(params: Record<string, string | number | boolean | undefined>): string {
@@ -89,4 +98,19 @@ export const api = {
     request<MonitoringCheckResponse>("/monitoring/check", { method: "POST" }),
 
   alerts: (limit = 50) => request<AlertsResponse>(`/alerts${query({ limit })}`),
+
+  // --- Saved scenarios (Phase 6) — every call needs the caller's Supabase session token;
+  // /scenarios/* is JWT-gated (api-reference.md), unlike everything above.
+  listSavedScenarios: (accessToken: string) =>
+    request<SavedScenariosResponse>("/scenarios", { headers: authHeader(accessToken) }),
+
+  saveScenario: (body: SavedScenarioRequest, accessToken: string) =>
+    request<SavedScenario>("/scenarios", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: authHeader(accessToken),
+    }),
+
+  deleteScenario: (id: string, accessToken: string) =>
+    request<void>(`/scenarios/${id}`, { method: "DELETE", headers: authHeader(accessToken) }),
 };

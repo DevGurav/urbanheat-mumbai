@@ -29,6 +29,10 @@ _AUTH_TIMEOUT_S = 10
 class AuthUser:
     id: str
     email: str | None
+    # Forwarded to PostgREST for the saved-scenarios endpoints (backend/saved_scenarios.py) so
+    # Supabase's own RLS policies (supabase/schema.sql), not backend code, decide what rows a
+    # request can see — the same "ask Supabase" trade this module already made for login itself.
+    access_token: str
 
 
 def get_current_user(authorization: str | None = Header(default=None)) -> AuthUser:
@@ -54,4 +58,4 @@ def get_current_user(authorization: str | None = Header(default=None)) -> AuthUs
     resp.raise_for_status()
 
     body = resp.json()
-    return AuthUser(id=body["id"], email=body.get("email"))
+    return AuthUser(id=body["id"], email=body.get("email"), access_token=token)

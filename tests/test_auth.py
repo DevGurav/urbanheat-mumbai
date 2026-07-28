@@ -87,6 +87,7 @@ def test_valid_token_returns_the_user(monkeypatch):
     user = auth_module.get_current_user(authorization="Bearer validtoken")
     assert user.id == "user-123"
     assert user.email == "planner@example.com"
+    assert user.access_token == "validtoken"
 
 
 def test_api_error_helper_shape_sanity():

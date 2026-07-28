@@ -605,10 +605,20 @@ decided)
 
 ### Saved scenarios (backend + frontend)
 
-- [ ] `POST /scenarios` (save the current form config), `GET /scenarios` (list mine),
-  `DELETE /scenarios/{id}` — all JWT-gated
-- [ ] Frontend: a sign-in affordance, a "Save this scenario" action in
-  `src/sections/Scenario.tsx`, a list of saved scenarios that re-runs `/scenario` on load
+- [X] `POST /scenarios` (save the current form config), `GET /scenarios` (list mine),
+  `DELETE /scenarios/{id}` — all JWT-gated (`backend/routers/scenarios.py`). Access control is
+  Postgres RLS, not backend code: every call forwards the caller's own Supabase token to
+  PostgREST (`backend/saved_scenarios.py`) rather than using the service-role key and
+  manually filtering by `user_id`. Live-verified against the real project with two throwaway
+  test users: user B's list stayed empty while user A had a saved row, and user B deleting
+  user A's row 404'd (RLS hides it — the backend can't tell "not found" from "not yours",
+  deliberately, so it doesn't leak which is true)
+- [X] Frontend: a sign-in affordance (Auth's `SignInMenu`, already built), a "Save scenario"
+  action in `src/sections/Scenario.tsx`, and a chip list of saved scenarios — clicking one
+  re-runs the real `/scenario` call rather than replaying a stored result. Live-verified
+  end to end through the actual UI (a real session injected via localStorage, since driving a
+  full magic-link email round-trip isn't automatable): saved a scenario, saw it appear as a
+  chip, deleted it, saw the section disappear
 
 ### Deployment
 

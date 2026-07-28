@@ -157,6 +157,24 @@ export interface AlertsResponse {
   alerts: AlertPayload[];
 }
 
+export interface SavedScenarioRequest {
+  ward_code: string;
+  intervention: Intervention;
+  coverage?: number;
+}
+
+export interface SavedScenario {
+  id: string;
+  ward_code: string;
+  intervention: Intervention;
+  coverage: number;
+  saved_at: string;
+}
+
+export interface SavedScenariosResponse {
+  scenarios: SavedScenario[];
+}
+
 /** {detail, error_code} — api-reference.md's error shape, every non-2xx response. */
 export interface ApiErrorBody {
   detail: string;

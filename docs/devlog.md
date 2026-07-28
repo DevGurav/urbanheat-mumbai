@@ -21,6 +21,54 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 6 — Saved scenarios (RLS-backed CRUD, live-verified)
+
+**Done**
+- `backend/saved_scenarios.py` — `list_saved_scenarios`/`create_saved_scenario`/
+  `delete_saved_scenario` over PostgREST, one `requests` call each (same client the rest of
+  the backend already uses, no `supabase-py` SDK added). Every call forwards the caller's own
+  access token (`AuthUser.access_token`, added to the dataclass this task) rather than the
+  service-role key — Postgres RLS (`supabase/schema.sql`'s three policies) is the actual
+  access-control boundary, not a `WHERE user_id = ...` this code would have to get right
+  itself. `DELETE` can't distinguish "no such row" from "someone else's row" — RLS just
+  returns zero rows either way — and the router intentionally preserves that ambiguity as a
+  404 rather than trying to tell the two apart.
+- `backend/routers/scenarios.py` — `GET`/`POST`/`DELETE /scenarios`, all
+  `Depends(get_current_user)`-gated. `main.py`'s CORS `allow_methods` needed `DELETE` added
+  (was `GET, POST` only since Phase 3).
+- Frontend: `api/client.ts` gained the three calls (each takes an access token, forwarded as
+  a bearer header) and `request()` learned to treat `204` as "no body" rather than trying to
+  `.json()` an empty response. `Scenario.tsx` gained a "Save scenario" button and a chip list
+  — click a chip to load its config and re-run the real `/scenario` call, click its delete
+  icon to remove it. Both only render when signed in (`accessToken !== null`), same
+  hide-don't-break pattern as `SignInMenu`.
+- 14 new backend tests (`tests/test_saved_scenarios.py`), all mocking PostgREST.
+
+**Broke / learned**
+- Live-verified the RLS boundary itself, not just the code path: created two throwaway
+  Supabase users via the admin API (service-role key, `email_confirm: true`, no real email
+  sent), signed both in via the password grant, and hit the running backend directly. User
+  B's list stayed empty while user A had a saved row; user B trying to delete user A's row by
+  id got a 404, not a 403 or a silent no-op — confirming the "not found vs not yours"
+  ambiguity is real Postgres behavior, not just what the backend claims. Deleted both test
+  users afterward (cascades removed their rows too).
+- Live-verified the actual frontend, not just the API, by injecting a real Supabase session
+  into `localStorage` under its default `sb-<project-ref>-auth-token` key before page load
+  (driving a full magic-link email round-trip isn't automatable) — confirmed sign-in state,
+  the Save button, saving a scenario, the chip appearing, and deleting it, all through the
+  real UI against the real backend and the real Supabase project. Cleaned up the test user
+  afterward the same way.
+- MUI version mismatch caught by `tsc`, not at runtime: `@mui/icons-material/DeleteOutline`
+  doesn't exist in the installed version (only `DeleteOutlineOutlined`/`Rounded`/`Sharp`/
+  `TwoTone` variants) — switched to the plain `Delete` icon, which does exist. `Stack`'s
+  `flexWrap`/`useFlexGap` props also aren't in this version's types; moved both into `sx`.
+
+**Next**
+- Deployment: `Dockerfile` → Render, frontend → Vercel, `CORS_ORIGINS` for the deployed
+  origin, `BACKEND_URL` GitHub Actions secret, a CI workflow (pytest/ruff/tsc/oxlint).
+
+---
+
 ## 2026-07-28 — Phase 6 — Auth: magic-link sign-in and JWT verification
 
 **Done**

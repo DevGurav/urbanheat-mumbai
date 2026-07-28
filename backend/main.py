@@ -24,6 +24,7 @@ from backend.routers import (
     monitoring,
     predict,
     scenario,
+    scenarios,
     trends,
     weather,
 )
@@ -86,7 +87,8 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
-    allow_methods=["GET", "POST"],
+    # DELETE joined GET/POST for /scenarios/{id} (Phase 6's saved-scenarios endpoints).
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -97,6 +99,7 @@ app.include_router(explain.router)
 app.include_router(weather.router)
 app.include_router(predict.router)
 app.include_router(scenario.router)
+app.include_router(scenarios.router)
 app.include_router(trends.router)
 app.include_router(agent.router)
 app.include_router(monitoring.router)
