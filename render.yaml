@@ -14,7 +14,7 @@ services:
     name: urbanheat-api
     runtime: image
     image:
-      url: ghcr.io/OWNER/urbanheat-api:latest # replace OWNER — runbook.md
+      url: ghcr.io/devgurav/urbanheat-api:latest # replace OWNER — runbook.md
     plan: free
     envVars:
       - key: GEMINI_API_KEY
