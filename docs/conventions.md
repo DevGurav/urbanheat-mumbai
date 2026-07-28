@@ -68,7 +68,7 @@ should be largely an assembly job — that only holds if these are kept up as wo
 
 ADRs are **immutable** once committed. To reverse a decision, write a new ADR that
 supersedes the old one and mark the old one `Superseded by ADR-XXXX`. The rejected options
-are the valuable part — they are what a viva panel asks about.
+are the valuable part — they are what a technical reviewer asks about.
 
 ---
 

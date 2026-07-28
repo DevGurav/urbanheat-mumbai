@@ -4,10 +4,9 @@ Papers, datasets and documents consulted. Grows as the project does — anything
 gets logged here the day it is used ([conventions.md](conventions.md)), so the bibliography assembles
 itself.
 
-**Status:** Phase 0. Method and dataset citations are known from the design; the UHI
-literature list is populated during Phases 1–2 as sources are actually read. **Nothing is
-listed as "used" until it has been read** — a bibliography of unread papers is detectable
-and embarrassing at a viva.
+**Status:** populated through Phase 6 as sources were actually read. **Nothing is
+listed as "used" until it has been read** — a bibliography of unread papers is easy to
+spot and undermines the credibility of everything else here.
 
 ---
 

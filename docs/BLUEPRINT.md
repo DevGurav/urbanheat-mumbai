@@ -64,7 +64,7 @@ Supabase storage), full RBAC (single planner role).
 | No GPU | Model must be tree-based on a ~20k-row table, not deep learning on rasters |
 | Laptop-scale RAM | Heavy raster math stays server-side in Earth Engine; only aggregates come down |
 | Author is sole developer, intermediate | Prefer boring, explainable tech; every phase must end in something demoable |
-| Viva-defended | Author must be able to explain every line and every number |
+| Fully explainable | Author must be able to explain every line and every number |
 
 ## 5. Free-tier stack map
 
@@ -116,7 +116,7 @@ end" — that is how student projects die.
 | **4 Agents** | 11–14 | Four agents + RAG + cron | Copilot answers a planning question with real numbers |
 | **5 Dashboard** | 15–19 | React UI | Full end-to-end local demo |
 | **6 Deploy** | 20–22 | Supabase + Vercel + Render | Public URLs work |
-| **7 Polish** | 23–24+ | PDF reports, report, viva prep | Report draft assembled from `docs/` |
+| **7 Polish** | 23–24+ | PDF reports, report, presentation prep | Report draft assembled from `docs/` |
 
 Detail for phases 2+ is expanded into `PROGRESS.md` at each kickoff rather than
 over-specified now — the shape of later phases depends on what phase 1's data reveals.
@@ -129,7 +129,7 @@ over-specified now — the shape of later phases depends on what phase 1's data 
 | Cloud cover ruins composites | Medium | Dry-season only + multi-year median compositing |
 | Model R² disappointing | Medium | Baseline comparison framing — a weak-but-honest model with good SHAP still carries the project |
 | Gemini rate limits during demo | Medium | Cache answers, backoff, canned demo script — no fallback provider (ADR-0011); warm the cache before a demo |
-| Render cold start during viva | High | Wake the URL before presenting; local fallback ready |
+| Render cold start during a live demo | High | Wake the URL before presenting; local fallback ready |
 | Scope creep (2nd city, mobile) | High | Parked-ideas list; nothing leaves it until Phase 7 |
 
 ## 7. Documentation system

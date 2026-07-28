@@ -174,7 +174,7 @@ row in this table, not an optimisation.
 | Fallback | ~~`GROQ_API_KEY` set → retry there on repeated 429~~ | ❌ **dropped (ADR-0011)** — one credential to manage, not two; the cache covers the practical case (repeat demo questions) a fallback mainly protected against |
 | Warm demos | Pre-run the scripted demo questions so answers are cached | runbook.md |
 
-**Not a defence — a warning.** A live viva demo hitting a rate limit looks like a crash, and
+**Not a defence — a warning.** A live demo hitting a rate limit looks like a crash, and
 without a fallback (ADR-0011) a fully exhausted daily quota has no recovery until it resets.
 The cache-warming step before any demo is a runbook item, not an optimisation.
 

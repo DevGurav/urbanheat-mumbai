@@ -12,7 +12,7 @@ decision → consequences.
   *decision* still stands. It never alters the original argument; it annotates it. A change
   to the decision itself always requires a new ADR, never a correction note.
 - Record the decision when it is made, not after it works out. The rejected options are
-  the valuable part — they are what a viva panel asks about.
+  the valuable part — they are what a technical reviewer asks about.
 - Number sequentially: `NNNN-short-kebab-title.md`.
 
 | ADR | Title | Status |

@@ -36,7 +36,7 @@ training set. The model can effectively look up the answer. Reported R² would b
 possibly badly, and the model would still fail on any genuinely unseen neighbourhood.
 
 This is spatial autocorrelation, and it is the single easiest way to produce an
-impressive-looking and worthless result. It is also exactly what a viva panel probes.
+impressive-looking and worthless result. It is also exactly what a rigorous reviewer probes.
 
 **The fix — ward-grouped spatial cross-validation (settled, ADR-0008).** `GroupKFold` on
 `ward_code`: hold out **whole BMC wards** (24 → ~5 folds), so no held-out cell has a neighbour
@@ -253,8 +253,8 @@ cooling) is a useful plausibility gate. If the model claims 15 °C, something is
 | 8 | Cloud gaps | Some cells rest on fewer observations; flag low-confidence cells |
 | 9 | Static land cover (WorldCover 2021) | Land cover ages against multi-year LST composites |
 
-A limitations section this specific is a strength in a viva — it demonstrates knowing what
-the model does *not* say.
+A limitations section this specific is a strength, not a weakness — it demonstrates knowing
+what the model does *not* say.
 
 ---
 

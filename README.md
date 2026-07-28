@@ -50,7 +50,7 @@ Why each of these: **[docs/decisions/](docs/decisions/)**
 
 **Phase 6 complete — deployed and live** (see **Live** link above). Data pipeline, ML model,
 backend API, four LangGraph agents, RAG copilot, React dashboard, auth, and public deployment
-are all built and running. Phase 7 (report, polish, viva prep) is in progress. See
+are all built and running. Phase 7 (report, polish, final review) is in progress. See
 **[PROGRESS.md](PROGRESS.md)** for the live task board and **[docs/BLUEPRINT.md](docs/BLUEPRINT.md)**
 for the full roadmap.
 

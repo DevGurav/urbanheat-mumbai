@@ -3,7 +3,7 @@
 Live task board. Newest phases get expanded into detailed tasks at their kickoff.
 
 **Legend** `[ ]` todo · `[~]` in progress · `[x]` done · ✅ phase exit criterion
-**Current phase:** 7 — Polish & academics *(Phase 6 complete — public URLs live)*
+**Current phase:** 7 — Polish & report *(Phase 6 complete — public URLs live)*
 **Last updated:** 2026-07-29
 
 ---
@@ -681,10 +681,10 @@ decided)
 
 ---
 
-## Phase 7 — Polish & academics · Weeks 23–24+
+## Phase 7 — Polish & report · Weeks 23–24+
 
 - [ ] PDF report endpoint (WeasyPrint) · demo script · screenshots
-- [ ] Final report / paper draft · viva prep
+- [ ] Final report / paper draft · presentation prep
 - [ ] ✅ **Report draft complete from `docs/`**
 
 ---
