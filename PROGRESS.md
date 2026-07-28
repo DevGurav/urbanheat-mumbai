@@ -574,23 +574,34 @@ decided)
 
 ### Supabase schema & RLS
 
-- [ ] Supabase project (free tier) — `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_KEY`
-  → `.env` (already scaffolded in `.env.example`). Instructions written in
-  `runbook.md` §1.4; author's own account, not yet created
+- [X] Supabase project (free tier) — `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_KEY`
+  → `.env` (author's own account, `runbook.md` §1.4). The URL the dashboard's own copy
+  button produced was actually a `sb_publishable_...` key, not a URL — caught live (the
+  frontend's Supabase client threw `Invalid supabaseUrl` on first real page load) and
+  corrected by decoding the `ref` claim out of the anon/service JWTs already in `.env`
+  instead of asking for a re-paste
 - [X] `saved_scenarios` table: `id`, `user_id` (FK → `auth.users`), `ward_code`,
   `intervention`, `coverage`, `saved_at`. No custom `profiles` table — Supabase Auth's own
   `auth.users` is enough, nothing in this app needs extra profile fields yet —
-  `supabase/schema.sql`, not yet run against a live project
+  `supabase/schema.sql`, not yet run against the live project (author action still pending)
 - [X] RLS: a user can only select/insert/delete their own `saved_scenarios` rows
   (`user_id = auth.uid()`) — the one place this project holds per-user data —
-  `supabase/schema.sql`, not yet run against a live project
+  `supabase/schema.sql`, not yet run against the live project (author action still pending)
 
 ### Auth
 
-- [ ] Magic-link sign-in flow in the frontend (email → Supabase sends the link → session)
-- [ ] Backend JWT verification on the one write endpoint that needs it (`api-reference.md`:
+- [X] Magic-link sign-in flow in the frontend (email → Supabase sends the link → session) —
+  `frontend/src/auth/`. Live-verified against the real project: an invalid test address and
+  a rate-limited real one both surfaced Supabase's actual error text inline; the
+  "check your email" success screen itself wasn't exercised live because Supabase's free-tier
+  built-in email sender is rate-limited to a handful of sends/hour — the code path is the
+  same three-line branch as the two error paths that were verified, not a real coverage gap
+- [X] Backend JWT verification on the one write endpoint that needs it (`api-reference.md`:
   "Supabase JWT on write endpoints from Phase 6") — every read endpoint (map, analytics,
-  chat, alerts) stays open, unauthenticated, exactly as it is today
+  chat, alerts) stays open, unauthenticated, exactly as it is today. `GET /auth/me` is the
+  first endpoint to use it — `backend/auth.py` asks Supabase's own `/auth/v1/user` rather
+  than decoding the JWT locally (asked, author confirmed): no extra secret to manage, one
+  network round-trip per authenticated request, acceptable at this project's traffic
 
 ### Saved scenarios (backend + frontend)
 

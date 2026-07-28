@@ -21,6 +21,60 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 6 — Auth: magic-link sign-in and JWT verification
+
+**Done**
+- `backend/auth.py`'s `get_current_user` — verifies a bearer token by asking Supabase's own
+  `GET /auth/v1/user` rather than decoding the JWT locally (asked, author confirmed: no extra
+  secret beyond the anon key already in `.env`, at the cost of one network round-trip per
+  authenticated request — an acceptable trade at this project's traffic, and consistent with
+  dropping the Groq fallback for the same reason, ADR-0011).
+- `GET /auth/me` — the first endpoint the dependency actually gates; echoes `{id, email}`.
+  Nine new tests (`tests/test_auth.py`), all mocking `requests`/`get_settings` so none depend
+  on a live Supabase project.
+- `data_pipeline/config.py` gained `supabase_url`/`supabase_anon_key`/`supabase_service_key`,
+  empty-default like every other Phase 4+ credential (a fresh clone still boots).
+- Frontend: `src/lib/supabase.ts` (client, `null` if the two `VITE_` vars aren't set — every
+  read-only section still works without a Supabase project), `src/auth/AuthProvider.tsx`
+  (session state, `signInWithOtp`, `signOut`), `src/auth/SignInMenu.tsx` in the AppBar.
+- `frontend/vite.config.ts` got `envDir: '..'` — the frontend had no working env file at all
+  before this (no `frontend/.env` existed; `VITE_API_BASE_URL` only ever read its hardcoded
+  fallback). One root `.env` now feeds both backend and frontend, matching what
+  `.env.example` already documented.
+- `pyproject.toml`: `extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]` — ruff's
+  B008 flagged `Depends()` in an argument default (FastAPI's own DI idiom); more
+  `Depends(get_current_user)` call sites are coming with the saved-scenarios endpoints.
+
+**Broke / learned**
+- The value the user pasted into `SUPABASE_URL` turned out to be a `sb_publishable_...`
+  key, not a URL — Supabase's redesigned dashboard puts the "publishable key" (its newer name
+  for the anon key) right next to the Project URL field. Caught immediately on first real
+  page load: the Supabase JS client throws `Invalid supabaseUrl` synchronously, not a silent
+  failure. Fixed without asking for a re-paste — decoded the (non-secret, structural) `ref`
+  claim out of the anon/service JWTs already correctly in `.env` and reconstructed
+  `https://{ref}.supabase.co` directly; cross-checked their `role` claims (`anon` /
+  `service_role`) to confirm those two fields were assigned correctly before trusting the fix.
+- Live-verified end to end against the real project once the URL was fixed: an obviously-fake
+  test address and a real one (rate-limited after one send) both surfaced Supabase's actual
+  error text inline through the UI. The "check your email" success screen itself wasn't
+  triggered live — Supabase's free-tier built-in email sender allows only a handful of
+  sends/hour — but that branch is the same three-line no-error path already exercised by
+  both error cases reaching the same call site, not an untested code path.
+- CORS errors appeared in the browser console during verification (`localhost:5174` vs the
+  `CORS_ORIGINS` default of `5173`) — a leftover dev server from an earlier task had port
+  5173 pinned, pushing this session to 5174. Not a real bug; killed the stale process.
+
+**Decided**
+- JWT verification method: remote check against Supabase's Auth API, not local decode with a
+  fourth secret (`SUPABASE_JWT_SECRET`) — asked directly, author chose the recommended option.
+
+**Next**
+- Saved scenarios: `POST /scenarios` / `GET /scenarios` / `DELETE /scenarios/{id}`, all
+  `Depends(get_current_user)`-gated, plus the frontend save/list UI in `Scenario.tsx`. Then
+  Deployment.
+
+---
+
 ## 2026-07-28 — Phase 6 — Supabase schema and RLS
 
 **Done**

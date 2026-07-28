@@ -1,6 +1,7 @@
 import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material";
 import { useState } from "react";
 
+import { SignInMenu } from "./auth/SignInMenu";
 import { Alerts } from "./sections/Alerts";
 import { Analytics } from "./sections/Analytics";
 import { Chat } from "./sections/Chat";
@@ -37,6 +38,8 @@ function App() {
               <Tab key={s.key} value={s.key} label={s.label} />
             ))}
           </Tabs>
+          <Box sx={{ flex: 1 }} />
+          <SignInMenu />
         </Toolbar>
       </AppBar>
 

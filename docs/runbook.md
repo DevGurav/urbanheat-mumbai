@@ -51,11 +51,23 @@ fallback (ADR-0011's "Revisit if").
    public** key → `.env` as `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Copy the **service_role**
    key too → `.env` as `SUPABASE_SERVICE_KEY` — **backend only, never sent to the browser**
    (`architecture.md` §7's trust boundary).
-4. Free tier **pauses after ~1 week of inactivity** (ADR-0004) — expected, not a bug; unpause
+   > **A real gotcha, hit live 2026-07-28.** Supabase's newer dashboard labels the anon key a
+   > "publishable key" (`sb_publishable_...`) and shows it right next to the Project URL field
+   > — easy to copy the wrong one into `SUPABASE_URL`. The symptom is immediate and loud
+   > (`Invalid supabaseUrl` the moment the frontend loads), not silent, so it surfaces the
+   > first time anyone opens the app rather than at some later write call.
+4. Duplicate the URL and anon key under `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` in the
+   same `.env` (`.env.example` has both pairs). The `VITE_` prefix is what makes Vite expose a
+   var to browser code (`frontend/vite.config.ts`'s `envDir: '..'` points it at this one root
+   `.env` instead of a second frontend-only copy). **Never** duplicate
+   `SUPABASE_SERVICE_KEY` this way — that one stays backend-only by design.
+5. Free tier **pauses after ~1 week of inactivity** (ADR-0004) — expected, not a bug; unpause
    from the dashboard before a demo session, same as Render's cold start.
 
-Auth (magic-link sign-in, JWT verification) and the frontend's Supabase client are a
-separate, later Phase 6 task — this section is just the project + schema.
+Magic-link sign-in (`frontend/src/auth/`) and backend JWT verification (`backend/auth.py`,
+`GET /auth/me`) are built (this section's live verification confirmed the wiring end to end).
+The saved-scenarios endpoints that will actually use the auth are a separate, later Phase 6
+task.
 
 ### 1.5 Installs
 

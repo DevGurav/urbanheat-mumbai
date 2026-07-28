@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     groq_model: str = Field(default="llama-3.3-70b-versatile")
     chroma_dir: Path = Field(default=Path("backend/rag/chroma_db"))
 
+    # --- Supabase (Phase 6+) ---
+    # Empty defaults for the same reason as gemini_api_key above: a fresh clone with no
+    # Supabase project yet must still boot and run every non-auth endpoint.
+    supabase_url: str = Field(default="")
+    supabase_anon_key: str = Field(default="")
+    supabase_service_key: str = Field(default="")
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

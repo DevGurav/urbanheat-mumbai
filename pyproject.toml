@@ -64,6 +64,12 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's DI pattern calls Depends()/Query() in argument defaults by design (B008 otherwise
+# flags it as a mutable-default footgun). More Depends(get_current_user) call sites are coming
+# with the saved-scenarios write endpoints (PROGRESS.md's next Phase 6 task).
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Data-backed tests skip cleanly when the gitignored parquets have not been built yet, so a

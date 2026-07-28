@@ -225,3 +225,8 @@ class WardExplainResponse(BaseModel):
     measurement: str = MEASUREMENT
     drivers: list[WardDriver]
     model_version: str
+
+
+class AuthUserResponse(BaseModel):
+    id: str
+    email: str | None = None

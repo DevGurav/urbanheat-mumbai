@@ -183,6 +183,20 @@ same shape `POST /monitoring/check` returns, read back from `backend/agents/aler
 append-only log. Advisory only — not an official IMD warning (every entry's own `caveat`
 field says so).
 
+## `GET /auth/me` ✅ *(landed)*
+The first write-adjacent endpoint with real auth (Phase 6). Requires `Authorization: Bearer
+<token>` — a Supabase session access token, obtained client-side after the magic-link
+sign-in completes. Verified by asking Supabase's own `/auth/v1/user` rather than decoding the
+JWT locally (`backend/auth.py`'s module docstring has the tradeoff); every other endpoint
+above stays open and unauthenticated.
+```json
+{"id": "3fae2b1a-...", "email": "planner@example.com"}
+```
+`401 unauthenticated` (no/malformed bearer token) · `401 invalid_token` (expired or bad
+session) · `503 auth_not_configured` (no Supabase project wired up — the honest failure mode
+on a fresh clone before `runbook.md` §1.4 is done) · `503 auth_upstream_unavailable` (Supabase
+itself unreachable).
+
 ## `POST /reports/generate` *(Phase 7)*
 WeasyPrint PDF for a ward or scenario. Returns a download URL.
 
