@@ -1,10 +1,10 @@
 import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material";
 import { useState } from "react";
 
+import { Alerts } from "./sections/Alerts";
 import { Analytics } from "./sections/Analytics";
 import { Chat } from "./sections/Chat";
 import { HeatMap } from "./sections/HeatMap";
-import { Placeholder } from "./sections/Placeholder";
 import { Scenario } from "./sections/Scenario";
 
 const SECTIONS = [
@@ -45,7 +45,7 @@ function App() {
         {section === "analytics" && <Analytics />}
         {section === "scenario" && <Scenario />}
         {section === "chat" && <Chat />}
-        {section === "alerts" && <Placeholder title="Alerts" />}
+        {section === "alerts" && <Alerts />}
       </Box>
     </Box>
   );

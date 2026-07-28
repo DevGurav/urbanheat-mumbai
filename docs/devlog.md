@@ -21,6 +21,44 @@ six months later. Dead ends recorded here are worth as much as successes; a viva
 
 ---
 
+## 2026-07-28 — Phase 5 — Alerts feed (all five sections done)
+
+**Done**
+- `src/sections/Alerts.tsx` — `GET /alerts` polled every 5 minutes (ADR-0003), severity-coded
+  cards, an honest empty state. Removed the now-orphaned `Placeholder.tsx` — all five
+  sections are real components now, nothing left placeholder-ing anything.
+- Severity color is the dataviz skill's **Status** job, not sequential or categorical:
+  advisory/heat_wave/severe_heat_wave map to warning/serious/critical from
+  `references/palette.md`, each always paired with an icon + label (`STATUS` added to
+  `src/viz/color.ts`) — the skill is explicit that status color never carries meaning alone.
+- Verified both real states. Empty: genuinely true right now (`read_alerts()` returns `[]`
+  — no real alert has ever fired). Populated: wrote 3 realistic entries (one per severity,
+  matching `backend/agents/alerts.py`'s exact JSONL shape) directly into the gitignored
+  `data/processed/alerts.jsonl`, screenshotted the escalating color-coding and newest-first
+  order rendering correctly, then deleted the file again — verifying the UI without leaving
+  fake data sitting in a state file that's supposed to reflect reality.
+
+**Decided**
+- The fake alerts got deleted after the screenshot, not left in place. `alerts.jsonl` is
+  gitignored so it was never going to reach the repo either way, but leaving fabricated
+  "the city had a severe heat wave" entries in *local* state — even temporarily, even
+  file-based — sat wrong against this project's whole stance on invented numbers. Verify,
+  then restore honest state, same as any other test fixture.
+
+**Broke / learned**
+- Nothing broke this entry. Worth noting for next time instead: `run_in_background: true` on
+  the Bash tool (rather than shell `&`/`disown`) was the fix for the backend/frontend-launch
+  flakiness noted two entries back — used consistently for the rest of Phase 5's live
+  verifications and it was reliable every time.
+
+**Next**
+- All five Phase 5 sections are built and individually verified live. What's left is the
+  phase exit criterion itself: ✅ *Full end-to-end local demo* — clicking through the whole
+  app in one sitting, author-verified, not assumed from five separate section checks. Not
+  ticked here, per convention.
+
+---
+
 ## 2026-07-28 — Phase 5 — Copilot chat
 
 **Done**

@@ -534,9 +534,21 @@ Vitest/RTL suite for a solo dashboard).
 
 ### Alerts feed
 
-- [ ] `GET /alerts` polling list (ADR-0003 — polled, not pushed), severity-coded
-- [ ] Honest empty state — "no active alerts" reads as calm, not broken (most days, per
-  ADR-0010, there won't be any)
+- [X] `GET /alerts` polling list (`src/sections/Alerts.tsx`) — `refetchInterval: 5 * 60_000`
+  on the query (ADR-0003, polled not pushed); the underlying feed is daily-refreshed, so a
+  5-minute client poll is well within budget without hammering the backend
+- [X] Severity-coded — the dataviz skill's **Status** color job (advisory/heat_wave/
+  severe_heat_wave → warning/serious/critical from `references/palette.md`), always icon +
+  label per the skill's rule, never color alone. Added `STATUS` to `src/viz/color.ts`
+- [X] Honest empty state — "no active alerts" reads as calm (a green outlined `Alert`), not
+  broken, with the ADR-0010 context for *why* that's the expected common case
+- [X] Verified live: the real empty state (genuinely no alerts have ever fired — confirmed
+  again, `read_alerts()` returns `[]`). For the populated state, wrote 3 realistic entries
+  (one per severity, matching `backend/agents/alerts.py`'s exact JSONL shape) directly to
+  the gitignored `data/processed/alerts.jsonl`, screenshotted all three severity colors
+  rendering correctly with escalating color + newest-first order, then **deleted the file
+  again** — the real system has never triggered a real alert, and leaving fake data in a
+  gitignored-but-local file would misrepresent that. Zero console errors throughout
 
 ### Exit
 

@@ -35,6 +35,15 @@ export const DIVERGING = {
  * project's charts never need more than 2 at once, so only the safe prefix is exported. */
 export const CATEGORICAL = ["#2a78d6", "#eb6834", "#1baf7a"] as const; // blue, orange, aqua
 
+/** Status (palette.md) — a small fixed scale, reserved meaning, never themed or reused for
+ * "series N." Always paired with an icon + label (some steps are sub-3:1 on the light
+ * surface by design — the pairing is the mitigation, not decoration). */
+export const STATUS = {
+  warning: "#fab219",
+  serious: "#ec835a",
+  critical: "#d03b3b",
+} as const;
+
 export const MUTED_INK = "#898781";
 
 /** A value → hex function over [min, max], sequential blue, light = low. Degenerates to the

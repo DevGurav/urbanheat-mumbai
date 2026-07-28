@@ -53,7 +53,14 @@ export function useTrends(ward?: string) {
 }
 
 export function useAlerts(limit = 50) {
-  return useQuery({ queryKey: ["alerts", limit], queryFn: () => api.alerts(limit) });
+  return useQuery({
+    queryKey: ["alerts", limit],
+    queryFn: () => api.alerts(limit),
+    // Polled, not pushed (ADR-0003) — the feed is daily-refreshed (api-reference.md), so a
+    // 5-minute poll catches a new alert well within a session without hammering the backend
+    // for a file that changes at most once a day.
+    refetchInterval: 5 * 60_000,
+  });
 }
 
 export function useScenario() {
