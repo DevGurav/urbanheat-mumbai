@@ -58,8 +58,8 @@ def store():
 
 @pytest.fixture(scope="session")
 def retriever(settings):
-    """The RAG retriever (`backend/rag/retrieve.py`). Session-scoped so the embedding model
-    loads once per test run, not once per test — it's the slow part (~seconds).
+    """The RAG retriever (`backend/rag/retrieve.py`). Session-scoped so the embeddings client
+    is built once per test run, not once per test.
     """
     from backend.rag.retrieve import Retriever
 
@@ -67,3 +67,8 @@ def retriever(settings):
         return Retriever(chroma_dir=settings.chroma_dir)
     except FileNotFoundError as exc:
         pytest.skip(f"Chroma index not built: {exc}")
+    except RuntimeError as exc:
+        # Retriever now embeds via Gemini's API (ADR-0013), so a missing GEMINI_API_KEY is
+        # also a skip, not a fixture error — CI has no .env at all (backend/main.py's
+        # lifespan catches the same two exceptions for the same reason).
+        pytest.skip(f"GEMINI_API_KEY not set: {exc}")
