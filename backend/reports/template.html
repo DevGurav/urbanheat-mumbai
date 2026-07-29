@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UrbanHeat AI — Ward {{ ward.ward_code }} report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 1.7cm 1.8cm;
+    @bottom-center {
+      content: "UrbanHeat AI — generated {{ generated_at }} — model {{ ward.model_version }}";
+      font-size: 8pt;
+      color: #888;
+    }
+  }
+  body {
+    font-family: "DejaVu Sans", Arial, sans-serif;
+    color: #1a1a1a;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+  h1 { color: #c0392b; font-size: 19pt; margin-bottom: 0.1em; }
+  h2 { color: #c0392b; font-size: 12.5pt; margin-top: 1em; margin-bottom: 0.4em; border-bottom: 1px solid #ddd; padding-bottom: 0.15em; }
+  .subtitle { color: #555; font-size: 9.5pt; margin-top: 0; }
+  .stat-grid { display: flex; flex-wrap: wrap; gap: 0.6em; margin: 0.6em 0; }
+  .stat { border: 1px solid #e0e0e0; border-radius: 4px; padding: 0.4em 0.9em; min-width: 6.2cm; }
+  .stat .label { font-size: 8pt; color: #777; text-transform: uppercase; letter-spacing: 0.03em; }
+  .stat .value { font-size: 13.5pt; font-weight: bold; }
+  table { width: 100%; border-collapse: collapse; margin: 0.5em 0; }
+  th, td { text-align: left; padding: 0.25em 0.6em; border-bottom: 1px solid #eee; font-size: 9pt; }
+  th { color: #777; font-weight: normal; text-transform: uppercase; font-size: 7.5pt; letter-spacing: 0.03em; }
+  .warming { color: #e34948; font-weight: bold; }
+  .cooling { color: #2a78d6; font-weight: bold; }
+  .caveat { background: #fdf3f2; border-left: 3px solid #c0392b; padding: 0.5em 0.9em; font-size: 8.5pt; color: #444; margin: 0.6em 0; }
+  .clamped-warning { background: #fff8e1; border-left: 3px solid #e0a800; padding: 0.5em 0.9em; font-size: 8.5pt; margin: 0.6em 0; }
+  .measurement-note { font-size: 7.5pt; color: #999; margin-top: 1.2em; }
+</style>
+</head>
+<body>
+
+<h1>Ward {{ ward.ward_code }}</h1>
+<p class="subtitle">UrbanHeat AI — Mumbai urban heat analysis · generated {{ generated_at }}</p>
+
+<h2>Heat summary</h2>
+<div class="stat-grid">
+  <div class="stat">
+    <div class="label">Mean surface temperature</div>
+    <div class="value">{{ "%.2f"|format(ward.lst_mean) }} °C</div>
+  </div>
+  <div class="stat">
+    <div class="label">Deviation from city mean</div>
+    <div class="value {{ 'warming' if ward.deviation > 0 else 'cooling' }}">
+      {{ "%+.2f"|format(ward.deviation) }} °C
+    </div>
+  </div>
+  <div class="stat">
+    <div class="label">Population</div>
+    <div class="value">{{ "{:,}".format(ward.population | round | int) }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Cells analysed</div>
+    <div class="value">{{ ward.n_cells }}</div>
+  </div>
+</div>
+<p>City-wide mean: {{ "%.2f"|format(ward.city_mean) }} °C. Values are <strong>land surface
+temperature</strong> from Landsat thermal composites, not air temperature.</p>
+
+<h2>What's driving the heat here</h2>
+<table>
+  <thead>
+    <tr><th>Feature</th><th>Ward mean value</th><th>Contribution</th><th>Direction</th></tr>
+  </thead>
+  <tbody>
+    {% for d in ward.drivers %}
+    <tr>
+      <td>{{ d.feature }}</td>
+      <td>{{ "%.3f"|format(d.mean_value) }}</td>
+      <td>{{ "%+.3f"|format(d.mean_shap_c) }} °C</td>
+      <td class="{{ d.direction }}">{{ d.direction }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p style="font-size: 8.5pt; color: #888;">Contributions are SHAP values from the trained
+model — each row is a mean across the ward's cells, not a single measurement.</p>
+
+{% if scenario %}
+<h2>Scenario: {{ scenario.intervention.replace('_', ' ') }}
+  {% if scenario.intervention == 'cool_roof' %}({{ "%.0f"|format(scenario.coverage * 100) }}% coverage){% endif %}
+</h2>
+<div class="stat-grid">
+  <div class="stat">
+    <div class="label">Mean predicted change</div>
+    <div class="value cooling">{{ "%.2f"|format(scenario.mean_dlst) }} °C</div>
+  </div>
+  <div class="stat">
+    <div class="label">Best-case cell</div>
+    <div class="value cooling">{{ "%.2f"|format(scenario.best_dlst) }} °C</div>
+  </div>
+</div>
+{% if scenario.clamped %}
+<div class="clamped-warning">
+  <strong>{{ scenario.clamped_cells }} of {{ scenario.n_cells }} cells</strong> pushed past
+  the model's training envelope and were clamped to the nearest supported value — their
+  numbers are a bound, not a free extrapolation.
+</div>
+{% endif %}
+<div class="caveat">{{ scenario.caveat }}</div>
+{% endif %}
+
+<p class="measurement-note">
+  Model version {{ ward.model_version }}. Correlational model: results describe cells like
+  this one, not a causal guarantee for any specific location. Generated automatically by
+  UrbanHeat AI — not an official municipal or meteorological assessment.
+</p>
+
+</body>
+</html>

@@ -253,3 +253,16 @@ class SavedScenario(BaseModel):
 
 class SavedScenariosResponse(BaseModel):
     scenarios: list[SavedScenario] = Field(description="Newest first")
+
+
+class ReportRequest(BaseModel):
+    """A ward's SHAP explanation, always; a scenario comparison too if `intervention` is
+    given. Both sections reuse `explain_ward`/`scenario` (`backend/services.py`) — the PDF
+    never computes its own numbers, only formats ones the API already serves elsewhere.
+    """
+
+    ward_code: str
+    intervention: Literal["greening", "cool_roof"] | None = Field(
+        default=None, description="Omit for an explanation-only report"
+    )
+    coverage: float = Field(default=1.0, ge=0.0, le=1.0)

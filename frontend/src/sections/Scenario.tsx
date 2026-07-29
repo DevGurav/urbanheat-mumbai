@@ -22,6 +22,7 @@ import { GeoJSON, MapContainer, TileLayer } from "react-leaflet";
 import {
   useCityGrid,
   useDeleteScenario,
+  useGenerateReport,
   useHotspots,
   useSaveScenario,
   useSavedScenarios,
@@ -54,6 +55,27 @@ export function Scenario() {
   const savedScenarios = useSavedScenarios(accessToken);
   const saveScenario = useSaveScenario(accessToken);
   const deleteScenario = useDeleteScenario(accessToken);
+  const generateReport = useGenerateReport();
+
+  function handleDownloadReport() {
+    if (!wardCode) return;
+    generateReport.mutate(
+      { ward_code: wardCode, intervention, coverage },
+      {
+        onSuccess: (pdfBlob) => {
+          // No stored file to link to (backend/routers/reports.py's own docstring — the PDF
+          // streams back on this same request, nothing saved server-side), so "download" is
+          // a client-side blob URL clicked once and released, not a real navigable link.
+          const url = URL.createObjectURL(pdfBlob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `urbanheat-ward-${wardCode}-report.pdf`;
+          link.click();
+          URL.revokeObjectURL(url);
+        },
+      },
+    );
+  }
 
   function handleLoad(saved: SavedScenario) {
     setWardCode(saved.ward_code);
@@ -157,7 +179,24 @@ export function Scenario() {
             {saveScenario.isPending ? "Saving…" : "Save scenario"}
           </Button>
         )}
+
+        <Button
+          variant="outlined"
+          onClick={handleDownloadReport}
+          disabled={!wardCode || generateReport.isPending}
+        >
+          {generateReport.isPending ? "Generating…" : "Download report"}
+        </Button>
       </Box>
+
+      {generateReport.isError && (
+        <Alert severity="error">
+          Couldn't generate the report —{" "}
+          {generateReport.error instanceof Error
+            ? generateReport.error.message
+            : "is the backend running?"}
+        </Alert>
+      )}
 
       {/* Config only, never a computed result — loading one re-runs /scenario for real
           (supabase/schema.sql's own comment, PROGRESS.md's kickoff decision), so a saved

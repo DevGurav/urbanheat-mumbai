@@ -19,6 +19,7 @@ import type {
   HotspotsUnit,
   MonitoringCheckResponse,
   PredictResponse,
+  ReportRequest,
   SavedScenario,
   SavedScenarioRequest,
   SavedScenariosResponse,
@@ -57,6 +58,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // DELETE /scenarios/{id} returns 204 with no body — nothing to parse.
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+/** POST /reports/generate returns a PDF binary, not JSON — its own fetch, not `request<T>`,
+ * but the same {detail, error_code} parsing on a non-2xx response. */
+async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...init?.headers },
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({
+      detail: response.statusText,
+      error_code: null,
+    }))) as ApiErrorBody;
+    throw new ApiError(response.status, body);
+  }
+  return response.blob();
 }
 
 function authHeader(accessToken: string): HeadersInit {
@@ -113,4 +131,7 @@ export const api = {
 
   deleteScenario: (id: string, accessToken: string) =>
     request<void>(`/scenarios/${id}`, { method: "DELETE", headers: authHeader(accessToken) }),
+
+  generateReport: (body: ReportRequest) =>
+    requestBlob("/reports/generate", { method: "POST", body: JSON.stringify(body) }),
 };

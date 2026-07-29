@@ -18,6 +18,15 @@
 FROM python:3.12-slim-bookworm
 COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
 
+# WeasyPrint (Phase 7, POST /reports/generate) needs these at import time, not just the
+# `weasyprint` Python package — it renders HTML/CSS to PDF via native Pango/cairo, the same
+# reason this doesn't work out of the box on a plain Windows dev machine
+# (backend/reports/generate.py's module docstring, ci.yml's matching apt-get step).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 libgdk-pixbuf2.0-0 libcairo2 \
+    fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
 

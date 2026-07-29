@@ -215,8 +215,25 @@ else** — RLS makes those look identical on purpose, so the response can't leak
 `POST /scenario` with these fields — the number a user sees is always freshly computed
 against the current model, never a snapshot that silently drifted from a retrained one.
 
-## `POST /reports/generate` *(Phase 7)*
-WeasyPrint PDF for a ward or scenario. Returns a download URL.
+## `POST /reports/generate` ✅ *(landed)*
+```json
+{"ward_code": "L", "intervention": "greening", "coverage": 1.0}
+```
+`intervention` optional — omit it for a ward-explanation-only report, no scenario section.
+Both sections reuse `explain_ward`/`scenario` (`backend/services.py`) — the PDF never
+computes a number itself, only formats one the API already serves.
+
+Returns the PDF **directly** (`application/pdf`, `Content-Disposition: attachment`), not a
+stored-file URL as originally sketched — the same kind of correction Phase 3 already made to
+this file's draft contracts (`ward_name` → `ward_code`, `tree_planting` →
+`greening`/`cool_roof`). Storing the file somewhere would mean adding blob storage this
+project has never needed anywhere else (ADR-0004); streaming the bytes back on the same
+request needs nothing new.
+
+`404 ward_not_found` / `ward_has_no_land_cells` (same as `POST /scenario` — reuses its
+validation). `503 reports_unavailable` if WeasyPrint's native Pango/cairo libraries aren't
+importable on the host — present in the deployed image and CI (`Dockerfile`, `ci.yml`), not
+guaranteed on every dev machine (`backend/reports/generate.py`'s module docstring).
 
 ---
 

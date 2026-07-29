@@ -5,7 +5,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "./client";
-import type { HotspotsBy, HotspotsUnit, SavedScenarioRequest, ScenarioRequest } from "./types";
+import type {
+  HotspotsBy,
+  HotspotsUnit,
+  ReportRequest,
+  SavedScenarioRequest,
+  ScenarioRequest,
+} from "./types";
 
 export function useHealth() {
   return useQuery({ queryKey: ["health"], queryFn: api.health });
@@ -105,5 +111,12 @@ export function useDeleteScenario(accessToken: string | null) {
   return useMutation({
     mutationFn: (id: string) => api.deleteScenario(id, accessToken as string),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-scenarios"] }),
+  });
+}
+
+/** Returns a PDF Blob, not JSON (Phase 7) — the caller triggers the actual browser download. */
+export function useGenerateReport() {
+  return useMutation({
+    mutationFn: (body: ReportRequest) => api.generateReport(body),
   });
 }

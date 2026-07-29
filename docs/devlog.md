@@ -21,6 +21,55 @@ six months later. Dead ends recorded here are worth as much as successes; a good
 
 ---
 
+## 2026-07-29 — Phase 7 — POST /reports/generate: PDF ward reports
+
+**Done**
+- `backend/reports/` — `template.html` (Jinja2) + `generate.py` (renders it to PDF bytes via
+  WeasyPrint). `backend/routers/reports.py` wires `POST /reports/generate`: always an
+  `explain_ward` section, plus a `scenario` comparison section when `intervention` is given.
+  Neither computes a number itself — both call the same `backend/services.py` functions
+  `GET /explain/{cell_id}` and `POST /scenario` already use, so a PDF can never disagree with
+  the live dashboard.
+- Returns the PDF directly on the same request (`application/pdf`,
+  `Content-Disposition: attachment`), not a stored-file URL as `api-reference.md`'s original
+  stub sketched — storing it anywhere would mean adding blob storage this project has never
+  needed elsewhere (ADR-0004); streaming the bytes back needs nothing new. Same kind of
+  correction Phase 3 already made to other draft contracts in that file.
+- Frontend: a "Download report" button in the Scenario simulator, client-side blob URL
+  clicked once via a temporary `<a>` and released — no server-side file to link to.
+
+**Broke / learned**
+- WeasyPrint installs cleanly via `uv` but needs native Pango/cairo/gdk-pixbuf libraries at
+  *import* time, not just the Python package — absent on this Windows dev machine
+  (`OSError: cannot load library 'libgobject-2.0-0'`), present via `apt-get` on the deployed
+  Debian image and on GitHub Actions' `ubuntu-latest` runner. Asked directly how to handle
+  local testing rather than fighting a Windows-specific GTK3 install that wouldn't even
+  reflect the real deployment target; author chose Docker-only verification for this feature.
+  `Dockerfile` and `ci.yml` both gained the same `apt-get install libpango-1.0-0
+  libpangocairo-1.0-0 libpangoft2-1.0-0 libgdk-pixbuf2.0-0 libcairo2 fonts-dejavu-core` step.
+  The router imports `generate_ward_report` lazily inside the function it needs, not at
+  module load — so a machine without these libraries still boots the rest of the app fine;
+  only this one endpoint 503s (`reports_unavailable`), matching how the RAG retriever already
+  degrades when its own optional dependency is missing (ADR-0013).
+- Real test-authoring bug caught before it shipped: `from backend.reports.generate import
+  generate_ward_report` binds a local name in `backend.routers.reports`, so
+  `monkeypatch.setattr` on the *source* module (`backend.reports.generate`) silently didn't
+  reach what the router actually calls — three tests passed for the wrong reason until a
+  real assertion failure (503 instead of 200) exposed it. Fixed by patching
+  `backend.routers.reports.generate_ward_report`, where the router actually looks it up.
+- Live-verified inside the real Docker image, under the same `--memory=512m` limit as Phase
+  6's OOM check, against the real Supabase project: ward A (a cooling ward, −1.25 °C
+  deviation) and ward L (the known hottest ward, +3.22 °C — the exact number live-verified
+  back in Phase 4's agents build) both rendered correct PDFs. First render spilled a nearly
+  empty second page onto the output; iterated the template's CSS directly inside the running
+  container via `docker cp` (no full rebuild per change) until it fit cleanly on one page.
+
+**Next**
+- Demo script + real screenshots of the deployed dashboard, then the report draft itself
+  (assembled from `docs/`, delivered outside the repo per the kickoff's own call).
+
+---
+
 ## 2026-07-29 — Phase 7 — Kickoff: report generation, demo, report draft
 
 **Done**

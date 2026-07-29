@@ -23,6 +23,15 @@ jobs:
       - uses: astral-sh/setup-uv@v9.0.0
         with:
           enable-cache: true
+      # WeasyPrint (Phase 7, POST /reports/generate) needs native Pango/cairo libraries at
+      # import time, not present on a bare ubuntu-latest runner — same packages as
+      # Dockerfile's matching apt-get step, so a test that renders a real PDF isn't stuck
+      # skipping forever in CI the way it does on a plain Windows dev machine.
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 libgdk-pixbuf2.0-0 \
+            libcairo2 fonts-dejavu-core
       - run: uv sync --frozen --extra pipeline --group dev
       - run: uv run ruff check backend data_pipeline tests
       - run: uv run pytest

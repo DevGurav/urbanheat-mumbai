@@ -175,6 +175,13 @@ export interface SavedScenariosResponse {
   scenarios: SavedScenario[];
 }
 
+export interface ReportRequest {
+  ward_code: string;
+  /** Omit for an explanation-only report — no scenario section. */
+  intervention?: Intervention | null;
+  coverage?: number;
+}
+
 /** {detail, error_code} — api-reference.md's error shape, every non-2xx response. */
 export interface ApiErrorBody {
   detail: string;

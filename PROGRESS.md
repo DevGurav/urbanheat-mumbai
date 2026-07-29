@@ -695,12 +695,20 @@ the opposite problem the report-draft call is solving for.
 
 ### Report generation
 
-- [ ] `POST /reports/generate` — WeasyPrint PDF for a ward or scenario: current LST/HVI, top
-  SHAP drivers with direction, a scenario comparison (ΔLST for greening vs. cool-roof) when
-  applicable, the same measurement/correlational caveats every other endpoint already
-  carries. Returns a download URL (`api-reference.md`'s existing stub)
-- [ ] Frontend: a "Download report" action — ward detail (Heat map's click-to-explain
-  Drawer) and/or the Scenario simulator
+- [X] `POST /reports/generate` — WeasyPrint PDF for a ward, and a scenario comparison when
+  `intervention` is given: mean LST/deviation/population, top SHAP drivers with direction,
+  ΔLST + clamping disclosure + the caveat text, all reused from `explain_ward`/`scenario`
+  (`backend/services.py`), never recomputed. Returns the PDF directly, not a stored-file URL
+  as first sketched (`api-reference.md`'s "Deviation" note has the why). Real bug caught by
+  actually building it, not assumed: WeasyPrint needs native Pango/cairo libraries at import
+  time that a bare Windows dev machine doesn't have — `Dockerfile` and `ci.yml` both gained
+  an `apt-get` step; local tests skip cleanly instead of failing when those libs are absent.
+  Live-verified inside the real Docker image with the same `--memory=512m` limit as Phase 6's
+  OOM check — real ward A and ward L reports rendered correctly, ward L's numbers matching
+  the ones live-verified back in Phase 4
+- [X] Frontend: a "Download report" action in the Scenario simulator, using whatever
+  ward/intervention/coverage is currently selected — client-side blob download, no stored
+  file to link to (matches the backend's own no-storage design)
 
 ### Demo & presentation
 

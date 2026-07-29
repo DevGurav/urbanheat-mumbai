@@ -23,6 +23,7 @@ from backend.routers import (
     hotspots,
     monitoring,
     predict,
+    reports,
     scenario,
     scenarios,
     trends,
@@ -108,6 +109,7 @@ app.include_router(agent.router)
 app.include_router(monitoring.router)
 app.include_router(alerts.router)
 app.include_router(auth.router)
+app.include_router(reports.router)
 
 
 @app.exception_handler(HTTPException)
