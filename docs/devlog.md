@@ -21,6 +21,40 @@ six months later. Dead ends recorded here are worth as much as successes; a good
 
 ---
 
+## 2026-07-29 — Phase 7 — Demo script and real screenshots
+
+**Done**
+- `docs/demo.md` — a five-stop walkthrough (heat map, analytics, scenario simulator, copilot,
+  alerts) with talking points, sized for a five-minute live presentation.
+- `docs/screenshots/` — captured with Playwright against **the live production URL**, not a
+  local dev server: the heat map, the click-to-explain SHAP drawer on a real cell, a real
+  scenario run on Ward L with the ΔLST overlay and the new Download-report button, a real
+  Gemini Copilot response, and the Alerts feed's calm empty state. README gained a
+  Screenshots section linking to `demo.md`.
+- Cross-checked once more, live: Ward L's numbers are identical across Analytics (HVI 0.61,
+  population 616,084), the Copilot's real answer (43.18 °C, +3.22 °C, same population), and
+  the scenario/report work from earlier this phase — four independent code paths, same
+  numbers, again.
+
+**Broke / learned**
+- The weather forecast panel hit a real `429` from Open-Meteo (`weather_upstream_unavailable`
+  from our own backend) while capturing screenshots — genuine upstream rate-limiting, not a
+  bug. Confirmed it wasn't a frontend defect either: `Analytics.tsx`'s `WeatherPanel` already
+  has a proper `isError` alert, and the first "stuck spinner"-looking screenshot was just
+  caught mid-retry (TanStack Query's default backoff). Waited for it to clear; it didn't
+  within a reasonable window, so the shipped screenshot shows the honest degraded state
+  instead of a forced, faked success — consistent with the whole project's stance on not
+  hiding real limitations.
+- One Playwright selector bug caught before it cost anything: `page.getByRole("textbox")`
+  matched both the sign-in email field in the AppBar and the chat input, throwing a strict-
+  mode error *before* the real Gemini call was sent — no quota spent on the mistake.
+
+**Next**
+- The report draft itself, assembled from `docs/`, delivered outside the repo per the
+  kickoff's own call — the last item on the Phase 7 board before the exit criterion.
+
+---
+
 ## 2026-07-29 — Phase 7 — POST /reports/generate: PDF ward reports
 
 **Done**

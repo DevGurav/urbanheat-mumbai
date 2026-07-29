@@ -712,8 +712,15 @@ the opposite problem the report-draft call is solving for.
 
 ### Demo & presentation
 
-- [ ] `docs/demo.md` — a walkthrough script for the live product
-- [ ] Real screenshots of the deployed dashboard (README and/or `demo.md`)
+- [X] `docs/demo.md` — a five-stop walkthrough script (heat map → analytics → scenario →
+  copilot → alerts), talking points included, for presenting the live product
+- [X] Real screenshots of the deployed dashboard — `docs/screenshots/`, captured against
+  **the live URL** with Playwright, not localhost: click-to-explain SHAP drawer, a real
+  scenario run with the ΔLST overlay and the new Download-report button, and a real Gemini
+  Copilot response (Ward L, citing the exact numbers Analytics and the PDF report also show).
+  One honest miss: the weather chart hit a genuine Open-Meteo rate limit
+  (`weather_upstream_unavailable`) during capture and is shown in its correctly-degraded
+  error state, not force-faked into a success screenshot
 
 ### Report draft — outside the repo
 

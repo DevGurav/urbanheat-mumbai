@@ -28,6 +28,15 @@ sleeps after 15 min idle, ~1 min to wake on first load).
 | **Monitor** conditions | Scheduled job watches forecasts and raises heatwave alerts |
 | **Converse** | RAG copilot answers planner questions over city data + policy documents |
 
+## Screenshots
+
+|  |  |
+|---|---|
+| ![Heat map](docs/screenshots/heat-map.png) Heat map — every 200m cell, coloured by surface temperature | ![Click-to-explain](docs/screenshots/ward-explain.png) Click any cell for its real SHAP attribution |
+| ![Scenario simulator](docs/screenshots/scenario.png) Scenario simulator — re-run the model with an intervention applied | ![Copilot](docs/screenshots/chat.png) Copilot — an agent calling the same tools, cited and grounded |
+
+Full walkthrough script: **[docs/demo.md](docs/demo.md)**
+
 ## Architecture
 
 Four LangGraph agents (Planning, Digital Twin, Monitoring, Copilot) sit on top of an
