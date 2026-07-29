@@ -683,8 +683,39 @@ decided)
 
 ## Phase 7 — Polish & report · Weeks 23–24+
 
-- [ ] PDF report endpoint (WeasyPrint) · demo script · screenshots
-- [ ] Final report / paper draft · presentation prep
+**Goal:** turn the finished, deployed product into a presentable package — a real
+downloadable-report feature, a demo walkthrough with real screenshots, and the written
+report draft.
+
+**Settled at kickoff, 2026-07-29**
+**The report draft stays outside the public repo** — assembled from `docs/` per
+`BLUEPRINT.md` §7's plan and delivered separately, never committed. **Demo script +
+screenshots stay in the repo** — a walkthrough of a real, live product reads as confidence,
+the opposite problem the report-draft call is solving for.
+
+### Report generation
+
+- [ ] `POST /reports/generate` — WeasyPrint PDF for a ward or scenario: current LST/HVI, top
+  SHAP drivers with direction, a scenario comparison (ΔLST for greening vs. cool-roof) when
+  applicable, the same measurement/correlational caveats every other endpoint already
+  carries. Returns a download URL (`api-reference.md`'s existing stub)
+- [ ] Frontend: a "Download report" action — ward detail (Heat map's click-to-explain
+  Drawer) and/or the Scenario simulator
+
+### Demo & presentation
+
+- [ ] `docs/demo.md` — a walkthrough script for the live product
+- [ ] Real screenshots of the deployed dashboard (README and/or `demo.md`)
+
+### Report draft — outside the repo
+
+- [ ] Assemble the final report from `docs/`: problem/scope (`BLUEPRINT.md`), methodology
+  (`ml-methodology.md` + `data-dictionary.md`), design (`architecture.md` + `decisions/`),
+  results (notebooks), limitations (the honest notes already kept in `devlog.md`),
+  bibliography (`references.md`) — delivered to the author directly, not committed
+
+### Exit
+
 - [ ] ✅ **Report draft complete from `docs/`**
 
 ---

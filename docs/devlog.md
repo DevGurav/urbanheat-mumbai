@@ -21,6 +21,30 @@ six months later. Dead ends recorded here are worth as much as successes; a good
 
 ---
 
+## 2026-07-29 — Phase 7 — Kickoff: report generation, demo, report draft
+
+**Done**
+- Planning pass before code, per the working agreement. Read `PROGRESS.md`'s thin Phase 7
+  stub against `BLUEPRINT.md` §7's documentation-system plan and `api-reference.md`'s
+  existing `POST /reports/generate` stub, then expanded the board into three groups: report
+  generation (the real feature), demo & presentation, and the report draft itself.
+- One real scoping question, asked directly: should the final written report/paper draft
+  live in the public repo, or stay separate? Author chose separate — delivered outside the
+  repo once assembled, never committed. Demo script + screenshots stay in the repo, the
+  opposite call for the opposite reason: a walkthrough of a real, live, deployed product
+  reads as confidence, not coursework, which is exactly the concern the report-draft call
+  was solving for.
+
+**Decided (author-confirmed)**
+- Report draft: outside the repo, not committed.
+- Demo script + screenshots: in the repo.
+
+**Next**
+- Build `POST /reports/generate` — WeasyPrint PDF for a ward or scenario, then the frontend
+  "Download report" action.
+
+---
+
 ## 2026-07-29 — Phase 6 — Closed: public URLs live
 
 **Done**
