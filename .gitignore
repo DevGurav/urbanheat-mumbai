@@ -58,3 +58,87 @@ cache/
 Thumbs.db
 .vscode/
 .idea/
+
+
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+
+# ======================
+# Environment / Secrets
+# ======================
+.env
+.env.*
+*.key
+*.pem
+
+
+# ======================
+# IDE
+# ======================
+.vscode/
+.idea/
+
+
+# ======================
+# Data
+# ======================
+datasets/
+data/raw/
+data/processed/
+*.csv
+*.parquet
+
+
+# Keep sample data
+!data/sample/*.csv
+
+
+# ======================
+# ML Models
+# ======================
+*.pkl
+*.joblib
+models/
+
+
+# ======================
+# Logs
+# ======================
+*.log
+
+
+# ======================
+# Frontend
+# ======================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+
+# ======================
+# OS
+# ======================
+.DS_Store
+Thumbs.db
+
+
+# ======================
+# Earth Engine
+# ======================
+gee_exports/
+exports/
+
+# Google Earth Engine credentials
+service-account.json
+*.json
