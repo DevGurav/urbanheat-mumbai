@@ -676,8 +676,8 @@ decided)
 ### Exit
 
 - [X] ✅ **Public URLs work end-to-end** — author-confirmed 2026-07-29.
-  Frontend: <https://urbanheat-mumbai.vercel.app> · Backend:
-  <https://urbanheat-api.onrender.com>
+  Frontend: [https://urbanheat-mumbai.vercel.app](https://urbanheat-mumbai.vercel.app) · Backend:
+  [https://urbanheat-api.onrender.com](https://urbanheat-api.onrender.com)
 
 ---
 
@@ -724,14 +724,14 @@ the opposite problem the report-draft call is solving for.
 
 ### Report draft — outside the repo
 
-- [ ] Assemble the final report from `docs/`: problem/scope (`BLUEPRINT.md`), methodology
+- [X] Assemble the final report from `docs/`: problem/scope (`BLUEPRINT.md`), methodology
   (`ml-methodology.md` + `data-dictionary.md`), design (`architecture.md` + `decisions/`),
   results (notebooks), limitations (the honest notes already kept in `devlog.md`),
   bibliography (`references.md`) — delivered to the author directly, not committed
 
 ### Exit
 
-- [ ] ✅ **Report draft complete from `docs/`**
+- [X] ✅ **Report draft complete from `docs/`**
 
 ---
 
