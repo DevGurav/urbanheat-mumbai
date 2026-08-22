@@ -21,6 +21,54 @@ six months later. Dead ends recorded here are worth as much as successes; a good
 
 ---
 
+## 2026-08-22 — Phase 7 — A second stack arrives on main, and CI goes red
+
+**Done**
+- Diagnosed the two failing CI runs on `main` (#10, #11) after two commits landed from a
+  collaborator: `6f8681c` and `e6b3a3e`. Run #9, on `49d6e3b`, was the last green one.
+- Preserved both commits on the `punit/backend-ml` branch, then reverted them from `main` in
+  a single commit. Verified before pushing that the reverted tree is byte-identical to
+  `49d6e3b` (`git diff --quiet 49d6e3b`) and that `ruff check backend data_pipeline tests`
+  passes again.
+
+**Broke / learned**
+- The commits added a *second* FastAPI application under `backend/app/` and a Next.js App
+  Router frontend under `frontend/src/app/`, running alongside the existing `backend/`
+  package and the Vite frontend rather than integrating with either. Two dependency managers
+  too — a `backend/requirements.txt` next to the existing `pyproject.toml` + `uv.lock`.
+- The `backend` job failed at `ruff check`: 38 errors, all under `backend/app/**` (28 `I001`,
+  5 `F401`, 3 `UP045`, 1 `UP006`, 1 `UP035`). `pytest` never ran.
+- The `frontend` job failed at `tsc -b`. Worth understanding *why* it was reachable at all:
+  `tsconfig.app.json` sets `"include": ["src"]`, so anything dropped anywhere under `src/`
+  is type-checked, no registration needed. The new files import `next`, `next/font/google`,
+  `maplibre-gl` and `lucide-react`, none declared in `frontend/package.json` — so `npm ci`,
+  which installs strictly from the lockfile, never provides them. `next/font` could not work
+  under Vite even if installed; that one is a framework mismatch, not a missing dependency.
+- The appended `.gitignore` block was the quiet hazard, and the reason to revert it rather
+  than keep it: `*.json`, `*.csv` and `models/` would have masked `frontend/package.json`,
+  all three `tsconfig*.json`, `.env.example` and `models/.gitkeep` from any future `git add`.
+  Already-tracked files are unaffected by a new ignore rule, which is exactly why this would
+  have sat unnoticed until something new failed to stage.
+- Nothing was salvageable into the ladder. `train_xgboost.py` scores with `train_test_split`
+  — a random split, which is the precise leakage the ward-grouped spatial CV in
+  `data_pipeline/ml/cv.py` exists to prevent (`ml-methodology.md` §2). Its `grid_generator.py`
+  and `historical_data.py` restate `data_pipeline/grid.py` and `data_pipeline/sources/*` more
+  thinly. And despite the commit subject *"added ml model trained on 2019-2024 data"*, no
+  model artifact was committed — only training code.
+
+**Decided**
+- Revert rather than reset-and-force-push. `main` is shared now, and rewriting a branch
+  someone else holds locally costs more than three commits of log noise. The history reads
+  honestly this way: the push happened, and it was undone for stated reasons.
+- Keep the work on a branch rather than deleting it. It is not mergeable, but it is someone
+  else's effort and it should be theirs to revisit.
+
+**Next**
+- Agree a branch-and-PR flow before any further shared work. CI already runs on
+  `pull_request` — a PR would have caught both failures without `main` ever going red.
+
+---
+
 ## 2026-07-29 — Phase 7 — Demo script and real screenshots
 
 **Done**
