@@ -58,8 +58,15 @@ export function Chat() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Alert severity="info" sx={{ borderRadius: 0 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%", maxWidth: 1100, mx: "auto", width: "100%" }}>
+      <Box sx={{ px: { xs: 2, md: 3 }, pt: 2.5, pb: 1.5 }}>
+        <Typography variant="overline" sx={{ color: "#168563", fontWeight: 800, letterSpacing: ".1em" }}>AI DECISION SUPPORT</Typography>
+        <Typography variant="h4" fontWeight={850} sx={{ letterSpacing: "-.04em" }}>UrbanHeat Copilot</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>
+          Ask about hotspots, drivers, weather, interventions or what the model can explain.
+        </Typography>
+      </Box>
+      <Alert severity="info" sx={{ mx: { xs: 1.5, md: 3 }, borderRadius: 3 }}>
         The free Gemini tier caps at ~20 requests/day for this project (measured live,
         `BLUEPRINT.md`) — identical questions are cached, but distinct ones spend real quota.
         Each reply can take several seconds; that is the LLM, not a stall.
