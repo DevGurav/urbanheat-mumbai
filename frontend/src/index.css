@@ -10,5 +10,188 @@ body {
     system-ui,
     "Segoe UI",
     Roboto,
+    Helvetica,
+    Arial,
     sans-serif;
+
+  background: #f4f8fc;
+  color: #10233f;
+}
+
+/* ================================
+   APP
+================================ */
+
+.app-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 10% 0%,
+      rgba(11, 94, 215, 0.06),
+      transparent 30%
+    ),
+    #f4f8fc;
+}
+
+.app-content {
+  min-height: calc(100vh - 64px);
+}
+
+/* ================================
+   BRAND
+================================ */
+
+.brand {
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+}
+
+.brand-name {
+  font-size: 1.05rem !important;
+  line-height: 1.2;
+}
+
+.brand-name span {
+  color: #5ee7ff;
+}
+
+.brand-subtitle {
+  font-size: 0.68rem !important;
+  line-height: 1.2;
+}
+
+/* ================================
+   TOOLBAR
+================================ */
+
+.app-toolbar {
+  min-height: 68px !important;
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+/* ================================
+   NAVIGATION
+================================ */
+
+.main-tabs {
+  margin-left: 28px;
+}
+
+.main-tabs .MuiTab-root {
+  min-height: 68px;
+}
+
+/* ================================
+   ALERT BUTTON
+================================ */
+
+.alert-button {
+  color: white !important;
+}
+
+/* ================================
+   MOBILE HOME
+================================ */
+
+.mobile-home {
+  display: none;
+
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  z-index: 2000;
+
+  padding: 8px 18px;
+
+  border-radius: 30px;
+
+  background: #0b5ed7;
+  color: white;
+
+  box-shadow:
+    0 8px 25px rgba(11, 94, 215, 0.3);
+
+  align-items: center;
+  gap: 6px;
+
+  cursor: pointer;
+}
+
+/* ================================
+   SCROLLBAR
+================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #eef3f8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a9bfdc;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0b5ed7;
+}
+
+/* ================================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 900px) {
+  .app-toolbar {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .main-tabs {
+    margin-left: 12px;
+  }
+
+  .main-tabs .MuiTab-root {
+    min-width: auto;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .brand-name {
+    font-size: 0.95rem !important;
+  }
+
+  .main-tabs {
+    display: none;
+  }
+
+  .mobile-home {
+    display: flex;
+  }
 }
