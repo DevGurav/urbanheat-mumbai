@@ -42,7 +42,6 @@ const LAYER_META: Record<
     shortLabel: string;
     unit: string;
     description: string;
-    icon: typeof ThermostatRoundedIcon;
   }
 > = {
   lst: {
@@ -50,28 +49,24 @@ const LAYER_META: Record<
     shortLabel: "LST",
     unit: "°C",
     description: "Land surface temperature across Mumbai",
-    icon: ThermostatRoundedIcon,
   },
   ndvi: {
     label: "NDVI (vegetation)",
     shortLabel: "NDVI",
     unit: "",
     description: "Vegetation density and health",
-    icon: ForestRoundedIcon,
   },
   hvi: {
     label: "Heat Vulnerability Index",
     shortLabel: "HVI",
     unit: "",
     description: "Relative heat vulnerability",
-    icon: WarningAmberRoundedIcon,
   },
   built: {
     label: "Built-up fraction",
     shortLabel: "Built",
     unit: "",
     description: "Built-up surface intensity",
-    icon: DomainRoundedIcon,
   },
 };
 
@@ -93,7 +88,6 @@ export function HeatMap() {
   const explain = useExplainCell(selectedCellId);
 
   const meta = LAYER_META[layer];
-  const LayerIcon = meta.icon;
 
   const { colorFor, min, max } = useMemo(() => {
     const values = (data?.features ?? []).map(
@@ -215,9 +209,8 @@ export function HeatMap() {
                 }
               );
 
-              layerInstance.on(
-                "click",
-                () => setSelectedCellId(cell_id)
+              layerInstance.on("click", () =>
+                setSelectedCellId(cell_id)
               );
 
               layerInstance.on(
@@ -249,7 +242,7 @@ export function HeatMap() {
       </MapContainer>
 
       {/* =========================================================
-          TOP LEFT — BRAND / MAP TITLE
+          TOP LEFT — TITLE
       ========================================================= */}
 
       <Paper
@@ -323,7 +316,7 @@ export function HeatMap() {
       </Paper>
 
       {/* =========================================================
-          TOP RIGHT — MAP STATUS
+          TOP RIGHT — STATUS
       ========================================================= */}
 
       <Paper
@@ -359,7 +352,8 @@ export function HeatMap() {
               height: 9,
               borderRadius: "50%",
               bgcolor: "#16a34a",
-              boxShadow: "0 0 0 4px rgba(22,163,74,.12)",
+              boxShadow:
+                "0 0 0 4px rgba(22,163,74,.12)",
             }}
           />
 
@@ -450,7 +444,9 @@ export function HeatMap() {
           }}
         >
           <ToggleButton value="lst">
-            <ThermostatRoundedIcon sx={{ mr: 1, fontSize: 19 }} />
+            <ThermostatRoundedIcon
+              sx={{ mr: 1, fontSize: 19 }}
+            />
 
             <Box sx={{ textAlign: "left" }}>
               <Typography
@@ -474,7 +470,9 @@ export function HeatMap() {
           </ToggleButton>
 
           <ToggleButton value="ndvi">
-            <ForestRoundedIcon sx={{ mr: 1, fontSize: 19 }} />
+            <ForestRoundedIcon
+              sx={{ mr: 1, fontSize: 19 }}
+            />
 
             <Box sx={{ textAlign: "left" }}>
               <Typography
@@ -524,7 +522,9 @@ export function HeatMap() {
           </ToggleButton>
 
           <ToggleButton value="built">
-            <DomainRoundedIcon sx={{ mr: 1, fontSize: 19 }} />
+            <DomainRoundedIcon
+              sx={{ mr: 1, fontSize: 19 }}
+            />
 
             <Box sx={{ textAlign: "left" }}>
               <Typography
@@ -560,10 +560,7 @@ export function HeatMap() {
           top: 90,
           right: 20,
           zIndex: 1000,
-          width: {
-            xs: "calc(100% - 40px)",
-            sm: 285,
-          },
+          width: 285,
           display: {
             xs: "none",
             lg: "block",
@@ -686,8 +683,8 @@ export function HeatMap() {
               lineHeight: 1.5,
             }}
           >
-            {meta.description}. Click a grid cell to inspect the
-            underlying heat drivers.
+            {meta.description}. Click a grid cell to inspect
+            the underlying heat drivers.
           </Typography>
         </Box>
 
@@ -882,15 +879,15 @@ export function HeatMap() {
       )}
 
       {/* =========================================================
-          DRAWER — CELL DETAILS
+          CELL DETAILS DRAWER
       ========================================================= */}
 
       <Drawer
         anchor="right"
         open={selectedCellId !== null}
         onClose={() => setSelectedCellId(null)}
-        PaperProps={{
-          sx: {
+        sx={{
+          "& .MuiDrawer-paper": {
             width: {
               xs: "100%",
               sm: 410,
@@ -1011,8 +1008,6 @@ export function HeatMap() {
 
           {explain.data && (
             <>
-              {/* Main temperature card */}
-
               <Paper
                 elevation={0}
                 sx={{
@@ -1055,16 +1050,11 @@ export function HeatMap() {
                     opacity: 0.82,
                   }}
                 >
-                  {explain.data.deviation >= 0
-                    ? "+"
-                    : ""}
-                  {explain.data.deviation.toFixed(1)}°C
-                  {" "}vs city mean of{" "}
-                  {explain.data.city_mean.toFixed(1)}°C
+                  {explain.data.deviation >= 0 ? "+" : ""}
+                  {explain.data.deviation.toFixed(1)}°C vs city
+                  mean of {explain.data.city_mean.toFixed(1)}°C
                 </Typography>
               </Paper>
-
-              {/* Context */}
 
               <Box
                 sx={{
@@ -1142,15 +1132,11 @@ export function HeatMap() {
                           : "#1d4ed8",
                     }}
                   >
-                    {explain.data.deviation >= 0
-                      ? "+"
-                      : ""}
+                    {explain.data.deviation >= 0 ? "+" : ""}
                     {explain.data.deviation.toFixed(1)}°C
                   </Typography>
                 </Box>
               </Box>
-
-              {/* Why section */}
 
               <Box sx={{ mt: 3 }}>
                 <Box
@@ -1215,14 +1201,15 @@ export function HeatMap() {
                             ? DIVERGING.warming
                             : DIVERGING.cooling,
                         flexShrink: 0,
-                        boxShadow:
-                          d.direction === "warming"
-                            ? `0 0 0 4px rgba(220,38,38,.08)`
-                            : `0 0 0 4px rgba(37,99,235,.08)`,
                       }}
                     />
 
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                    >
                       <Typography
                         sx={{
                           fontSize: 12,
@@ -1261,8 +1248,6 @@ export function HeatMap() {
                   </Box>
                 ))}
               </Box>
-
-              {/* Info */}
 
               <Box
                 sx={{
