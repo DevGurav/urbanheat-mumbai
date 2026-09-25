@@ -28,8 +28,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 
 import { useCityGrid, useExplainCell } from "../api/hooks";
-import { DIVERGING, MUTED_INK, sequentialScale } from "../viz/color";
-import { SequentialLegend } from "../viz/SequentialLegend";
+import { DIVERGING, MUTED_INK } from "../viz/color";
 
 const MUMBAI_CENTER: LatLngExpression = [19.076, 72.8777];
 
@@ -42,6 +41,9 @@ const LAYER_META: Record<
     shortLabel: string;
     unit: string;
     description: string;
+    lowLabel: string;
+    highLabel: string;
+    colors: string[];
   }
 > = {
   lst: {
@@ -49,24 +51,72 @@ const LAYER_META: Record<
     shortLabel: "LST",
     unit: "°C",
     description: "Land surface temperature across Mumbai",
+    lowLabel: "Cooler",
+    highLabel: "Hotter",
+    colors: [
+      "#fff7bc",
+      "#fee391",
+      "#fec44f",
+      "#fe9929",
+      "#ec7014",
+      "#cc4c02",
+      "#990000",
+    ],
   },
+
   ndvi: {
-    label: "NDVI (vegetation)",
+    label: "Vegetation",
     shortLabel: "NDVI",
     unit: "",
     description: "Vegetation density and health",
+    lowLabel: "Low vegetation",
+    highLabel: "Healthy vegetation",
+    colors: [
+      "#8c510a",
+      "#bf812d",
+      "#dfc27d",
+      "#f6e8c3",
+      "#c7e9c0",
+      "#74c476",
+      "#238b45",
+      "#005a32",
+    ],
   },
+
   hvi: {
     label: "Heat Vulnerability Index",
     shortLabel: "HVI",
     unit: "",
     description: "Relative heat vulnerability",
+    lowLabel: "Low vulnerability",
+    highLabel: "High vulnerability",
+    colors: [
+      "#15803d",
+      "#65a30d",
+      "#eab308",
+      "#f59e0b",
+      "#f97316",
+      "#ef4444",
+      "#991b1b",
+    ],
   },
+
   built: {
     label: "Built-up fraction",
     shortLabel: "Built",
     unit: "",
     description: "Built-up surface intensity",
+    lowLabel: "Low built-up",
+    highLabel: "High built-up",
+    colors: [
+      "#f8fafc",
+      "#e7e5e4",
+      "#d6d3d1",
+      "#a8a29e",
+      "#78716c",
+      "#57534e",
+      "#292524",
+    ],
   },
 };
 
@@ -80,9 +130,89 @@ interface CellProperties {
   value: number;
 }
 
+/**
+ * Convert a hex color into RGB.
+ */
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = hex.replace("#", "");
+
+  const value =
+    clean.length === 3
+      ? clean
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : clean;
+
+  return [
+    parseInt(value.substring(0, 2), 16),
+    parseInt(value.substring(2, 4), 16),
+    parseInt(value.substring(4, 6), 16),
+  ];
+}
+
+/**
+ * Interpolate between two colors.
+ */
+function interpolateColor(
+  start: string,
+  end: string,
+  amount: number
+): string {
+  const [r1, g1, b1] = hexToRgb(start);
+  const [r2, g2, b2] = hexToRgb(end);
+
+  const r = Math.round(r1 + (r2 - r1) * amount);
+  const g = Math.round(g1 + (g2 - g1) * amount);
+  const b = Math.round(b1 + (b2 - b1) * amount);
+
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
+ * Create a color from a value using the currently selected
+ * layer's color theme.
+ */
+function createColorScale(
+  min: number,
+  max: number,
+  colors: string[]
+) {
+  return (value: number): string => {
+    if (!Number.isFinite(value)) {
+      return colors[0];
+    }
+
+    if (max <= min) {
+      return colors[Math.floor(colors.length / 2)];
+    }
+
+    const normalized = Math.max(
+      0,
+      Math.min(1, (value - min) / (max - min))
+    );
+
+    const scaled = normalized * (colors.length - 1);
+    const index = Math.min(
+      colors.length - 2,
+      Math.floor(scaled)
+    );
+
+    const localAmount = scaled - index;
+
+    return interpolateColor(
+      colors[index],
+      colors[index + 1],
+      localAmount
+    );
+  };
+}
+
 export function HeatMap() {
   const [layer, setLayer] = useState<LayerKey>("lst");
-  const [selectedCellId, setSelectedCellId] = useState<number | null>(null);
+  const [selectedCellId, setSelectedCellId] = useState<number | null>(
+    null
+  );
 
   const { data, isLoading, isError } = useCityGrid(layer);
   const explain = useExplainCell(selectedCellId);
@@ -90,9 +220,12 @@ export function HeatMap() {
   const meta = LAYER_META[layer];
 
   const { colorFor, min, max } = useMemo(() => {
-    const values = (data?.features ?? []).map(
-      (f) => (f.properties as CellProperties).value
-    );
+    const values = (data?.features ?? [])
+      .map(
+        (f) =>
+          (f.properties as CellProperties).value
+      )
+      .filter((value) => Number.isFinite(value));
 
     if (values.length === 0) {
       return {
@@ -106,17 +239,25 @@ export function HeatMap() {
     const hi = Math.max(...values);
 
     return {
-      colorFor: sequentialScale(lo, hi),
+      colorFor: createColorScale(
+        lo,
+        hi,
+        meta.colors
+      ),
       min: lo,
       max: hi,
     };
-  }, [data]);
+  }, [data, meta]);
 
   const formattedMin =
-    layer === "lst" ? `${min.toFixed(1)}°C` : min.toFixed(2);
+    layer === "lst"
+      ? `${min.toFixed(1)}°C`
+      : min.toFixed(2);
 
   const formattedMax =
-    layer === "lst" ? `${max.toFixed(1)}°C` : max.toFixed(2);
+    layer === "lst"
+      ? `${max.toFixed(1)}°C`
+      : max.toFixed(2);
 
   return (
     <Box
@@ -153,8 +294,11 @@ export function HeatMap() {
             data={data}
             style={(feature) => {
               const value =
-                (feature?.properties as CellProperties | undefined)
-                  ?.value ?? min;
+                (
+                  feature?.properties as
+                    | CellProperties
+                    | undefined
+                )?.value ?? min;
 
               return {
                 fillColor: colorFor(value),
@@ -167,7 +311,11 @@ export function HeatMap() {
               feature: Feature<Geometry, CellProperties>,
               layerInstance
             ) => {
-              const { cell_id, ward_code, value } = feature.properties;
+              const {
+                cell_id,
+                ward_code,
+                value,
+              } = feature.properties;
 
               layerInstance.bindTooltip(
                 `
@@ -229,10 +377,16 @@ export function HeatMap() {
               layerInstance.on(
                 "mouseout",
                 (e: LeafletMouseEvent) => {
+                  const currentValue =
+                    (
+                      feature.properties as CellProperties
+                    ).value;
+
                   (e.target as Path).setStyle({
                     weight: 0.4,
                     color: "#ffffff",
                     fillOpacity: 0.72,
+                    fillColor: colorFor(currentValue),
                   });
                 }
               );
@@ -261,7 +415,8 @@ export function HeatMap() {
           background:
             "linear-gradient(145deg, rgba(255,255,255,.98), rgba(248,250,250,.96))",
           border: "1px solid rgba(15,23,42,.08)",
-          boxShadow: "0 14px 40px rgba(15,23,42,.16)",
+          boxShadow:
+            "0 14px 40px rgba(15,23,42,.16)",
           backdropFilter: "blur(12px)",
         }}
       >
@@ -281,12 +436,34 @@ export function HeatMap() {
               placeItems: "center",
               color: "#fff",
               background:
-                "linear-gradient(135deg, #064e4b, #08968c)",
-              boxShadow: "0 6px 18px rgba(8,150,140,.28)",
+                layer === "lst"
+                  ? "linear-gradient(135deg, #991b1b, #ef4444)"
+                  : layer === "ndvi"
+                    ? "linear-gradient(135deg, #166534, #4ade80)"
+                    : layer === "hvi"
+                      ? "linear-gradient(135deg, #b91c1c, #f97316)"
+                      : "linear-gradient(135deg, #44403c, #78716c)",
+              boxShadow:
+                layer === "lst"
+                  ? "0 6px 18px rgba(220,38,38,.28)"
+                  : layer === "ndvi"
+                    ? "0 6px 18px rgba(22,101,52,.28)"
+                    : layer === "hvi"
+                      ? "0 6px 18px rgba(249,115,22,.28)"
+                      : "0 6px 18px rgba(68,64,60,.25)",
               flexShrink: 0,
+              transition: "all .25s ease",
             }}
           >
-            <ThermostatRoundedIcon />
+            {layer === "ndvi" ? (
+              <ForestRoundedIcon />
+            ) : layer === "built" ? (
+              <DomainRoundedIcon />
+            ) : layer === "hvi" ? (
+              <WarningAmberRoundedIcon />
+            ) : (
+              <ThermostatRoundedIcon />
+            )}
           </Box>
 
           <Box sx={{ minWidth: 0 }}>
@@ -309,7 +486,7 @@ export function HeatMap() {
                 color: "#64748b",
               }}
             >
-              Mumbai · Live spatial intelligence
+              Mumbai · {meta.label}
             </Typography>
           </Box>
         </Box>
@@ -335,7 +512,8 @@ export function HeatMap() {
           py: 1.15,
           background: "rgba(255,255,255,.95)",
           border: "1px solid rgba(15,23,42,.08)",
-          boxShadow: "0 10px 30px rgba(15,23,42,.12)",
+          boxShadow:
+            "0 10px 30px rgba(15,23,42,.12)",
           backdropFilter: "blur(10px)",
         }}
       >
@@ -388,7 +566,8 @@ export function HeatMap() {
           p: 1.2,
           background: "rgba(255,255,255,.96)",
           border: "1px solid rgba(15,23,42,.08)",
-          boxShadow: "0 12px 35px rgba(15,23,42,.14)",
+          boxShadow:
+            "0 12px 35px rgba(15,23,42,.14)",
           backdropFilter: "blur(12px)",
         }}
       >
@@ -438,14 +617,21 @@ export function HeatMap() {
             },
 
             "& .Mui-selected": {
-              bgcolor: "#e6f5f3 !important",
-              color: "#075b58 !important",
+              bgcolor: "#f1f5f9 !important",
+              color: "#0f172a !important",
             },
           }}
         >
           <ToggleButton value="lst">
             <ThermostatRoundedIcon
-              sx={{ mr: 1, fontSize: 19 }}
+              sx={{
+                mr: 1,
+                fontSize: 19,
+                color:
+                  layer === "lst"
+                    ? "#dc2626"
+                    : "#64748b",
+              }}
             />
 
             <Box sx={{ textAlign: "left" }}>
@@ -471,7 +657,14 @@ export function HeatMap() {
 
           <ToggleButton value="ndvi">
             <ForestRoundedIcon
-              sx={{ mr: 1, fontSize: 19 }}
+              sx={{
+                mr: 1,
+                fontSize: 19,
+                color:
+                  layer === "ndvi"
+                    ? "#15803d"
+                    : "#64748b",
+              }}
             />
 
             <Box sx={{ textAlign: "left" }}>
@@ -497,7 +690,14 @@ export function HeatMap() {
 
           <ToggleButton value="hvi">
             <WarningAmberRoundedIcon
-              sx={{ mr: 1, fontSize: 19 }}
+              sx={{
+                mr: 1,
+                fontSize: 19,
+                color:
+                  layer === "hvi"
+                    ? "#ea580c"
+                    : "#64748b",
+              }}
             />
 
             <Box sx={{ textAlign: "left" }}>
@@ -523,7 +723,14 @@ export function HeatMap() {
 
           <ToggleButton value="built">
             <DomainRoundedIcon
-              sx={{ mr: 1, fontSize: 19 }}
+              sx={{
+                mr: 1,
+                fontSize: 19,
+                color:
+                  layer === "built"
+                    ? "#57534e"
+                    : "#64748b",
+              }}
             />
 
             <Box sx={{ textAlign: "left" }}>
@@ -569,7 +776,8 @@ export function HeatMap() {
           p: 2,
           background: "rgba(255,255,255,.96)",
           border: "1px solid rgba(15,23,42,.08)",
-          boxShadow: "0 12px 35px rgba(15,23,42,.14)",
+          boxShadow:
+            "0 12px 35px rgba(15,23,42,.14)",
           backdropFilter: "blur(12px)",
         }}
       >
@@ -583,7 +791,14 @@ export function HeatMap() {
         >
           <TrendingUpRoundedIcon
             sx={{
-              color: "#087f78",
+              color:
+                layer === "lst"
+                  ? "#dc2626"
+                  : layer === "ndvi"
+                    ? "#15803d"
+                    : layer === "hvi"
+                      ? "#ea580c"
+                      : "#57534e",
               fontSize: 20,
             }}
           />
@@ -610,14 +825,35 @@ export function HeatMap() {
             sx={{
               p: 1.25,
               borderRadius: 2,
-              bgcolor: "#fff7ed",
-              border: "1px solid #fed7aa",
+              bgcolor:
+                layer === "lst"
+                  ? "#fff7ed"
+                  : layer === "ndvi"
+                    ? "#f0fdf4"
+                    : layer === "hvi"
+                      ? "#fff7ed"
+                      : "#f5f5f4",
+              border:
+                layer === "lst"
+                  ? "1px solid #fed7aa"
+                  : layer === "ndvi"
+                    ? "1px solid #bbf7d0"
+                    : layer === "hvi"
+                      ? "1px solid #fed7aa"
+                      : "1px solid #d6d3d1",
             }}
           >
             <Typography
               sx={{
                 fontSize: 10,
-                color: "#9a3412",
+                color:
+                  layer === "lst"
+                    ? "#9a3412"
+                    : layer === "ndvi"
+                      ? "#166534"
+                      : layer === "hvi"
+                        ? "#c2410c"
+                        : "#57534e",
                 fontWeight: 700,
               }}
             >
@@ -629,7 +865,14 @@ export function HeatMap() {
                 mt: 0.35,
                 fontSize: 16,
                 fontWeight: 850,
-                color: "#7c2d12",
+                color:
+                  layer === "lst"
+                    ? "#7c2d12"
+                    : layer === "ndvi"
+                      ? "#14532d"
+                      : layer === "hvi"
+                        ? "#9a3412"
+                        : "#292524",
               }}
             >
               {meta.shortLabel}
@@ -640,14 +883,14 @@ export function HeatMap() {
             sx={{
               p: 1.25,
               borderRadius: 2,
-              bgcolor: "#f0fdfa",
-              border: "1px solid #99f6e4",
+              bgcolor: "#f8fafc",
+              border: "1px solid #e2e8f0",
             }}
           >
             <Typography
               sx={{
                 fontSize: 10,
-                color: "#0f766e",
+                color: "#64748b",
                 fontWeight: 700,
               }}
             >
@@ -659,7 +902,7 @@ export function HeatMap() {
                 mt: 0.35,
                 fontSize: 16,
                 fontWeight: 850,
-                color: "#115e59",
+                color: "#334155",
               }}
             >
               {data?.features?.length ?? "—"}
@@ -683,8 +926,8 @@ export function HeatMap() {
               lineHeight: 1.5,
             }}
           >
-            {meta.description}. Click a grid cell to inspect
-            the underlying heat drivers.
+            {meta.description}. Click a grid cell to
+            inspect the underlying heat drivers.
           </Typography>
         </Box>
 
@@ -719,10 +962,106 @@ export function HeatMap() {
             </Typography>
           </Box>
         )}
+
+        {layer === "ndvi" && (
+          <Box
+            sx={{
+              mt: 1,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 1,
+              py: 0.9,
+              borderRadius: 2,
+              bgcolor: "#f0fdf4",
+            }}
+          >
+            <ForestRoundedIcon
+              sx={{
+                fontSize: 17,
+                color: "#15803d",
+              }}
+            />
+
+            <Typography
+              sx={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#166534",
+              }}
+            >
+              Greener zones indicate healthier vegetation
+            </Typography>
+          </Box>
+        )}
+
+        {layer === "hvi" && (
+          <Box
+            sx={{
+              mt: 1,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 1,
+              py: 0.9,
+              borderRadius: 2,
+              bgcolor: "#fff7ed",
+            }}
+          >
+            <WarningAmberRoundedIcon
+              sx={{
+                fontSize: 17,
+                color: "#ea580c",
+              }}
+            />
+
+            <Typography
+              sx={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#9a3412",
+              }}
+            >
+              Red zones indicate higher vulnerability
+            </Typography>
+          </Box>
+        )}
+
+        {layer === "built" && (
+          <Box
+            sx={{
+              mt: 1,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 1,
+              py: 0.9,
+              borderRadius: 2,
+              bgcolor: "#f5f5f4",
+            }}
+          >
+            <DomainRoundedIcon
+              sx={{
+                fontSize: 17,
+                color: "#57534e",
+              }}
+            />
+
+            <Typography
+              sx={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#44403c",
+              }}
+            >
+              Darker zones indicate greater built-up intensity
+            </Typography>
+          </Box>
+        )}
       </Paper>
 
       {/* =========================================================
-          BOTTOM LEFT — LEGEND
+          BOTTOM LEFT — DYNAMIC LEGEND
       ========================================================= */}
 
       {data && (
@@ -735,13 +1074,14 @@ export function HeatMap() {
             zIndex: 1000,
             width: {
               xs: "calc(100% - 40px)",
-              sm: 300,
+              sm: 320,
             },
             borderRadius: 3,
             p: 1.8,
             background: "rgba(255,255,255,.96)",
             border: "1px solid rgba(15,23,42,.08)",
-            boxShadow: "0 12px 35px rgba(15,23,42,.14)",
+            boxShadow:
+              "0 12px 35px rgba(15,23,42,.14)",
             backdropFilter: "blur(12px)",
           }}
         >
@@ -773,23 +1113,31 @@ export function HeatMap() {
             </Typography>
           </Box>
 
-          <SequentialLegend
-            title=""
-            unit={meta.unit}
-            min={min}
-            max={max}
+          {/* Gradient */}
+          <Box
+            sx={{
+              height: 13,
+              borderRadius: 999,
+              background: `linear-gradient(
+                90deg,
+                ${meta.colors.join(", ")}
+              )`,
+              border: "1px solid rgba(15,23,42,.08)",
+            }}
           />
 
+          {/* Values */}
           <Box
             sx={{
               display: "flex",
               justifyContent: "space-between",
-              mt: 0.5,
+              mt: 0.65,
             }}
           >
             <Typography
               sx={{
                 fontSize: 10,
+                fontWeight: 700,
                 color: "#64748b",
               }}
             >
@@ -799,6 +1147,25 @@ export function HeatMap() {
             <Typography
               sx={{
                 fontSize: 10,
+                color: "#94a3b8",
+              }}
+            >
+              {meta.lowLabel}
+            </Typography>
+
+            <Typography
+              sx={{
+                fontSize: 10,
+                color: "#94a3b8",
+              }}
+            >
+              {meta.highLabel}
+            </Typography>
+
+            <Typography
+              sx={{
+                fontSize: 10,
+                fontWeight: 700,
                 color: "#64748b",
               }}
             >
@@ -835,7 +1202,8 @@ export function HeatMap() {
               py: 1.5,
               borderRadius: 3,
               bgcolor: "rgba(255,255,255,.96)",
-              boxShadow: "0 12px 35px rgba(15,23,42,.15)",
+              boxShadow:
+                "0 12px 35px rgba(15,23,42,.15)",
             }}
           >
             <CircularProgress size={22} />
@@ -870,7 +1238,8 @@ export function HeatMap() {
               xs: "calc(100% - 40px)",
               sm: "auto",
             },
-            boxShadow: "0 10px 30px rgba(15,23,42,.15)",
+            boxShadow:
+              "0 10px 30px rgba(15,23,42,.15)",
             borderRadius: 2.5,
           }}
         >
@@ -1015,15 +1384,15 @@ export function HeatMap() {
                   borderRadius: 3,
                   color: "#fff",
                   background:
-                    "linear-gradient(135deg, #073b3a 0%, #087f78 100%)",
+                    "linear-gradient(135deg, #991b1b 0%, #ef4444 100%)",
                   boxShadow:
-                    "0 10px 28px rgba(7,59,58,.22)",
+                    "0 10px 28px rgba(220,38,38,.22)",
                 }}
               >
                 <Typography
                   sx={{
                     fontSize: 11,
-                    opacity: 0.7,
+                    opacity: 0.78,
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: ".07em",
@@ -1047,12 +1416,15 @@ export function HeatMap() {
                   sx={{
                     mt: 1,
                     fontSize: 12,
-                    opacity: 0.82,
+                    opacity: 0.88,
                   }}
                 >
-                  {explain.data.deviation >= 0 ? "+" : ""}
-                  {explain.data.deviation.toFixed(1)}°C vs city
-                  mean of {explain.data.city_mean.toFixed(1)}°C
+                  {explain.data.deviation >= 0
+                    ? "+"
+                    : ""}
+                  {explain.data.deviation.toFixed(1)}°C
+                  vs city mean of{" "}
+                  {explain.data.city_mean.toFixed(1)}°C
                 </Typography>
               </Paper>
 
@@ -1132,7 +1504,9 @@ export function HeatMap() {
                           : "#1d4ed8",
                     }}
                   >
-                    {explain.data.deviation >= 0 ? "+" : ""}
+                    {explain.data.deviation >= 0
+                      ? "+"
+                      : ""}
                     {explain.data.deviation.toFixed(1)}°C
                   </Typography>
                 </Box>
@@ -1150,7 +1524,7 @@ export function HeatMap() {
                   <GridViewRoundedIcon
                     sx={{
                       fontSize: 19,
-                      color: "#087f78",
+                      color: "#dc2626",
                     }}
                   />
 
@@ -1173,8 +1547,8 @@ export function HeatMap() {
                     mb: 1.5,
                   }}
                 >
-                  Model drivers contributing to the cell's
-                  temperature.
+                  Model drivers contributing to the
+                  cell's temperature.
                 </Typography>
 
                 {explain.data.drivers.map((d) => (
@@ -1275,9 +1649,9 @@ export function HeatMap() {
                     color: "#64748b",
                   }}
                 >
-                  Positive SHAP contribution indicates a warming
-                  influence, while negative contribution indicates a
-                  cooling influence.
+                  Positive SHAP contribution indicates a
+                  warming influence, while negative
+                  contribution indicates a cooling influence.
                 </Typography>
               </Box>
             </>
