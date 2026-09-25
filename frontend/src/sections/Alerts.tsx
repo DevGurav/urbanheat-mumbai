@@ -1,75 +1,719 @@
-import ErrorIcon from "@mui/icons-material/Error";
-import ReportProblemIcon from "@mui/icons-material/ReportProblem";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import { Alert as MuiAlert, Box, Chip, CircularProgress, Paper, Typography } from "@mui/material";
-import type { SvgIconComponent } from "@mui/icons-material";
+import { useState } from "react";
+import {
+  Box,
+  Button,
+  Chip,
+  Divider,
+  IconButton,
+  Paper,
+  Typography,
+} from "@mui/material";
 
-import { useAlerts } from "../api/hooks";
-import type { AlertPayload, AlertSeverity } from "../api/types";
-import { MUTED_INK, STATUS } from "../viz/color";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
+import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
+import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
+import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
+import ThermostatRoundedIcon from "@mui/icons-material/ThermostatRounded";
+import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
+import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
+import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
 
-const SEVERITY_META: Record<AlertSeverity, { label: string; color: string; Icon: SvgIconComponent }> = {
-  advisory: { label: "Advisory", color: STATUS.warning, Icon: WarningAmberIcon },
-  heat_wave: { label: "Heat wave", color: STATUS.serious, Icon: ReportProblemIcon },
-  severe_heat_wave: { label: "Severe heat wave", color: STATUS.critical, Icon: ErrorIcon },
+type AlertSeverity = "High" | "Medium" | "Low";
+
+type AlertItem = {
+  id: number;
+  title: string;
+  location: string;
+  temperature: string;
+  severity: AlertSeverity;
+  time: string;
+  description: string;
+  acknowledged: boolean;
 };
 
-export function Alerts() {
-  const { data, isLoading, isError } = useAlerts(50);
+const INITIAL_ALERTS: AlertItem[] = [
+  {
+    id: 1,
+    title: "Extreme heat detected",
+    location: "Andheri East",
+    temperature: "42.8°C",
+    severity: "High",
+    time: "12 min ago",
+    description:
+      "Surface temperature is significantly above the monitored urban threshold.",
+    acknowledged: false,
+  },
+  {
+    id: 2,
+    title: "Elevated heat zone",
+    location: "Dadar",
+    temperature: "39.6°C",
+    severity: "Medium",
+    time: "28 min ago",
+    description:
+      "Persistent elevated land-surface temperature detected across the monitored grid.",
+    acknowledged: false,
+  },
+  {
+    id: 3,
+    title: "Heat threshold approaching",
+    location: "Borivali West",
+    temperature: "37.9°C",
+    severity: "Low",
+    time: "46 min ago",
+    description:
+      "Temperature is approaching the configured warning threshold.",
+    acknowledged: true,
+  },
+];
 
-  return (
-    <Box sx={{ p: 3, display: "flex", flexDirection: "column", gap: 2, overflow: "auto" }}>
-      <Typography variant="h6">Alerts</Typography>
-      <Typography variant="caption" sx={{ color: MUTED_INK }}>
-        Advisory only — not an official IMD warning. Polled every 5 minutes; the underlying
-        feed refreshes at most once a day (`GET /alerts`, ADR-0003).
-      </Typography>
+function severityStyles(severity: AlertSeverity) {
+  if (severity === "High") {
+    return {
+      color: "#d32f2f",
+      background: "#fff1f1",
+      border: "#ffcdd2",
+    };
+  }
 
-      {isLoading && <CircularProgress size={24} />}
-      {isError && <MuiAlert severity="error">Couldn't load alerts — is the backend running?</MuiAlert>}
+  if (severity === "Medium") {
+    return {
+      color: "#ed6c02",
+      background: "#fff7ed",
+      border: "#ffe0b2",
+    };
+  }
 
-      {data && data.alerts.length === 0 && (
-        <MuiAlert severity="success" variant="outlined">
-          No active alerts. Most days, for Mumbai, that's the honest state — the Monitoring
-          agent's threshold (45 °C+) is deliberately conservative (ADR-0010).
-        </MuiAlert>
-      )}
-
-      {data && data.alerts.length > 0 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-          {data.alerts.map((alert, i) => (
-            <AlertCard key={i} alert={alert} />
-          ))}
-        </Box>
-      )}
-    </Box>
-  );
+  return {
+    color: "#2e7d32",
+    background: "#f1f8f3",
+    border: "#c8e6c9",
+  };
 }
 
-function AlertCard({ alert }: { alert: AlertPayload }) {
-  const meta = SEVERITY_META[alert.severity];
+export function Alerts() {
+  const [alerts, setAlerts] = useState<AlertItem[]>(INITIAL_ALERTS);
+
+  const activeAlerts = alerts.filter(
+    (alert) => !alert.acknowledged
+  ).length;
+
+  const highAlerts = alerts.filter(
+    (alert) => alert.severity === "High" && !alert.acknowledged
+  ).length;
+
+  const acknowledgedAlerts = alerts.filter(
+    (alert) => alert.acknowledged
+  ).length;
+
+  const acknowledgeAlert = (id: number) => {
+    setAlerts((current) =>
+      current.map((alert) =>
+        alert.id === id
+          ? {
+              ...alert,
+              acknowledged: true,
+            }
+          : alert
+      )
+    );
+  };
+
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderLeft: `4px solid ${meta.color}` }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+    <Box
+      sx={{
+        minHeight: "100%",
+        p: {
+          xs: 2,
+          md: 3,
+          lg: 4,
+        },
+      }}
+    >
+      {/* ================= PAGE HEADER ================= */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: {
+            xs: "flex-start",
+            md: "center",
+          },
+          flexDirection: {
+            xs: "column",
+            md: "row",
+          },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Box>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.2,
+              mb: 0.7,
+            }}
+          >
+            <Box
+              sx={{
+                width: 42,
+                height: 42,
+                borderRadius: "12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#eaf3ff",
+                color: "#1976d2",
+              }}
+            >
+              <NotificationsActiveRoundedIcon />
+            </Box>
+
+            <Typography
+              sx={{
+                fontSize: {
+                  xs: 24,
+                  md: 28,
+                },
+                fontWeight: 800,
+                color: "#172033",
+                letterSpacing: "-0.5px",
+              }}
+            >
+              Heat alerts
+            </Typography>
+          </Box>
+
+          <Typography
+            sx={{
+              color: "#697386",
+              fontSize: 14,
+              maxWidth: 650,
+            }}
+          >
+            Monitor abnormal heat conditions and review alerts generated by
+            the UrbanHeat intelligence system.
+          </Typography>
+        </Box>
+
         <Chip
-          icon={<meta.Icon sx={{ color: `${meta.color} !important` }} />}
-          label={meta.label}
-          size="small"
-          sx={{ bgcolor: `${meta.color}22`, fontWeight: 600 }}
+          icon={<CheckCircleOutlineRoundedIcon />}
+          label="Monitoring active"
+          sx={{
+            height: 34,
+            borderRadius: "9px",
+            fontWeight: 700,
+            color: "#2e7d32",
+            backgroundColor: "#eef8f1",
+            border: "1px solid #c8e6c9",
+          }}
         />
-        <Typography variant="caption" sx={{ color: MUTED_INK }}>
-          {alert.date} · forecast max {alert.forecast_max_c.toFixed(1)}°C
+      </Box>
+
+      {/* ================= SUMMARY ================= */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(3, 1fr)",
+          },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        {/* ACTIVE */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.2,
+            borderRadius: "15px",
+            border: "1px solid #e5e9f0",
+            backgroundColor: "#ffffff",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+            }}
+          >
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: "#7b8494",
+                  fontWeight: 600,
+                  mb: 0.6,
+                }}
+              >
+                ACTIVE ALERTS
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 28,
+                  fontWeight: 800,
+                  color: "#172033",
+                }}
+              >
+                {activeAlerts}
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                width: 38,
+                height: 38,
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#1976d2",
+                backgroundColor: "#eaf3ff",
+              }}
+            >
+              <NotificationsActiveRoundedIcon />
+            </Box>
+          </Box>
+        </Paper>
+
+        {/* HIGH PRIORITY */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.2,
+            borderRadius: "15px",
+            border: "1px solid #e5e9f0",
+            backgroundColor: "#ffffff",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+            }}
+          >
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: "#7b8494",
+                  fontWeight: 600,
+                  mb: 0.6,
+                }}
+              >
+                HIGH PRIORITY
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 28,
+                  fontWeight: 800,
+                  color: "#d32f2f",
+                }}
+              >
+                {highAlerts}
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                width: 38,
+                height: 38,
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#d32f2f",
+                backgroundColor: "#fff1f1",
+              }}
+            >
+              <ErrorOutlineRoundedIcon />
+            </Box>
+          </Box>
+        </Paper>
+
+        {/* ACKNOWLEDGED */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.2,
+            borderRadius: "15px",
+            border: "1px solid #e5e9f0",
+            backgroundColor: "#ffffff",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+            }}
+          >
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: "#7b8494",
+                  fontWeight: 600,
+                  mb: 0.6,
+                }}
+              >
+                ACKNOWLEDGED
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 28,
+                  fontWeight: 800,
+                  color: "#172033",
+                }}
+              >
+                {acknowledgedAlerts}
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                width: 38,
+                height: 38,
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#2e7d32",
+                backgroundColor: "#eef8f1",
+              }}
+            >
+              <CheckCircleOutlineRoundedIcon />
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
+
+      {/* ================= ALERT LIST ================= */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "16px",
+          border: "1px solid #e5e9f0",
+          backgroundColor: "#ffffff",
+          overflow: "hidden",
+        }}
+      >
+        {/* HEADER */}
+        <Box
+          sx={{
+            px: {
+              xs: 2,
+              md: 2.5,
+            },
+            py: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 16,
+                fontWeight: 800,
+                color: "#172033",
+              }}
+            >
+              Recent alerts
+            </Typography>
+
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: "#8993a3",
+                mt: 0.3,
+              }}
+            >
+              Latest heat events detected across monitored areas
+            </Typography>
+          </Box>
+
+          <IconButton
+            size="small"
+            sx={{
+              color: "#697386",
+              border: "1px solid #e5e9f0",
+              borderRadius: "8px",
+            }}
+          >
+            <MoreHorizRoundedIcon fontSize="small" />
+          </IconButton>
+        </Box>
+
+        <Divider />
+
+        {/* ALERTS */}
+        {alerts.map((alert, index) => {
+          const styles = severityStyles(alert.severity);
+
+          return (
+            <Box key={alert.id}>
+              <Box
+                sx={{
+                  p: {
+                    xs: 2,
+                    md: 2.5,
+                  },
+                  display: "flex",
+                  gap: 2,
+                  flexDirection: {
+                    xs: "column",
+                    md: "row",
+                  },
+                  opacity: alert.acknowledged ? 0.65 : 1,
+                }}
+              >
+                {/* ICON */}
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    color: styles.color,
+                    backgroundColor: styles.background,
+                  }}
+                >
+                  {alert.severity === "High" ? (
+                    <ErrorOutlineRoundedIcon />
+                  ) : (
+                    <WarningAmberRoundedIcon />
+                  )}
+                </Box>
+
+                {/* CONTENT */}
+                <Box
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: {
+                        xs: "flex-start",
+                        sm: "center",
+                      },
+                      flexDirection: {
+                        xs: "column",
+                        sm: "row",
+                      },
+                      gap: 1,
+                      mb: 0.7,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: "#172033",
+                      }}
+                    >
+                      {alert.title}
+                    </Typography>
+
+                    <Chip
+                      label={alert.severity}
+                      size="small"
+                      sx={{
+                        height: 23,
+                        fontSize: 10.5,
+                        fontWeight: 800,
+                        color: styles.color,
+                        backgroundColor: styles.background,
+                        border: `1px solid ${styles.border}`,
+                      }}
+                    />
+
+                    {alert.acknowledged && (
+                      <Chip
+                        label="Acknowledged"
+                        size="small"
+                        sx={{
+                          height: 23,
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          color: "#2e7d32",
+                          backgroundColor: "#eef8f1",
+                        }}
+                      />
+                    )}
+                  </Box>
+
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      color: "#697386",
+                      mb: 1.2,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {alert.description}
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 2,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.6,
+                      }}
+                    >
+                      <LocationOnOutlinedIcon
+                        sx={{
+                          fontSize: 16,
+                          color: "#8993a3",
+                        }}
+                      />
+
+                      <Typography
+                        sx={{
+                          fontSize: 11.5,
+                          color: "#697386",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {alert.location}
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.6,
+                      }}
+                    >
+                      <ThermostatRoundedIcon
+                        sx={{
+                          fontSize: 16,
+                          color: styles.color,
+                        }}
+                      />
+
+                      <Typography
+                        sx={{
+                          fontSize: 11.5,
+                          color: "#697386",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {alert.temperature}
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.6,
+                      }}
+                    >
+                      <AccessTimeRoundedIcon
+                        sx={{
+                          fontSize: 15,
+                          color: "#8993a3",
+                        }}
+                      />
+
+                      <Typography
+                        sx={{
+                          fontSize: 11.5,
+                          color: "#8993a3",
+                        }}
+                      >
+                        {alert.time}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* ACTION */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: {
+                      xs: "flex-start",
+                      md: "center",
+                    },
+                    flexShrink: 0,
+                  }}
+                >
+                  {!alert.acknowledged && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => acknowledgeAlert(alert.id)}
+                      startIcon={<CheckCircleOutlineRoundedIcon />}
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: "9px",
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        borderColor: "#d9dee7",
+                        color: "#596579",
+                        whiteSpace: "nowrap",
+
+                        "&:hover": {
+                          borderColor: "#1976d2",
+                          color: "#1976d2",
+                          backgroundColor: "#f5f9ff",
+                        },
+                      }}
+                    >
+                      Acknowledge
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+
+              {index < alerts.length - 1 && <Divider />}
+            </Box>
+          );
+        })}
+      </Paper>
+
+      {/* FOOTER NOTE */}
+      <Box
+        sx={{
+          mt: 2,
+          px: 0.5,
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: 11,
+            color: "#9aa3b2",
+          }}
+        >
+          Alert values shown in this interface are monitoring outputs and
+          should be interpreted together with the underlying heat-map and
+          analytics data.
         </Typography>
       </Box>
-      <Typography variant="body2" sx={{ mb: 1 }}>
-        {alert.summary}
-      </Typography>
-      <Typography variant="caption" sx={{ color: MUTED_INK }}>
-        Wards: {alert.wards_affected.join(", ")}
-      </Typography>
-      <Typography variant="caption" component="div" sx={{ color: MUTED_INK, mt: 0.5, fontStyle: "italic" }}>
-        {alert.caveat}
-      </Typography>
-    </Paper>
+    </Box>
   );
 }
