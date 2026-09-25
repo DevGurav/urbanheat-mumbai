@@ -3,14 +3,29 @@ import {
   Box,
   CircularProgress,
   Drawer,
+  IconButton,
+  Paper,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+
 import { useMemo, useState } from "react";
+
 import type { Feature, Geometry } from "geojson";
 import type { LatLngExpression, LeafletMouseEvent, Path } from "leaflet";
+
 import { GeoJSON, MapContainer, TileLayer } from "react-leaflet";
+
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import ThermostatRoundedIcon from "@mui/icons-material/ThermostatRounded";
+import LocationOnRoundedIcon from "@mui/icons-material/LocationOnRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
+import ForestRoundedIcon from "@mui/icons-material/ForestRounded";
+import DomainRoundedIcon from "@mui/icons-material/DomainRounded";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 
 import { useCityGrid, useExplainCell } from "../api/hooks";
 import { DIVERGING, MUTED_INK, sequentialScale } from "../viz/color";
@@ -20,16 +35,50 @@ const MUMBAI_CENTER: LatLngExpression = [19.076, 72.8777];
 
 type LayerKey = "lst" | "ndvi" | "hvi" | "built";
 
-const LAYER_META: Record<LayerKey, { label: string; unit: string }> = {
-  lst: { label: "Surface temperature", unit: "°C" },
-  ndvi: { label: "NDVI (vegetation)", unit: "" },
-  hvi: { label: "Heat Vulnerability Index", unit: "" },
-  built: { label: "Built-up fraction", unit: "" },
+const LAYER_META: Record<
+  LayerKey,
+  {
+    label: string;
+    shortLabel: string;
+    unit: string;
+    description: string;
+    icon: typeof ThermostatRoundedIcon;
+  }
+> = {
+  lst: {
+    label: "Surface temperature",
+    shortLabel: "LST",
+    unit: "°C",
+    description: "Land surface temperature across Mumbai",
+    icon: ThermostatRoundedIcon,
+  },
+  ndvi: {
+    label: "NDVI (vegetation)",
+    shortLabel: "NDVI",
+    unit: "",
+    description: "Vegetation density and health",
+    icon: ForestRoundedIcon,
+  },
+  hvi: {
+    label: "Heat Vulnerability Index",
+    shortLabel: "HVI",
+    unit: "",
+    description: "Relative heat vulnerability",
+    icon: WarningAmberRoundedIcon,
+  },
+  built: {
+    label: "Built-up fraction",
+    shortLabel: "Built",
+    unit: "",
+    description: "Built-up surface intensity",
+    icon: DomainRoundedIcon,
+  },
 };
 
-/** `/city/grid`'s feature properties (backend/routers/grid.py) — react-leaflet's `GeoJSON`
- * isn't generic-parameterized in this version, so properties arrive untyped from Leaflet's
- * own API; this is the one boundary where a cast stands in for it. */
+/**
+ * `/city/grid` feature properties.
+ * Backend/API behaviour is unchanged.
+ */
 interface CellProperties {
   cell_id: number;
   ward_code: string;
@@ -39,36 +88,732 @@ interface CellProperties {
 export function HeatMap() {
   const [layer, setLayer] = useState<LayerKey>("lst");
   const [selectedCellId, setSelectedCellId] = useState<number | null>(null);
+
   const { data, isLoading, isError } = useCityGrid(layer);
   const explain = useExplainCell(selectedCellId);
+
   const meta = LAYER_META[layer];
+  const LayerIcon = meta.icon;
 
   const { colorFor, min, max } = useMemo(() => {
-    const values = (data?.features ?? []).map((f) => (f.properties as CellProperties).value);
-    if (values.length === 0) return { colorFor: () => MUTED_INK, min: 0, max: 0 };
+    const values = (data?.features ?? []).map(
+      (f) => (f.properties as CellProperties).value
+    );
+
+    if (values.length === 0) {
+      return {
+        colorFor: () => MUTED_INK,
+        min: 0,
+        max: 0,
+      };
+    }
+
     const lo = Math.min(...values);
     const hi = Math.max(...values);
-    return { colorFor: sequentialScale(lo, hi), min: lo, max: hi };
+
+    return {
+      colorFor: sequentialScale(lo, hi),
+      min: lo,
+      max: hi,
+    };
   }, [data]);
 
+  const formattedMin =
+    layer === "lst" ? `${min.toFixed(1)}°C` : min.toFixed(2);
+
+  const formattedMax =
+    layer === "lst" ? `${max.toFixed(1)}°C` : max.toFixed(2);
+
   return (
-    <Box sx={{ position: "relative", height: "100%" }}>
-      {/* top: 16 + left: 60 clears Leaflet's default zoom control, which also docks
-          top-left — found by screenshot, not by reading Leaflet's source. */}
-      <Box sx={{ position: "absolute", top: 16, left: 60, zIndex: 1000 }}>
+    <Box
+      sx={{
+        position: "relative",
+        height: "calc(100vh - 72px)",
+        minHeight: 650,
+        overflow: "hidden",
+        bgcolor: "#e8eef0",
+      }}
+    >
+      {/* =========================================================
+          MAP
+      ========================================================= */}
+
+      <MapContainer
+        center={MUMBAI_CENTER}
+        zoom={11}
+        preferCanvas
+        zoomControl
+        style={{
+          height: "100%",
+          width: "100%",
+        }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        {data && (
+          <GeoJSON
+            key={layer}
+            data={data}
+            style={(feature) => {
+              const value =
+                (feature?.properties as CellProperties | undefined)
+                  ?.value ?? min;
+
+              return {
+                fillColor: colorFor(value),
+                fillOpacity: 0.72,
+                color: "#ffffff",
+                weight: 0.4,
+              };
+            }}
+            onEachFeature={(
+              feature: Feature<Geometry, CellProperties>,
+              layerInstance
+            ) => {
+              const { cell_id, ward_code, value } = feature.properties;
+
+              layerInstance.bindTooltip(
+                `
+                <div style="
+                  font-family: Inter, Arial, sans-serif;
+                  min-width: 160px;
+                  padding: 3px;
+                ">
+                  <div style="
+                    color:#64748b;
+                    font-size:11px;
+                    margin-bottom:4px;
+                    text-transform:uppercase;
+                    letter-spacing:.05em;
+                  ">
+                    ${meta.shortLabel}
+                  </div>
+
+                  <div style="
+                    font-size:17px;
+                    font-weight:800;
+                    color:#0f172a;
+                    margin-bottom:3px;
+                  ">
+                    ${value.toFixed(2)}${meta.unit}
+                  </div>
+
+                  <div style="
+                    color:#64748b;
+                    font-size:11px;
+                  ">
+                    Ward ${ward_code} · Cell ${cell_id}
+                  </div>
+                </div>
+                `,
+                {
+                  sticky: true,
+                  direction: "top",
+                }
+              );
+
+              layerInstance.on(
+                "click",
+                () => setSelectedCellId(cell_id)
+              );
+
+              layerInstance.on(
+                "mouseover",
+                (e: LeafletMouseEvent) => {
+                  (e.target as Path).setStyle({
+                    weight: 2,
+                    color: "#111827",
+                    fillOpacity: 0.88,
+                  });
+
+                  (e.target as Path).bringToFront();
+                }
+              );
+
+              layerInstance.on(
+                "mouseout",
+                (e: LeafletMouseEvent) => {
+                  (e.target as Path).setStyle({
+                    weight: 0.4,
+                    color: "#ffffff",
+                    fillOpacity: 0.72,
+                  });
+                }
+              );
+            }}
+          />
+        )}
+      </MapContainer>
+
+      {/* =========================================================
+          TOP LEFT — BRAND / MAP TITLE
+      ========================================================= */}
+
+      <Paper
+        elevation={0}
+        sx={{
+          position: "absolute",
+          top: 20,
+          left: 62,
+          zIndex: 1000,
+          width: {
+            xs: "calc(100% - 82px)",
+            sm: 370,
+          },
+          p: 2,
+          borderRadius: 3,
+          background:
+            "linear-gradient(145deg, rgba(255,255,255,.98), rgba(248,250,250,.96))",
+          border: "1px solid rgba(15,23,42,.08)",
+          boxShadow: "0 14px 40px rgba(15,23,42,.16)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.3,
+          }}
+        >
+          <Box
+            sx={{
+              width: 44,
+              height: 44,
+              borderRadius: 2.2,
+              display: "grid",
+              placeItems: "center",
+              color: "#fff",
+              background:
+                "linear-gradient(135deg, #064e4b, #08968c)",
+              boxShadow: "0 6px 18px rgba(8,150,140,.28)",
+              flexShrink: 0,
+            }}
+          >
+            <ThermostatRoundedIcon />
+          </Box>
+
+          <Box sx={{ minWidth: 0 }}>
+            <Typography
+              sx={{
+                fontSize: 19,
+                fontWeight: 850,
+                color: "#102a2a",
+                letterSpacing: "-.025em",
+                lineHeight: 1.15,
+              }}
+            >
+              Urban Heat Overview
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 0.35,
+                fontSize: 12,
+                color: "#64748b",
+              }}
+            >
+              Mumbai · Live spatial intelligence
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+
+      {/* =========================================================
+          TOP RIGHT — MAP STATUS
+      ========================================================= */}
+
+      <Paper
+        elevation={0}
+        sx={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          zIndex: 1000,
+          display: {
+            xs: "none",
+            md: "block",
+          },
+          borderRadius: 3,
+          px: 1.6,
+          py: 1.15,
+          background: "rgba(255,255,255,.95)",
+          border: "1px solid rgba(15,23,42,.08)",
+          boxShadow: "0 10px 30px rgba(15,23,42,.12)",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <Box
+            sx={{
+              width: 9,
+              height: 9,
+              borderRadius: "50%",
+              bgcolor: "#16a34a",
+              boxShadow: "0 0 0 4px rgba(22,163,74,.12)",
+            }}
+          />
+
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 750,
+              color: "#334155",
+            }}
+          >
+            Mumbai grid active
+          </Typography>
+        </Box>
+      </Paper>
+
+      {/* =========================================================
+          LEFT — LAYER SELECTOR
+      ========================================================= */}
+
+      <Paper
+        elevation={0}
+        sx={{
+          position: "absolute",
+          left: 20,
+          top: 142,
+          zIndex: 1000,
+          width: {
+            xs: "calc(100% - 40px)",
+            sm: 255,
+          },
+          borderRadius: 3,
+          p: 1.2,
+          background: "rgba(255,255,255,.96)",
+          border: "1px solid rgba(15,23,42,.08)",
+          boxShadow: "0 12px 35px rgba(15,23,42,.14)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <Typography
+          sx={{
+            px: 1,
+            pt: 0.6,
+            pb: 1,
+            fontSize: 11,
+            fontWeight: 800,
+            color: "#64748b",
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+          }}
+        >
+          Intelligence layer
+        </Typography>
+
         <ToggleButtonGroup
           value={layer}
           exclusive
-          onChange={(_, value: LayerKey | null) => value && setLayer(value)}
-          size="small"
-          sx={{ bgcolor: "background.paper" }}
+          orientation="vertical"
+          onChange={(_, value: LayerKey | null) => {
+            if (value) {
+              setLayer(value);
+              setSelectedCellId(null);
+            }
+          }}
+          sx={{
+            width: "100%",
+            gap: 0.55,
+
+            "& .MuiToggleButton-root": {
+              width: "100%",
+              justifyContent: "flex-start",
+              textTransform: "none",
+              border: "0 !important",
+              borderRadius: "10px !important",
+              px: 1.2,
+              py: 1,
+              color: "#475569",
+              fontWeight: 650,
+            },
+
+            "& .MuiToggleButton-root:hover": {
+              bgcolor: "#f1f5f9",
+            },
+
+            "& .Mui-selected": {
+              bgcolor: "#e6f5f3 !important",
+              color: "#075b58 !important",
+            },
+          }}
         >
-          <ToggleButton value="lst">LST</ToggleButton>
-          <ToggleButton value="ndvi">NDVI</ToggleButton>
-          <ToggleButton value="hvi">HVI</ToggleButton>
-          <ToggleButton value="built">Built</ToggleButton>
+          <ToggleButton value="lst">
+            <ThermostatRoundedIcon sx={{ mr: 1, fontSize: 19 }} />
+
+            <Box sx={{ textAlign: "left" }}>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                Surface temperature
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 10,
+                  color: "#94a3b8",
+                }}
+              >
+                LST · °C
+              </Typography>
+            </Box>
+          </ToggleButton>
+
+          <ToggleButton value="ndvi">
+            <ForestRoundedIcon sx={{ mr: 1, fontSize: 19 }} />
+
+            <Box sx={{ textAlign: "left" }}>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                Vegetation
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 10,
+                  color: "#94a3b8",
+                }}
+              >
+                NDVI
+              </Typography>
+            </Box>
+          </ToggleButton>
+
+          <ToggleButton value="hvi">
+            <WarningAmberRoundedIcon
+              sx={{ mr: 1, fontSize: 19 }}
+            />
+
+            <Box sx={{ textAlign: "left" }}>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                Heat vulnerability
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 10,
+                  color: "#94a3b8",
+                }}
+              >
+                HVI
+              </Typography>
+            </Box>
+          </ToggleButton>
+
+          <ToggleButton value="built">
+            <DomainRoundedIcon sx={{ mr: 1, fontSize: 19 }} />
+
+            <Box sx={{ textAlign: "left" }}>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                Built-up intensity
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 10,
+                  color: "#94a3b8",
+                }}
+              >
+                Built-up fraction
+              </Typography>
+            </Box>
+          </ToggleButton>
         </ToggleButtonGroup>
-      </Box>
+      </Paper>
+
+      {/* =========================================================
+          RIGHT — KEY INSIGHTS
+      ========================================================= */}
+
+      <Paper
+        elevation={0}
+        sx={{
+          position: "absolute",
+          top: 90,
+          right: 20,
+          zIndex: 1000,
+          width: {
+            xs: "calc(100% - 40px)",
+            sm: 285,
+          },
+          display: {
+            xs: "none",
+            lg: "block",
+          },
+          borderRadius: 3,
+          p: 2,
+          background: "rgba(255,255,255,.96)",
+          border: "1px solid rgba(15,23,42,.08)",
+          boxShadow: "0 12px 35px rgba(15,23,42,.14)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            mb: 1.8,
+          }}
+        >
+          <TrendingUpRoundedIcon
+            sx={{
+              color: "#087f78",
+              fontSize: 20,
+            }}
+          />
+
+          <Typography
+            sx={{
+              fontSize: 14,
+              fontWeight: 850,
+              color: "#0f172a",
+            }}
+          >
+            Key Insights
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 1,
+          }}
+        >
+          <Box
+            sx={{
+              p: 1.25,
+              borderRadius: 2,
+              bgcolor: "#fff7ed",
+              border: "1px solid #fed7aa",
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: 10,
+                color: "#9a3412",
+                fontWeight: 700,
+              }}
+            >
+              Current layer
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 0.35,
+                fontSize: 16,
+                fontWeight: 850,
+                color: "#7c2d12",
+              }}
+            >
+              {meta.shortLabel}
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              p: 1.25,
+              borderRadius: 2,
+              bgcolor: "#f0fdfa",
+              border: "1px solid #99f6e4",
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: 10,
+                color: "#0f766e",
+                fontWeight: 700,
+              }}
+            >
+              Grid cells
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 0.35,
+                fontSize: 16,
+                fontWeight: 850,
+                color: "#115e59",
+              }}
+            >
+              {data?.features?.length ?? "—"}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            mt: 1,
+            p: 1.35,
+            borderRadius: 2,
+            bgcolor: "#f8fafc",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: 11,
+              color: "#64748b",
+              lineHeight: 1.5,
+            }}
+          >
+            {meta.description}. Click a grid cell to inspect the
+            underlying heat drivers.
+          </Typography>
+        </Box>
+
+        {layer === "lst" && (
+          <Box
+            sx={{
+              mt: 1,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 1,
+              py: 0.9,
+              borderRadius: 2,
+              bgcolor: "#fff1f2",
+            }}
+          >
+            <ThermostatRoundedIcon
+              sx={{
+                fontSize: 17,
+                color: "#dc2626",
+              }}
+            />
+
+            <Typography
+              sx={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#991b1b",
+              }}
+            >
+              Warmer zones are highlighted in red
+            </Typography>
+          </Box>
+        )}
+      </Paper>
+
+      {/* =========================================================
+          BOTTOM LEFT — LEGEND
+      ========================================================= */}
+
+      {data && (
+        <Paper
+          elevation={0}
+          sx={{
+            position: "absolute",
+            left: 20,
+            bottom: 22,
+            zIndex: 1000,
+            width: {
+              xs: "calc(100% - 40px)",
+              sm: 300,
+            },
+            borderRadius: 3,
+            p: 1.8,
+            background: "rgba(255,255,255,.96)",
+            border: "1px solid rgba(15,23,42,.08)",
+            boxShadow: "0 12px 35px rgba(15,23,42,.14)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 1.2,
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 850,
+                color: "#0f172a",
+              }}
+            >
+              {meta.label}
+            </Typography>
+
+            <Typography
+              sx={{
+                fontSize: 10,
+                color: "#64748b",
+              }}
+            >
+              {data.features.length} cells
+            </Typography>
+          </Box>
+
+          <SequentialLegend
+            title=""
+            unit={meta.unit}
+            min={min}
+            max={max}
+          />
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mt: 0.5,
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: 10,
+                color: "#64748b",
+              }}
+            >
+              {formattedMin}
+            </Typography>
+
+            <Typography
+              sx={{
+                fontSize: 10,
+                color: "#64748b",
+              }}
+            >
+              {formattedMax}
+            </Typography>
+          </Box>
+        </Paper>
+      )}
+
+      {/* =========================================================
+          LOADING
+      ========================================================= */}
 
       {isLoading && (
         <Box
@@ -79,97 +824,477 @@ export function HeatMap() {
             alignItems: "center",
             justifyContent: "center",
             zIndex: 999,
+            bgcolor: "rgba(248,250,252,.35)",
+            backdropFilter: "blur(2px)",
           }}
         >
-          <CircularProgress />
+          <Paper
+            elevation={0}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              px: 2.2,
+              py: 1.5,
+              borderRadius: 3,
+              bgcolor: "rgba(255,255,255,.96)",
+              boxShadow: "0 12px 35px rgba(15,23,42,.15)",
+            }}
+          >
+            <CircularProgress size={22} />
+
+            <Typography
+              sx={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#334155",
+              }}
+            >
+              Loading Mumbai heat grid…
+            </Typography>
+          </Paper>
         </Box>
       )}
+
+      {/* =========================================================
+          ERROR
+      ========================================================= */}
+
       {isError && (
-        <Alert severity="error" sx={{ position: "absolute", top: 72, left: 16, zIndex: 1000 }}>
+        <Alert
+          severity="error"
+          sx={{
+            position: "absolute",
+            top: 90,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+            width: {
+              xs: "calc(100% - 40px)",
+              sm: "auto",
+            },
+            boxShadow: "0 10px 30px rgba(15,23,42,.15)",
+            borderRadius: 2.5,
+          }}
+        >
           Couldn't load the grid — is the backend running?
         </Alert>
       )}
 
-      <MapContainer
-        center={MUMBAI_CENTER}
-        zoom={11}
-        preferCanvas
-        style={{ height: "100%", width: "100%" }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        />
-        {data && (
-          <GeoJSON
-            // Force a clean remount per layer — a style/tooltip closure captured over the
-            // previous layer's colorFor and label would otherwise linger on old features.
-            key={layer}
-            data={data}
-            style={(feature) => {
-              const value = (feature?.properties as CellProperties | undefined)?.value ?? min;
-              return { fillColor: colorFor(value), fillOpacity: 0.75, color: "#ffffff", weight: 0.3 };
-            }}
-            onEachFeature={(feature: Feature<Geometry, CellProperties>, layerInstance) => {
-              const { cell_id, ward_code, value } = feature.properties;
-              layerInstance.bindTooltip(
-                `Ward ${ward_code} · cell ${cell_id}<br/>${meta.label}: ${value.toFixed(2)}${meta.unit}`,
-                { sticky: true },
-              );
-              layerInstance.on("click", () => setSelectedCellId(cell_id));
-              layerInstance.on("mouseover", (e: LeafletMouseEvent) => {
-                (e.target as Path).setStyle({ weight: 2, color: "#0b0b0b" });
-              });
-              layerInstance.on("mouseout", (e: LeafletMouseEvent) => {
-                (e.target as Path).setStyle({ weight: 0.3, color: "#ffffff" });
-              });
-            }}
-          />
-        )}
-      </MapContainer>
-
-      {data && <SequentialLegend title={meta.label} unit={meta.unit} min={min} max={max} />}
+      {/* =========================================================
+          DRAWER — CELL DETAILS
+      ========================================================= */}
 
       <Drawer
         anchor="right"
         open={selectedCellId !== null}
         onClose={() => setSelectedCellId(null)}
+        PaperProps={{
+          sx: {
+            width: {
+              xs: "100%",
+              sm: 410,
+            },
+            bgcolor: "#f8fafc",
+          },
+        }}
       >
-        <Box sx={{ width: 340, p: 2 }}>
-          {explain.isLoading && <CircularProgress />}
-          {explain.isError && <Alert severity="error">Couldn't explain this cell.</Alert>}
+        <Box
+          sx={{
+            p: 2.5,
+            borderBottom: "1px solid #e2e8f0",
+            bgcolor: "#ffffff",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: "#64748b",
+                  letterSpacing: ".08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Cell intelligence
+              </Typography>
+
+              {explain.data && (
+                <Typography
+                  sx={{
+                    mt: 0.5,
+                    fontSize: 25,
+                    fontWeight: 850,
+                    color: "#0f172a",
+                    letterSpacing: "-.035em",
+                  }}
+                >
+                  Cell {explain.data.cell_id}
+                </Typography>
+              )}
+            </Box>
+
+            <IconButton
+              onClick={() => setSelectedCellId(null)}
+              size="small"
+              sx={{
+                bgcolor: "#f1f5f9",
+                "&:hover": {
+                  bgcolor: "#e2e8f0",
+                },
+              }}
+            >
+              <CloseRoundedIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
           {explain.data && (
-            <>
-              <Typography variant="h6">Cell {explain.data.cell_id}</Typography>
-              <Typography variant="body2" sx={{ color: MUTED_INK }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.7,
+                mt: 0.8,
+              }}
+            >
+              <LocationOnRoundedIcon
+                sx={{
+                  fontSize: 16,
+                  color: "#087f78",
+                }}
+              />
+
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: MUTED_INK,
+                }}
+              >
                 Ward {explain.data.ward_code}
               </Typography>
-              <Typography sx={{ mt: 1 }}>
-                {explain.data.lst_mean.toFixed(1)}°C surface temperature (
-                {explain.data.deviation >= 0 ? "+" : ""}
-                {explain.data.deviation.toFixed(1)}°C vs city mean{" "}
-                {explain.data.city_mean.toFixed(1)}°C)
-              </Typography>
-              <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                Why
-              </Typography>
-              {explain.data.drivers.map((d) => (
-                <Box key={d.feature} sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
-                  <Box
+            </Box>
+          )}
+        </Box>
+
+        <Box sx={{ p: 2.5 }}>
+          {explain.isLoading && (
+            <Box
+              sx={{
+                minHeight: 250,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          )}
+
+          {explain.isError && (
+            <Alert
+              severity="error"
+              sx={{
+                borderRadius: 2,
+              }}
+            >
+              Couldn't explain this cell.
+            </Alert>
+          )}
+
+          {explain.data && (
+            <>
+              {/* Main temperature card */}
+
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 3,
+                  color: "#fff",
+                  background:
+                    "linear-gradient(135deg, #073b3a 0%, #087f78 100%)",
+                  boxShadow:
+                    "0 10px 28px rgba(7,59,58,.22)",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    opacity: 0.7,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: ".07em",
+                  }}
+                >
+                  Surface temperature
+                </Typography>
+
+                <Typography
+                  sx={{
+                    mt: 0.3,
+                    fontSize: 35,
+                    fontWeight: 850,
+                    lineHeight: 1,
+                  }}
+                >
+                  {explain.data.lst_mean.toFixed(1)}°C
+                </Typography>
+
+                <Typography
+                  sx={{
+                    mt: 1,
+                    fontSize: 12,
+                    opacity: 0.82,
+                  }}
+                >
+                  {explain.data.deviation >= 0
+                    ? "+"
+                    : ""}
+                  {explain.data.deviation.toFixed(1)}°C
+                  {" "}vs city mean of{" "}
+                  {explain.data.city_mean.toFixed(1)}°C
+                </Typography>
+              </Paper>
+
+              {/* Context */}
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 1,
+                  mt: 1.5,
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2.5,
+                    bgcolor: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <Typography
                     sx={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      bgcolor: d.direction === "warming" ? DIVERGING.warming : DIVERGING.cooling,
-                      flexShrink: 0,
+                      fontSize: 10,
+                      color: "#64748b",
+                      fontWeight: 700,
                     }}
-                  />
-                  <Typography variant="body2">
-                    {d.feature}: {d.shap_c >= 0 ? "+" : ""}
-                    {d.shap_c.toFixed(2)}°C ({d.direction})
+                  >
+                    City mean
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      mt: 0.4,
+                      fontSize: 18,
+                      fontWeight: 850,
+                      color: "#0f172a",
+                    }}
+                  >
+                    {explain.data.city_mean.toFixed(1)}°C
                   </Typography>
                 </Box>
-              ))}
+
+                <Box
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2.5,
+                    bgcolor:
+                      explain.data.deviation >= 0
+                        ? "#fff7ed"
+                        : "#eff6ff",
+                    border:
+                      explain.data.deviation >= 0
+                        ? "1px solid #fed7aa"
+                        : "1px solid #bfdbfe",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: 10,
+                      color:
+                        explain.data.deviation >= 0
+                          ? "#9a3412"
+                          : "#1d4ed8",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Deviation
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      mt: 0.4,
+                      fontSize: 18,
+                      fontWeight: 850,
+                      color:
+                        explain.data.deviation >= 0
+                          ? "#c2410c"
+                          : "#1d4ed8",
+                    }}
+                  >
+                    {explain.data.deviation >= 0
+                      ? "+"
+                      : ""}
+                    {explain.data.deviation.toFixed(1)}°C
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Why section */}
+
+              <Box sx={{ mt: 3 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    mb: 1.4,
+                  }}
+                >
+                  <GridViewRoundedIcon
+                    sx={{
+                      fontSize: 19,
+                      color: "#087f78",
+                    }}
+                  />
+
+                  <Typography
+                    sx={{
+                      fontSize: 15,
+                      fontWeight: 850,
+                      color: "#0f172a",
+                    }}
+                  >
+                    Why is this area hot?
+                  </Typography>
+                </Box>
+
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    color: "#64748b",
+                    lineHeight: 1.5,
+                    mb: 1.5,
+                  }}
+                >
+                  Model drivers contributing to the cell's
+                  temperature.
+                </Typography>
+
+                {explain.data.drivers.map((d) => (
+                  <Box
+                    key={d.feature}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.2,
+                      p: 1.3,
+                      mb: 0.8,
+                      borderRadius: 2,
+                      bgcolor: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        bgcolor:
+                          d.direction === "warming"
+                            ? DIVERGING.warming
+                            : DIVERGING.cooling,
+                        flexShrink: 0,
+                        boxShadow:
+                          d.direction === "warming"
+                            ? `0 0 0 4px rgba(220,38,38,.08)`
+                            : `0 0 0 4px rgba(37,99,235,.08)`,
+                      }}
+                    />
+
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          fontWeight: 750,
+                          color: "#334155",
+                        }}
+                      >
+                        {d.feature}
+                      </Typography>
+
+                      <Typography
+                        sx={{
+                          mt: 0.15,
+                          fontSize: 10,
+                          color: "#94a3b8",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {d.direction}
+                      </Typography>
+                    </Box>
+
+                    <Typography
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: 850,
+                        color:
+                          d.direction === "warming"
+                            ? "#dc2626"
+                            : "#2563eb",
+                      }}
+                    >
+                      {d.shap_c >= 0 ? "+" : ""}
+                      {d.shap_c.toFixed(2)}°C
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+
+              {/* Info */}
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 1,
+                  mt: 2.5,
+                  p: 1.4,
+                  borderRadius: 2,
+                  bgcolor: "#f1f5f9",
+                }}
+              >
+                <InfoOutlinedIcon
+                  sx={{
+                    fontSize: 17,
+                    color: "#64748b",
+                    mt: 0.1,
+                  }}
+                />
+
+                <Typography
+                  sx={{
+                    fontSize: 10.5,
+                    lineHeight: 1.55,
+                    color: "#64748b",
+                  }}
+                >
+                  Positive SHAP contribution indicates a warming
+                  influence, while negative contribution indicates a
+                  cooling influence.
+                </Typography>
+              </Box>
             </>
           )}
         </Box>
