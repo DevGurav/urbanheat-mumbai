@@ -118,3 +118,4 @@ CC BY 4.0, OpenStreetMap is ODbL. Attribution details in
 ---
 
 **Author:** Devendra Gurav ([@DevGurav](https://github.com/DevGurav))
+**Author:** Pankaj Bhandari ([@Pankaj](https://github.com/DevGurav))
