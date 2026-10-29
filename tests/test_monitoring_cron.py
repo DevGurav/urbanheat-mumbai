@@ -156,9 +156,11 @@ def test_monitoring_check_endpoint_reports_no_trigger_honestly(client, monkeypat
     assert resp.json() == {"triggered": False, "alert": None}
 
 
-def test_monitoring_check_endpoint_reports_a_real_trigger(client, monkeypatch, tmp_path):
+def test_monitoring_check_endpoint_reports_a_real_trigger(client, monkeypatch, tmp_path, fake_llm):
     from backend.agents import alerts as alerts_module
+    from backend.agents import monitoring as monitoring_module
 
+    monkeypatch.setattr(monitoring_module, "get_llm", lambda: fake_llm)
     monkeypatch.setattr(services, "get_weather", lambda days: _weather(46.0))
     monkeypatch.setattr(alerts_module, "_default_dir", lambda: tmp_path)
 
@@ -171,9 +173,11 @@ def test_monitoring_check_endpoint_reports_a_real_trigger(client, monkeypatch, t
     assert "not an official IMD warning" in body["alert"]["caveat"]
 
 
-def test_alerts_endpoint_serves_what_was_logged(client, monkeypatch, tmp_path):
+def test_alerts_endpoint_serves_what_was_logged(client, monkeypatch, tmp_path, fake_llm):
     from backend.agents import alerts as alerts_module
+    from backend.agents import monitoring as monitoring_module
 
+    monkeypatch.setattr(monitoring_module, "get_llm", lambda: fake_llm)
     monkeypatch.setattr(alerts_module, "_default_dir", lambda: tmp_path)
     monkeypatch.setattr(services, "get_weather", lambda days: _weather(46.0))
     client.post("/monitoring/check")
