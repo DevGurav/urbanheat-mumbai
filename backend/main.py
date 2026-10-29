@@ -9,6 +9,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
@@ -121,6 +122,22 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     return JSONResponse(
         status_code=exc.status_code, content={"detail": exc.detail, "error_code": None}
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """FastAPI's default 422 body has `detail` as a list of objects; the frontend's ApiError
+    expects a string, so flatten to the same `{detail, error_code}` shape as every other error.
+    """
+    parts = [
+        f"{'.'.join(str(p) for p in e['loc'] if p != 'body')}: {e['msg']}" for e in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "; ".join(parts), "error_code": "validation_error"},
     )
 
 

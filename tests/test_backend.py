@@ -147,3 +147,13 @@ def test_weather_uses_mocked_upstream(client, monkeypatch):
     assert body["source"] == "open-meteo"
     assert len(body["days"]) == 2
     assert body["days"][0]["date"] == "2026-07-26"
+
+
+def test_validation_errors_use_the_standard_error_shape(client):
+    resp = client.get("/hotspots", params={"by": "nonsense"})
+
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["error_code"] == "validation_error"
+    assert isinstance(body["detail"], str)
+    assert "by" in body["detail"]
