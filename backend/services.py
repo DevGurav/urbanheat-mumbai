@@ -9,6 +9,7 @@ Neither caller re-implements the logic; both call it.
 
 from __future__ import annotations
 
+import logging
 from typing import Literal
 
 import pandas as pd
@@ -39,6 +40,8 @@ from data_pipeline.ml.scenario import (
     greening_delta,
     training_envelope,
 )
+
+log = logging.getLogger("urbanheat.services")
 
 # --- hotspots -----------------------------------------------------------------------------
 
@@ -364,6 +367,8 @@ _WEATHER_DAILY_VARS = (
 # Open-Meteo's forecast model updates a few times a day; 30 minutes avoids hammering it on
 # every dashboard/agent call without serving stale data for long.
 _weather_cache = TTLCache(ttl_s=1800)
+# Last successful response per `days`, kept past the TTL as a fallback when the upstream fails.
+_weather_last_good: dict[int, dict] = {}
 
 
 def _fetch_weather(days: int) -> dict:
@@ -383,8 +388,16 @@ def _fetch_weather(days: int) -> dict:
 def get_weather(days: int = 7) -> WeatherResponse:
     try:
         data = _weather_cache.get_or_set(days, lambda: _fetch_weather(days))
+        _weather_last_good[days] = data
     except requests.RequestException as exc:
-        raise api_error(503, "weather_upstream_unavailable", str(exc)) from exc
+        # Open-Meteo's free tier rate-limits (429) — serve the last good forecast rather than
+        # failing the dashboard, and never echo the upstream URL back to the client.
+        log.warning("weather upstream failed: %s", exc)
+        if days not in _weather_last_good:
+            raise api_error(
+                503, "weather_upstream_unavailable", "weather provider is unavailable"
+            ) from exc
+        data = _weather_last_good[days]
 
     daily = data["daily"]
     forecast = [

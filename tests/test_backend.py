@@ -157,3 +157,55 @@ def test_validation_errors_use_the_standard_error_shape(client):
     assert body["error_code"] == "validation_error"
     assert isinstance(body["detail"], str)
     assert "by" in body["detail"]
+
+
+def _clear_weather_state():
+    from backend import services
+
+    services._weather_cache._store.clear()
+    services._weather_last_good.clear()
+
+
+def test_weather_serves_the_last_good_forecast_when_upstream_fails(client, monkeypatch):
+    import requests
+
+    _clear_weather_state()
+    fake_daily = {
+        "time": ["2026-07-26"],
+        "temperature_2m_max": [32.1],
+        "temperature_2m_min": [26.0],
+        "relative_humidity_2m_mean": [78.0],
+        "wind_speed_10m_max": [4.2],
+        "precipitation_sum": [0.0],
+    }
+    monkeypatch.setattr("backend.services._fetch_weather", lambda days: {"daily": fake_daily})
+    assert client.get("/weather", params={"days": 1}).status_code == 200
+
+    # Cache expires, then the provider rate-limits us.
+    from backend import services
+
+    services._weather_cache._store.clear()
+
+    def boom(days):
+        raise requests.RequestException("429 for url: https://api.open-meteo.com/secret")
+
+    monkeypatch.setattr("backend.services._fetch_weather", boom)
+    resp = client.get("/weather", params={"days": 1})
+    assert resp.status_code == 200
+    assert resp.json()["days"][0]["date"] == "2026-07-26"
+    _clear_weather_state()
+
+
+def test_weather_503_does_not_leak_the_upstream_url(client, monkeypatch):
+    import requests
+
+    _clear_weather_state()
+
+    def boom(days):
+        raise requests.RequestException("429 for url: https://api.open-meteo.com/secret")
+
+    monkeypatch.setattr("backend.services._fetch_weather", boom)
+    resp = client.get("/weather", params={"days": 3})
+    assert resp.status_code == 503
+    assert resp.json()["error_code"] == "weather_upstream_unavailable"
+    assert "open-meteo" not in resp.json()["detail"]
