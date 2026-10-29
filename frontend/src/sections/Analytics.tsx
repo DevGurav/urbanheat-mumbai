@@ -85,8 +85,7 @@ export function Analytics() {
                 fontSize: "0.92rem",
               }}
             >
-              Explore Mumbai heat hotspots, weather conditions and thermal
-              trends.
+              Explore Mumbai heat hotspots and weather conditions.
             </Typography>
           </Box>
 

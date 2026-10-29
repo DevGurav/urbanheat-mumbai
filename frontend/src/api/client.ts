@@ -77,6 +77,44 @@ async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
   return response.blob();
 }
 
+const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
+
+/** Browser-side fallback for GET /weather — mirrors backend/services.py's `_fetch_weather`. */
+async function fetchWeatherDirect(days: number): Promise<WeatherResponse> {
+  const params = new URLSearchParams({
+    latitude: "19.076",
+    longitude: "72.8777",
+    daily:
+      "temperature_2m_max,temperature_2m_min,relative_humidity_2m_mean,wind_speed_10m_max,precipitation_sum",
+    forecast_days: String(days),
+    wind_speed_unit: "ms",
+    timezone: "Asia/Kolkata",
+  });
+  const response = await fetch(`${OPEN_METEO_URL}?${params.toString()}`);
+  if (!response.ok) throw new ApiError(response.status, { detail: "Weather provider unavailable", error_code: "weather_upstream_unavailable" });
+  const { daily } = (await response.json()) as {
+    daily: {
+      time: string[];
+      temperature_2m_max: number[];
+      temperature_2m_min: number[];
+      relative_humidity_2m_mean: number[];
+      wind_speed_10m_max: number[];
+      precipitation_sum: number[];
+    };
+  };
+  return {
+    source: "open-meteo",
+    days: daily.time.map((date, i) => ({
+      date,
+      temp_max_c: daily.temperature_2m_max[i],
+      temp_min_c: daily.temperature_2m_min[i],
+      humidity_mean_pct: daily.relative_humidity_2m_mean[i],
+      wind_speed_max_ms: daily.wind_speed_10m_max[i],
+      precipitation_sum_mm: daily.precipitation_sum[i],
+    })),
+  };
+}
+
 function authHeader(accessToken: string): HeadersInit {
   return { Authorization: `Bearer ${accessToken}` };
 }
@@ -100,7 +138,16 @@ export const api = {
   explainCell: (cellId: number, top = 3) =>
     request<ExplainResponse>(`/explain/${cellId}${query({ top })}`),
 
-  weather: (days = 7) => request<WeatherResponse>(`/weather${query({ days })}`),
+  weather: async (days = 7): Promise<WeatherResponse> => {
+    try {
+      return await request<WeatherResponse>(`/weather${query({ days })}`);
+    } catch {
+      // Open-Meteo's free tier rate-limits shared server IPs (the free host's 429s), but not an
+      // individual visitor's browser, and it allows cross-origin calls. So when the backend
+      // can't serve a forecast, ask the provider directly — same variables, same units.
+      return fetchWeatherDirect(days);
+    }
+  },
 
   predict: (cellId: number) => request<PredictResponse>(`/predict${query({ cell_id: cellId })}`),
 
