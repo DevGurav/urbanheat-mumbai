@@ -1,6 +1,7 @@
 import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material";
 import { useState } from "react";
 
+import { useHealth } from "./api/hooks";
 import { SignInMenu } from "./auth/SignInMenu";
 import { Alerts } from "./sections/Alerts";
 import { Analytics } from "./sections/Analytics";
@@ -20,6 +21,14 @@ type SectionKey = (typeof SECTIONS)[number]["key"];
 
 function App() {
   const [section, setSection] = useState<SectionKey>("map");
+  // Real backend status, not a fixed label: the free-tier server sleeps when idle, so the first
+  // load can be "connecting" for a minute and the badge should say so rather than claim online.
+  const health = useHealth();
+  const status = health.isError
+    ? { label: "Offline", color: "#ef4444" }
+    : health.isSuccess
+      ? { label: "System online", color: "#22c55e" }
+      : { label: "Connecting…", color: "#f59e0b" };
 
   return (
     <Box
@@ -209,8 +218,8 @@ function App() {
                   width: 7,
                   height: 7,
                   borderRadius: "50%",
-                  backgroundColor: "#22c55e",
-                  boxShadow: "0 0 0 3px rgba(34,197,94,0.10)",
+                  backgroundColor: status.color,
+                  boxShadow: `0 0 0 3px ${status.color}1a`,
                 }}
               />
 
@@ -221,7 +230,7 @@ function App() {
                   color: "#596579",
                 }}
               >
-                System online
+                {status.label}
               </Typography>
             </Box>
 
