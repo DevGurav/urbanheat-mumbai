@@ -19,7 +19,6 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
-import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import ParkRoundedIcon from "@mui/icons-material/ParkRounded";
 import RoofingRoundedIcon from "@mui/icons-material/RoofingRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
@@ -34,7 +33,6 @@ import { GeoJSON, MapContainer, TileLayer } from "react-leaflet";
 import {
   useCityGrid,
   useDeleteScenario,
-  useGenerateReport,
   useHotspots,
   useSaveScenario,
   useSavedScenarios,
@@ -69,32 +67,6 @@ export function Scenario() {
   const savedScenarios = useSavedScenarios(accessToken);
   const saveScenario = useSaveScenario(accessToken);
   const deleteScenario = useDeleteScenario(accessToken);
-  const generateReport = useGenerateReport();
-
-  function handleDownloadReport() {
-    if (!wardCode) return;
-
-    generateReport.mutate(
-      {
-        ward_code: wardCode,
-        intervention,
-        coverage,
-      },
-      {
-        onSuccess: (pdfBlob) => {
-          const url = URL.createObjectURL(pdfBlob);
-          const link = document.createElement("a");
-
-          link.href = url;
-          link.download = `urbanheat-ward-${wardCode}-report.pdf`;
-          link.click();
-
-          URL.revokeObjectURL(url);
-        },
-      },
-    );
-  }
-
   function handleLoad(saved: SavedScenario) {
     setWardCode(saved.ward_code);
     setIntervention(saved.intervention);
@@ -683,53 +655,9 @@ export function Scenario() {
                 </Button>
               )}
 
-              <Button
-                variant="outlined"
-                startIcon={
-                  <DownloadRoundedIcon />
-                }
-                onClick={
-                  handleDownloadReport
-                }
-                disabled={
-                  !wardCode ||
-                  generateReport.isPending
-                }
-                sx={{
-                  px: 2.2,
-                  py: 1.1,
-                  borderRadius: 2,
-                  textTransform: "none",
-                  fontWeight: 750,
-                  borderColor: "#c5d7df",
-                  color: "#285d75",
-                }}
-              >
-                {generateReport.isPending
-                  ? "Generating…"
-                  : "Download report"}
-              </Button>
             </Box>
           </CardContent>
         </Card>
-
-        {/* =========================================================
-            REPORT ERROR
-        ========================================================= */}
-        {generateReport.isError && (
-          <Alert
-            severity="error"
-            sx={{
-              borderRadius: 2.5,
-            }}
-          >
-            Couldn't generate the report —{" "}
-            {generateReport.error instanceof
-            Error
-              ? generateReport.error.message
-              : "is the backend running?"}
-          </Alert>
-        )}
 
         {/* =========================================================
             SAVED SCENARIOS
