@@ -128,6 +128,27 @@ def test_read_alerts_respects_limit(store, tmp_path, monkeypatch, fake_llm):
     assert len(read_alerts(state_dir=tmp_path, limit=2)) == 2
 
 
+def test_a_gemini_server_error_still_logs_the_alert_with_the_template(
+    store, tmp_path, monkeypatch
+):
+    """A raw google-genai ServerError (504 seen live) must degrade the wording only: the
+    trigger is deterministic and the alert must still exist (agents.md §7)."""
+    from google.genai.errors import ServerError
+
+    from backend.agents.alerts import check_and_log, read_alerts
+
+    broken_llm = MagicMock()
+    broken_llm.invoke.side_effect = ServerError(504, {"error": {"message": "Deadline expired"}})
+    monkeypatch.setattr(services, "get_weather", lambda days: _weather(46.0))
+
+    result = check_and_log(store, llm=broken_llm, state_dir=tmp_path)
+
+    assert result is not None
+    assert result.severity == "heat_wave"
+    assert "not an official IMD warning" in result.summary
+    assert len(read_alerts(state_dir=tmp_path)) == 1
+
+
 # --- the two endpoints, via the real app -------------------------------------------------------
 
 

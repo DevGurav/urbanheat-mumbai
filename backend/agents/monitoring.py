@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
+from google.genai.errors import APIError as GenaiAPIError
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai.chat_models import ChatGoogleGenerativeAIError
 
@@ -91,9 +92,11 @@ def _draft_summary(
         # `.content` is not reliably a plain string (`backend/agents/result.py`'s same fix,
         # found live: Gemini can return a list of content blocks). `.text` normalizes it.
         return str(response.text)
-    except (RuntimeError, ChatGoogleGenerativeAIError) as exc:
+    except (RuntimeError, ChatGoogleGenerativeAIError, GenaiAPIError) as exc:
         # RuntimeError: get_llm() with no GEMINI_API_KEY set. ChatGoogleGenerativeAIError: a
         # real call failed (quota, a broken key — this exact project's own recent history).
+        # GenaiAPIError: a raw google-genai server error (e.g. 504 DEADLINE_EXCEEDED, seen
+        # live) that langchain doesn't wrap.
         # Either way, the alert still exists; only its prose degrades.
         log.warning("monitoring: LLM wording draft unavailable (%s) — using the template", exc)
         return _fallback_summary(severity, forecast_max_c, wards)
