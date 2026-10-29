@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -8,6 +8,9 @@ import {
   Paper,
   Typography,
 } from "@mui/material";
+
+import { useAlerts } from "../api/hooks";
+import type { AlertPayload } from "../api/types";
 
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
@@ -21,7 +24,7 @@ import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
 type AlertSeverity = "High" | "Medium" | "Low";
 
 type AlertItem = {
-  id: number;
+  id: string;
   title: string;
   location: string;
   temperature: string;
@@ -31,41 +34,35 @@ type AlertItem = {
   acknowledged: boolean;
 };
 
-const INITIAL_ALERTS: AlertItem[] = [
-  {
-    id: 1,
-    title: "Extreme heat detected",
-    location: "Andheri East",
-    temperature: "42.8°C",
-    severity: "High",
-    time: "12 min ago",
-    description:
-      "Surface temperature is significantly above the monitored urban threshold.",
+/** The real Monitoring feed (GET /alerts, agents.md §7) mapped onto this page's card shape.
+ * The backend's three levels are IMD-style absolute thresholds: advisory, heat wave, severe
+ * heat wave. Nothing here is invented — an empty feed renders as an empty state. */
+const SEVERITY_LABEL: Record<AlertPayload["severity"], AlertSeverity> = {
+  advisory: "Low",
+  heat_wave: "Medium",
+  severe_heat_wave: "High",
+};
+
+const SEVERITY_TITLE: Record<AlertPayload["severity"], string> = {
+  advisory: "Heat advisory",
+  heat_wave: "Heat wave",
+  severe_heat_wave: "Severe heat wave",
+};
+
+function toAlertItem(alert: AlertPayload): AlertItem {
+  return {
+    id: `${alert.date}-${alert.severity}`,
+    title: SEVERITY_TITLE[alert.severity],
+    location: alert.wards_affected.length
+      ? `Wards ${alert.wards_affected.join(", ")}`
+      : "Citywide",
+    temperature: `${alert.forecast_max_c.toFixed(1)}°C forecast max`,
+    severity: SEVERITY_LABEL[alert.severity],
+    time: alert.date,
+    description: alert.summary,
     acknowledged: false,
-  },
-  {
-    id: 2,
-    title: "Elevated heat zone",
-    location: "Dadar",
-    temperature: "39.6°C",
-    severity: "Medium",
-    time: "28 min ago",
-    description:
-      "Persistent elevated land-surface temperature detected across the monitored grid.",
-    acknowledged: false,
-  },
-  {
-    id: 3,
-    title: "Heat threshold approaching",
-    location: "Borivali West",
-    temperature: "37.9°C",
-    severity: "Low",
-    time: "46 min ago",
-    description:
-      "Temperature is approaching the configured warning threshold.",
-    acknowledged: true,
-  },
-];
+  };
+}
 
 function severityStyles(severity: AlertSeverity) {
   if (severity === "High") {
@@ -92,31 +89,29 @@ function severityStyles(severity: AlertSeverity) {
 }
 
 export function Alerts() {
-  const [alerts, setAlerts] = useState<AlertItem[]>(INITIAL_ALERTS);
+  const { data, isLoading, isError } = useAlerts(50);
+  // Acknowledging is a per-browser view state — the backend has no acknowledge endpoint.
+  const [acknowledgedIds, setAcknowledgedIds] = useState<ReadonlySet<string>>(new Set());
 
-  const activeAlerts = alerts.filter(
-    (alert) => !alert.acknowledged
-  ).length;
+  const alerts = useMemo(
+    () =>
+      (data?.alerts ?? []).map((a) => {
+        const item = toAlertItem(a);
+        return { ...item, acknowledged: acknowledgedIds.has(item.id) };
+      }),
+    [data, acknowledgedIds]
+  );
+
+  const activeAlerts = alerts.filter((alert) => !alert.acknowledged).length;
 
   const highAlerts = alerts.filter(
     (alert) => alert.severity === "High" && !alert.acknowledged
   ).length;
 
-  const acknowledgedAlerts = alerts.filter(
-    (alert) => alert.acknowledged
-  ).length;
+  const acknowledgedAlerts = alerts.filter((alert) => alert.acknowledged).length;
 
-  const acknowledgeAlert = (id: number) => {
-    setAlerts((current) =>
-      current.map((alert) =>
-        alert.id === id
-          ? {
-              ...alert,
-              acknowledged: true,
-            }
-          : alert
-      )
-    );
+  const acknowledgeAlert = (id: string) => {
+    setAcknowledgedIds((current) => new Set(current).add(id));
   };
 
   return (
@@ -455,6 +450,26 @@ export function Alerts() {
 
         <Divider />
 
+        {/* STATES */}
+        {(isLoading || isError || alerts.length === 0) && (
+          <Box sx={{ p: 3 }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#172033", mb: 0.5 }}>
+              {isLoading
+                ? "Loading alerts…"
+                : isError
+                  ? "Couldn't load alerts"
+                  : "No heat alerts"}
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: "#697386" }}>
+              {isLoading
+                ? "Fetching the latest monitoring results."
+                : isError
+                  ? "The alerts service didn't respond. It may be waking up, so try again in a minute."
+                  : "The monitor checks the forecast every morning at 06:00 IST and logs an alert only when the forecast maximum reaches 37 °C or more."}
+            </Typography>
+          </Box>
+        )}
+
         {/* ALERTS */}
         {alerts.map((alert, index) => {
           const styles = severityStyles(alert.severity);
@@ -709,9 +724,9 @@ export function Alerts() {
             color: "#9aa3b2",
           }}
         >
-          Alert values shown in this interface are monitoring outputs and
-          should be interpreted together with the underlying heat-map and
-          analytics data.
+          Alerts are model-derived advisories based on forecast air temperature
+          against IMD's absolute thresholds, not an official IMD warning.
+          Interpret them together with the heat-map and analytics data.
         </Typography>
       </Box>
     </Box>
