@@ -23,6 +23,10 @@ from data_pipeline.config import get_settings
 # a doomed request (daily quota actually exhausted) makes the caller wait needlessly.
 MAX_RETRIES = 3
 
+# Per-request ceiling. Without it a stalled connection or a throttled key can hold the request
+# thread for minutes (seen live: a one-word prompt still pending after 200s).
+REQUEST_TIMEOUT_S = 30
+
 
 def get_llm(temperature: float = 0.0) -> BaseChatModel:
     settings = get_settings()
@@ -36,4 +40,5 @@ def get_llm(temperature: float = 0.0) -> BaseChatModel:
         google_api_key=settings.gemini_api_key,
         temperature=temperature,
         max_retries=MAX_RETRIES,
+        timeout=REQUEST_TIMEOUT_S,
     )
