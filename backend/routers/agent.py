@@ -12,6 +12,7 @@ surfaces here instead, as the same 503 rather than a raw traceback.
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
+from google.genai.errors import APIError as GenaiAPIError
 from langchain_google_genai.chat_models import ChatGoogleGenerativeAIError
 
 from backend.agents.supervisor import build_agent_layer
@@ -34,7 +35,7 @@ def agent_chat(request: Request, body: AgentChatRequest) -> AgentChatResponse:
 
     try:
         result = supervisor.handle(body.message)
-    except ChatGoogleGenerativeAIError as exc:
+    except (ChatGoogleGenerativeAIError, GenaiAPIError) as exc:
         raise api_error(503, "agent_upstream_unavailable", str(exc)) from exc
 
     layer = build_agent_layer(request.app.state.store, result.tool_calls)

@@ -259,6 +259,23 @@ def test_agent_chat_reports_a_broken_llm_key_as_503_not_a_raw_500(client):
     assert resp.json()["error_code"] == "agent_upstream_unavailable"
 
 
+def test_agent_chat_reports_a_gemini_server_error_as_503(client):
+    """A raw `google.genai` ServerError (e.g. 504 DEADLINE_EXCEEDED, seen live) isn't a
+    ChatGoogleGenerativeAIError — it still has to come back as a clean 503, not a 500.
+    """
+    from google.genai.errors import ServerError
+
+    class _TimingOutSupervisor:
+        def handle(self, message: str):
+            raise ServerError(504, {"error": {"message": "Deadline expired"}})
+
+    client.app.state.supervisor = _TimingOutSupervisor()
+    resp = client.post("/agent/chat", json={"message": "where is it hottest?"})
+
+    assert resp.status_code == 503
+    assert resp.json()["error_code"] == "agent_upstream_unavailable"
+
+
 def test_agent_chat_returns_the_full_contract_with_a_fake_supervisor(client):
     from backend.agents.result import ToolCallRecord
     from backend.agents.supervisor import ChatResult
