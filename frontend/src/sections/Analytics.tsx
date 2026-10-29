@@ -5,7 +5,6 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Divider,
   Paper,
   Table,
   TableBody,
@@ -31,7 +30,7 @@ import {
   YAxis,
 } from "recharts";
 
-import { useHotspots, useTrends, useWeather } from "../api/hooks";
+import { useHotspots, useWeather } from "../api/hooks";
 import type { HotspotsBy, HotspotsUnit } from "../api/types";
 import { CATEGORICAL, MUTED_INK, SEQUENTIAL_BLUE } from "../viz/color";
 
@@ -107,7 +106,6 @@ export function Analytics() {
 
         <HotspotsPanel />
         <WeatherPanel />
-        <TrendsPanel />
       </Box>
     </Box>
   );
@@ -890,130 +888,6 @@ function WeatherPanel() {
                 </Typography>
               </Paper>
             </Box>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function TrendsPanel() {
-  const { data, isLoading } = useTrends();
-
-  return (
-    <Card
-      elevation={0}
-      sx={{
-        borderRadius: 3.5,
-        border: "1px solid #dce8e5",
-        bgcolor: "#ffffff",
-        overflow: "hidden",
-      }}
-    >
-      <Box
-        sx={{
-          px: { xs: 2, md: 3 },
-          py: 2.5,
-          background:
-            "linear-gradient(135deg, rgba(123,72,32,0.05), rgba(7,66,61,0.02))",
-          borderBottom: "1px solid #e5eeec",
-        }}
-      >
-        <Typography
-          sx={{
-            color: "#0b3b36",
-            fontWeight: 800,
-            fontSize: "1.15rem",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          LST trend
-        </Typography>
-
-        <Typography
-          sx={{
-            color: MUTED_INK,
-            fontSize: "0.82rem",
-            mt: 0.35,
-          }}
-        >
-          Long-term land surface temperature analysis
-        </Typography>
-      </Box>
-
-      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-        {isLoading && (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              py: 2,
-            }}
-          >
-            <CircularProgress size={24} sx={{ color: "#0b5d50" }} />
-
-            <Typography variant="body2" color="text.secondary">
-              Loading historical trend data...
-            </Typography>
-          </Box>
-        )}
-
-        {data && !data.available && (
-          <Paper
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: "1px solid #e7ddd2",
-              bgcolor: "#fffaf5",
-              p: { xs: 2, md: 2.5 },
-            }}
-          >
-            <Alert
-              severity="info"
-              sx={{
-                bgcolor: "transparent",
-                p: 0,
-                "& .MuiAlert-message": {
-                  width: "100%",
-                },
-              }}
-            >
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  color: "#5b5149",
-                  mb: 0.4,
-                }}
-              >
-                Historical trend unavailable
-              </Typography>
-
-              <Typography
-                sx={{
-                  color: "#756b63",
-                  fontSize: "0.85rem",
-                }}
-              >
-                {data.note}
-              </Typography>
-            </Alert>
-          </Paper>
-        )}
-
-        {data && data.available && (
-          <Box>
-            <Divider sx={{ mb: 2 }} />
-
-            <Typography
-              variant="body2"
-              sx={{
-                color: MUTED_INK,
-              }}
-            >
-              Historical LST trend data is available from the analytics
-              service.
-            </Typography>
           </Box>
         )}
       </CardContent>
